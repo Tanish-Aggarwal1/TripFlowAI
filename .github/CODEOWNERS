@@ -1,0 +1,14 @@
+# Default owner for anything not matched below
+*                       @Tanish-Aggarwal1
+
+# Backend
+/backend/               @Tanish-Aggarwal1 @Coding-Pratham
+
+# Frontend
+/frontend/               @NeelLogic
+
+# CI/CD and repo config
+/.github/                @JoannMonteiro
+
+# Documentation
+/docs/                   @Tanish-Aggarwal1
