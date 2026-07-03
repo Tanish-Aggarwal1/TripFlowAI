@@ -16,7 +16,7 @@ frontend/.angular/
 *.iml
 *.swp
 *.swo
-
+.metadata/
 # === Environment / Secrets ===
 .env
 *.env.local
