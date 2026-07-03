@@ -1,17 +1,19 @@
 package com.tripflow.backend.beans;
 
-import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+import com.tripflow.backend.beans.enums.TripStatus;
+import com.tripflow.backend.beans.enums.TripVisibility;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
@@ -22,11 +24,8 @@ import lombok.Setter;
 @Entity
 @Table(name = "trips")
 @Getter @Setter @NoArgsConstructor
-public class Trip {
+public class Trip extends BaseEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id", nullable = false)
@@ -37,24 +36,20 @@ public class Trip {
 
     @Column(columnDefinition = "TEXT")
     private String description;
-
-    @Column(name = "is_public", nullable = false)
-    private boolean isPublic = false;
-
-    @Column(nullable = false, length = 20)
-    private String status = "PLANNED";
-
+    
     @JdbcTypeCode(SqlTypes.ARRAY)
-    @Column(columnDefinition = "text[]")
-    private List<String> tags;
+    @Column(columnDefinition = "TEXT[]")
+    private List<String> tags = new ArrayList<>();
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private TripVisibility visibility = TripVisibility.PRIVATE;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private TripStatus status = TripStatus.DRAFT;
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "route_geometry", columnDefinition = "jsonb")
     private String routeGeometry;
-
-    @Column(name = "created_at", nullable = false)
-    private LocalDateTime createdAt = LocalDateTime.now();
-
-    @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt = LocalDateTime.now();
 }
