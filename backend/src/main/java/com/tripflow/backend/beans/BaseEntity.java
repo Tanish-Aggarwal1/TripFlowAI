@@ -1,4 +1,4 @@
-package com.tripflow.beans;
+package com.tripflow.backend.beans;
 
 import java.time.LocalDateTime;
 
