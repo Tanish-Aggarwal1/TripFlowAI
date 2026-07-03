@@ -22,4 +22,7 @@ public class Place extends BaseEntity {
 
     @Column(length = 300)
     private String address;
+    
+    @Column(name = "external_place_id", length = 150)
+    private String externalPlaceId;
 }
