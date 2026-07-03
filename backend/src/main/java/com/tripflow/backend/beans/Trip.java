@@ -9,6 +9,7 @@ import org.hibernate.type.SqlTypes;
 import com.tripflow.backend.beans.enums.TripStatus;
 import com.tripflow.backend.beans.enums.TripVisibility;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -16,6 +17,8 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -52,4 +55,8 @@ public class Trip extends BaseEntity {
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "route_geometry", columnDefinition = "jsonb")
     private String routeGeometry;
+    
+    @OneToMany(mappedBy = "trip", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("stopOrder ASC")
+    private List<Stop> stops = new ArrayList<>();
 }
