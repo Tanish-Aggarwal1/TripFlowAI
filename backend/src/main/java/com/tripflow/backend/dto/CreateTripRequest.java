@@ -26,6 +26,5 @@ public class CreateTripRequest {
     private TripVisibility visibility;
 
     @NotEmpty
-    @Valid
-    private List<CreateStopRequest> stops;
+    private List<@Valid CreateStopRequest> stops;
 }
