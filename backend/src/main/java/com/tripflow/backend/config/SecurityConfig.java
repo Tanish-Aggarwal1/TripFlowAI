@@ -17,14 +17,17 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import com.tripflow.backend.security.JwtAuthFilter;
 
+import lombok.AllArgsConstructor;
+
 @Configuration
+@AllArgsConstructor
 public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
 
-    public SecurityConfig(JwtAuthFilter jwtAuthFilter) {
-        this.jwtAuthFilter = jwtAuthFilter;
-    }
+//    public SecurityConfig(JwtAuthFilter jwtAuthFilter) {
+//        this.jwtAuthFilter = jwtAuthFilter;
+//    }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
