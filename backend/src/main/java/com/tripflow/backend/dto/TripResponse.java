@@ -1,6 +1,6 @@
 package com.tripflow.backend.dto;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 import com.tripflow.backend.beans.enums.TripStatus;
@@ -19,6 +19,6 @@ public class TripResponse {
     private TripStatus status;
     private Long ownerId;
     private List<StopResponse> stops;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+    private Instant createdAt;
+    private Instant updatedAt;
 }
