@@ -1,0 +1,36 @@
+<ion-content class="ion-padding">
+  <div class="login-card">
+    <img src="assets/logo.svg" alt="TripFlow AI" class="logo" />
+    <h1>Log In</h1>
+
+    <form [formGroup]="form" (ngSubmit)="onSubmit()">
+      <ion-item>
+        <ion-label position="floating">Email</ion-label>
+        <ion-input formControlName="email" type="email"></ion-input>
+      </ion-item>
+      <ion-text color="danger" *ngIf="fieldError('email')">
+        <p>{{ fieldError('email') }}</p>
+      </ion-text>
+
+      <ion-item>
+        <ion-label position="floating">Password</ion-label>
+        <ion-input formControlName="password" type="password"></ion-input>
+      </ion-item>
+      <ion-text color="danger" *ngIf="fieldError('password')">
+        <p>{{ fieldError('password') }}</p>
+      </ion-text>
+
+      <ion-text color="danger" *ngIf="generalError">
+        <p>{{ generalError }}</p>
+      </ion-text>
+
+      <ion-button expand="block" type="submit" [disabled]="isSubmitting">
+        {{ isSubmitting ? 'Logging in...' : 'Log In' }}
+      </ion-button>
+    </form>
+
+    <ion-text>
+      Don't have an account? <a routerLink="/signup">Sign up</a>
+    </ion-text>
+  </div>
+</ion-content>
