@@ -3,12 +3,12 @@ CREATE TABLE trips (
     user_id        BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     title          VARCHAR(150) NOT NULL,
     description    TEXT,
-    is_public      BOOLEAN NOT NULL DEFAULT FALSE,
-    status         VARCHAR(20) NOT NULL DEFAULT 'PLANNED',
     tags           TEXT[],
+    visibility     VARCHAR(20) NOT NULL DEFAULT 'PRIVATE',
+    status         VARCHAR(20) NOT NULL DEFAULT 'DRAFT',
     route_geometry JSONB,
-    created_at     TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at     TIMESTAMP NOT NULL DEFAULT NOW()
+    created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_trips_user_id ON trips(user_id);
