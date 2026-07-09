@@ -1,5 +1,6 @@
 package com.tripflow.backend.exception;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -7,7 +8,7 @@ import lombok.Getter;
 
 @Getter
 public class ApiError {
-	private final LocalDateTime timestamp = LocalDateTime.now();
+	private final Instant timestamp = Instant.now();
     private final int status;
     private final String error;
     private final String message;
