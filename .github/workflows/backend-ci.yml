@@ -17,4 +17,4 @@ jobs:
           distribution: temurin
           java-version: "21"
           cache: maven
-      - run: ./mvnw -B verify -Pci
+      - run: bash mvnw -B verify -Pci
