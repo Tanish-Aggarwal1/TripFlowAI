@@ -46,8 +46,8 @@ public class GlobalExceptionHandler {
 
 	@ExceptionHandler(Exception.class)
 	public ResponseEntity<ApiError> handleGeneric(Exception ex, HttpServletRequest req) {
-        return error(HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected error", req, null);
-    }
+	    return error(HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected error", req, null);
+	}
 
     private ResponseEntity<ApiError> error(HttpStatus status, String message, HttpServletRequest req,
             List<ApiError.FieldError> fieldErrors) {
