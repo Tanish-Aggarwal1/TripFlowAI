@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.List;
 import java.util.Set;
 
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.tripflow.backend.beans.enums.TripVisibility;
@@ -15,11 +17,20 @@ import jakarta.validation.Validator;
 import jakarta.validation.ValidatorFactory;
 
 public class CreateTripRequestValidationTest {
-	private final Validator validator;
+	
 
-    CreateTripRequestValidationTest() {
-        ValidatorFactory factory = Validation.buildDefaultValidatorFactory();
-        this.validator = factory.getValidator();
+	private ValidatorFactory factory;
+    private Validator validator;
+    
+    @BeforeEach
+    void setUp() {
+        factory = Validation.buildDefaultValidatorFactory();
+        validator = factory.getValidator();
+    }
+
+    @AfterEach
+    void tearDown() {
+        factory.close();
     }
 
     @Test

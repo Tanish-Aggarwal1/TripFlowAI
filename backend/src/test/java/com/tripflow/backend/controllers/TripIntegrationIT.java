@@ -1,4 +1,4 @@
-package com.tripflow.backend.controller;
+package com.tripflow.backend.controllers;
 
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
