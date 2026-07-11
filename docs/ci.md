@@ -14,8 +14,15 @@ GitHub Actions runs on every PR targeting main. A failing pipeline blocks merge 
 1. Checkout code
 2. Set up JDK 21
 3. Cache Maven dependencies
-4. Run `mvn -B verify` (compiles + runs all tests)
-5. Generate JaCoCo coverage report
+4. Run `mvn -B verify -Pci` (unit tests + Testcontainers integration tests)
+5. [Optional] Generate JaCoCo coverage report
+
+## Local commands
+
+| Command | When to use |
+|---------|-------------|
+| `mvn verify` | Fast feedback — unit tests only, no Docker |
+| `mvn verify -Pci` | Full suite — unit + `*IT` integration tests via Testcontainers |
 
 ## What Blocks a Merge
 - Any failing test
