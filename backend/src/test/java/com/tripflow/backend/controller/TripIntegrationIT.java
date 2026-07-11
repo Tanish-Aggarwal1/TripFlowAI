@@ -14,8 +14,10 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.testcontainers.context.ImportTestcontainers;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,11 +29,14 @@ import com.tripflow.backend.dto.CreateStopRequest;
 import com.tripflow.backend.dto.CreateTripRequest;
 import com.tripflow.backend.dto.UpdateTripRequest;
 import com.tripflow.backend.repository.UserRepository;
+import com.tripflow.backend.testsupport.PostgresTestcontainersConfiguration;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@ImportTestcontainers(PostgresTestcontainersConfiguration.class)
+@ActiveProfiles("test")
 @AutoConfigureMockMvc
 @Transactional
-public class TripIntegrationTest {
+class TripIntegrationIT {
 
 	@Autowired
 	private MockMvc mockMvc;
@@ -40,8 +45,6 @@ public class TripIntegrationTest {
 	private UserRepository userRepository;
 
 	private final ObjectMapper objectMapper = new ObjectMapper();
-
-	// ---------- helpers ----------
 
 	private String createTestUser(String suffix) {
 		User user = new User();
@@ -73,8 +76,6 @@ public class TripIntegrationTest {
 				.andReturn();
 		return objectMapper.readTree(result.getResponse().getContentAsString()).get("id").asLong();
 	}
-
-	// ---------- create / get ----------
 
 	@Test
 	void createTrip_andRetrieveIt_persistsAndReloadsCorrectly() throws Exception {
@@ -126,8 +127,6 @@ public class TripIntegrationTest {
 				.andExpect(jsonPath("$.error").value("Forbidden"));
 	}
 
-	// ---------- list ----------
-
 	@Test
 	void listTrips_returnsOnlyRequestersTrips() throws Exception {
 		String userId = createTestUser("listowner");
@@ -137,8 +136,6 @@ public class TripIntegrationTest {
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$[0].title").value("User's Trip"));
 	}
-
-	// ---------- update ----------
 
 	@Test
 	void updateTrip_nonOwner_returns403() throws Exception {
@@ -162,8 +159,6 @@ public class TripIntegrationTest {
 				.content(objectMapper.writeValueAsString(updateRequest)).with(user(otherId)))
 				.andExpect(status().isForbidden());
 	}
-
-	// ---------- delete ----------
 
 	@Test
 	void deleteTrip_owner_returns204_thenGetReturns404() throws Exception {
