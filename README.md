@@ -3,10 +3,15 @@ AI-powered multi-stop trip planning PWA. Built with Ionic + Angular, Spring Boot
 
 ## Project Structure
 TripFlowAI/
+
 ├── backend/          # Spring Boot (Java 17)
+
 ├── frontend/         # Ionic + Angular PWA (TypeScript)
+
 ├── docs/             # Project documentation and diagrams
+
 ├── .github/workflows # GitHub Actions CI/CD
+
 └── README.md
 
 ## Tech Stack
@@ -15,7 +20,7 @@ TripFlowAI/
 - **Backend:** Spring Boot (Java 17)
 - **Database:** PostgreSQL
 - **Maps:** Mapbox GL JS
-- **Route Optimization:** OpenRouteService + VROOM
+- **Route Optimization:** OpenRouteService
 - **AI:** Google Gemini API
 - **Auth:** Spring Security + JWT + BCrypt
 - **Image Storage:** Cloudinary
