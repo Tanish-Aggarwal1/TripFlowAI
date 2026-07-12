@@ -35,7 +35,6 @@ import com.tripflow.backend.testsupport.PostgresTestcontainersConfiguration;
 @AutoConfigureMockMvc
 @Transactional
 class StopIntegrationIT {
-
 	@Autowired
 	private MockMvc mockMvc;
 
@@ -54,22 +53,14 @@ class StopIntegrationIT {
 	}
 
 	private Long createTripAsUser(String userId) throws Exception {
-		CreateStopRequest stop = new CreateStopRequest();
-		stop.setName("Cottage");
-		stop.setLatitude(45.0);
-		stop.setLongitude(-79.9);
+		CreateStopRequest stop = new CreateStopRequest("Cottage", 45.0, -79.9, null, null, null);
+		CreateTripRequest tripRequest = new CreateTripRequest("Muskoka Trip", null, null, TripVisibility.PRIVATE,
+				List.of(stop));
 
-		CreateTripRequest tripRequest = new CreateTripRequest();
-		tripRequest.setTitle("Muskoka Trip");
-		tripRequest.setVisibility(TripVisibility.PRIVATE);
-		tripRequest.setStops(List.of(stop));
-
-		MvcResult result = mockMvc.perform(post("/api/trips").with(csrf())
-						.contentType(MediaType.APPLICATION_JSON)
-						.content(objectMapper.writeValueAsString(tripRequest))
-						.with(user(userId)))
-				.andExpect(status().isCreated())
-				.andReturn();
+		MvcResult result = mockMvc
+				.perform(post("/api/trips").with(csrf()).contentType(MediaType.APPLICATION_JSON)
+						.content(objectMapper.writeValueAsString(tripRequest)).with(user(userId)))
+				.andExpect(status().isCreated()).andReturn();
 
 		return objectMapper.readTree(result.getResponse().getContentAsString()).get("id").asLong();
 	}
@@ -79,18 +70,11 @@ class StopIntegrationIT {
 		String ownerId = createTestUser("addowner");
 		Long tripId = createTripAsUser(ownerId);
 
-		CreateStopRequest newStop = new CreateStopRequest();
-		newStop.setName("Gas Station");
-		newStop.setLatitude(44.5);
-		newStop.setLongitude(-79.6);
+		CreateStopRequest newStop = new CreateStopRequest("Gas Station", 44.5, -79.6, null, null, null);
 
-		mockMvc.perform(post("/api/trips/" + tripId + "/stops").with(csrf())
-						.contentType(MediaType.APPLICATION_JSON)
-						.content(objectMapper.writeValueAsString(newStop))
-						.with(user(ownerId)))
-				.andExpect(status().isCreated())
-				.andExpect(jsonPath("$.stopOrder").value(1))
-				.andExpect(jsonPath("$.name").value("Gas Station"));
+		mockMvc.perform(post("/api/trips/" + tripId + "/stops").with(csrf()).contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(newStop)).with(user(ownerId))).andExpect(status().isCreated())
+				.andExpect(jsonPath("$.stopOrder").value(1)).andExpect(jsonPath("$.name").value("Gas Station"));
 	}
 
 	@Test
@@ -99,17 +83,11 @@ class StopIntegrationIT {
 		String otherId = createTestUser("nonownerother");
 		Long tripId = createTripAsUser(ownerId);
 
-		CreateStopRequest newStop = new CreateStopRequest();
-		newStop.setName("Gas Station");
-		newStop.setLatitude(44.5);
-		newStop.setLongitude(-79.6);
+		CreateStopRequest newStop = new CreateStopRequest("Gas Station", 44.5, -79.6, null, null, null);
 
-		mockMvc.perform(post("/api/trips/" + tripId + "/stops").with(csrf())
-						.contentType(MediaType.APPLICATION_JSON)
-						.content(objectMapper.writeValueAsString(newStop))
-						.with(user(otherId)))
-				.andExpect(status().isForbidden())
-				.andExpect(jsonPath("$.status").value(403));
+		mockMvc.perform(post("/api/trips/" + tripId + "/stops").with(csrf()).contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(newStop)).with(user(otherId)))
+				.andExpect(status().isForbidden()).andExpect(jsonPath("$.status").value(403));
 	}
 
 	@Test
@@ -118,8 +96,7 @@ class StopIntegrationIT {
 		Long tripId = createTripAsUser(ownerId);
 
 		mockMvc.perform(get("/api/trips/" + tripId + "/stops").with(csrf()).with(user(ownerId)))
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$[0].name").value("Cottage"));
+				.andExpect(status().isOk()).andExpect(jsonPath("$[0].name").value("Cottage"));
 	}
 
 	@Test
@@ -128,7 +105,6 @@ class StopIntegrationIT {
 		Long tripId = createTripAsUser(ownerId);
 
 		mockMvc.perform(delete("/api/trips/" + tripId + "/stops/999999").with(csrf()).with(user(ownerId)))
-				.andExpect(status().isNotFound())
-				.andExpect(jsonPath("$.status").value(404));
+				.andExpect(status().isNotFound()).andExpect(jsonPath("$.status").value(404));
 	}
 }

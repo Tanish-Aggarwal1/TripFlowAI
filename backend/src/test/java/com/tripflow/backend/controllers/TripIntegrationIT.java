@@ -37,7 +37,7 @@ import com.tripflow.backend.testsupport.PostgresTestcontainersConfiguration;
 @AutoConfigureMockMvc
 @Transactional
 class TripIntegrationIT {
-
+	
 	@Autowired
 	private MockMvc mockMvc;
 
@@ -56,24 +56,15 @@ class TripIntegrationIT {
 	}
 
 	private CreateTripRequest sampleTripRequest(String title, TripVisibility visibility) {
-		CreateStopRequest stop = new CreateStopRequest();
-		stop.setName("Cottage");
-		stop.setLatitude(45.0);
-		stop.setLongitude(-79.9);
-
-		CreateTripRequest request = new CreateTripRequest();
-		request.setTitle(title);
-		request.setVisibility(visibility);
-		request.setStops(List.of(stop));
-		return request;
+		CreateStopRequest stop = new CreateStopRequest("Cottage", 45.0, -79.9, null, null, null);
+		return new CreateTripRequest(title, null, null, visibility, List.of(stop));
 	}
 
 	private Long createTrip(String userId, CreateTripRequest request) throws Exception {
 		MvcResult result = mockMvc
 				.perform(post("/api/trips").with(csrf()).contentType(MediaType.APPLICATION_JSON)
 						.content(objectMapper.writeValueAsString(request)).with(user(userId)))
-				.andExpect(status().isCreated())
-				.andReturn();
+				.andExpect(status().isCreated()).andReturn();
 		return objectMapper.readTree(result.getResponse().getContentAsString()).get("id").asLong();
 	}
 
@@ -85,15 +76,12 @@ class TripIntegrationIT {
 		MvcResult createResult = mockMvc
 				.perform(post("/api/trips").with(csrf()).contentType(MediaType.APPLICATION_JSON)
 						.content(objectMapper.writeValueAsString(tripRequest)).with(user(userId)))
-				.andExpect(status().isCreated())
-				.andExpect(jsonPath("$.title").value("Weekend Trip"))
-				.andExpect(jsonPath("$.stops[0].name").value("Cottage"))
-				.andReturn();
+				.andExpect(status().isCreated()).andExpect(jsonPath("$.title").value("Weekend Trip"))
+				.andExpect(jsonPath("$.stops[0].name").value("Cottage")).andReturn();
 
 		Long tripId = objectMapper.readTree(createResult.getResponse().getContentAsString()).get("id").asLong();
 
-		mockMvc.perform(get("/api/trips/" + tripId).with(csrf()).with(user(userId)))
-				.andExpect(status().isOk())
+		mockMvc.perform(get("/api/trips/" + tripId).with(csrf()).with(user(userId))).andExpect(status().isOk())
 				.andExpect(jsonPath("$.title").value("Weekend Trip"));
 	}
 
@@ -101,15 +89,11 @@ class TripIntegrationIT {
 	void createTrip_invalidRequest_returns400WithValidationErrors() throws Exception {
 		String userId = createTestUser("invalidreq");
 
-		CreateTripRequest tripRequest = new CreateTripRequest();
-		tripRequest.setTitle("");
-		tripRequest.setVisibility(TripVisibility.PRIVATE);
-		tripRequest.setStops(List.of());
+		CreateTripRequest tripRequest = new CreateTripRequest("", null, null, TripVisibility.PRIVATE, List.of());
 
 		mockMvc.perform(post("/api/trips").with(csrf()).contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(tripRequest)).with(user(userId)))
-				.andExpect(status().isBadRequest())
-				.andExpect(jsonPath("$.status").value(400))
+				.andExpect(status().isBadRequest()).andExpect(jsonPath("$.status").value(400))
 				.andExpect(jsonPath("$.fieldErrors").isArray());
 	}
 
@@ -121,10 +105,8 @@ class TripIntegrationIT {
 		CreateTripRequest tripRequest = sampleTripRequest("Private Trip", TripVisibility.PRIVATE);
 		Long tripId = createTrip(ownerId, tripRequest);
 
-		mockMvc.perform(get("/api/trips/" + tripId).with(csrf()).with(user(otherId)))
-				.andExpect(status().isForbidden())
-				.andExpect(jsonPath("$.status").value(403))
-				.andExpect(jsonPath("$.error").value("Forbidden"));
+		mockMvc.perform(get("/api/trips/" + tripId).with(csrf()).with(user(otherId))).andExpect(status().isForbidden())
+				.andExpect(jsonPath("$.status").value(403)).andExpect(jsonPath("$.error").value("Forbidden"));
 	}
 
 	@Test
@@ -132,8 +114,7 @@ class TripIntegrationIT {
 		String userId = createTestUser("listowner");
 		createTrip(userId, sampleTripRequest("User's Trip", TripVisibility.PRIVATE));
 
-		mockMvc.perform(get("/api/trips").with(csrf()).with(user(userId)))
-				.andExpect(status().isOk())
+		mockMvc.perform(get("/api/trips").with(csrf()).with(user(userId))).andExpect(status().isOk())
 				.andExpect(jsonPath("$[0].title").value("User's Trip"));
 	}
 
@@ -145,15 +126,9 @@ class TripIntegrationIT {
 		CreateTripRequest tripRequest = sampleTripRequest("Original", TripVisibility.PRIVATE);
 		Long tripId = createTrip(ownerId, tripRequest);
 
-		CreateStopRequest stop = new CreateStopRequest();
-		stop.setName("Cottage");
-		stop.setLatitude(45.0);
-		stop.setLongitude(-79.9);
-
-		UpdateTripRequest updateRequest = new UpdateTripRequest();
-		updateRequest.setTitle("Hijacked");
-		updateRequest.setVisibility(TripVisibility.PRIVATE);
-		updateRequest.setStops(List.of(stop));
+		CreateStopRequest stop = new CreateStopRequest("Cottage", 45.0, -79.9, null, null, null);
+		UpdateTripRequest updateRequest = new UpdateTripRequest("Hijacked", null, null, TripVisibility.PRIVATE,
+				List.of(stop));
 
 		mockMvc.perform(put("/api/trips/" + tripId).with(csrf()).contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(updateRequest)).with(user(otherId)))
@@ -168,7 +143,6 @@ class TripIntegrationIT {
 		mockMvc.perform(delete("/api/trips/" + tripId).with(csrf()).with(user(userId)))
 				.andExpect(status().isNoContent());
 
-		mockMvc.perform(get("/api/trips/" + tripId).with(csrf()).with(user(userId)))
-				.andExpect(status().isNotFound());
+		mockMvc.perform(get("/api/trips/" + tripId).with(csrf()).with(user(userId))).andExpect(status().isNotFound());
 	}
 }

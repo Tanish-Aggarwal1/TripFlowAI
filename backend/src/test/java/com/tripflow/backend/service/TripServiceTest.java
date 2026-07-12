@@ -31,13 +31,14 @@ import com.tripflow.backend.dto.UpdateStopRequest;
 import com.tripflow.backend.dto.UpdateTripRequest;
 import com.tripflow.backend.exception.ForbiddenException;
 import com.tripflow.backend.exception.ResourceNotFoundException;
+import com.tripflow.backend.mapper.StopMapper;
+import com.tripflow.backend.mapper.TripMapper;
 import com.tripflow.backend.repository.PlaceRepository;
 import com.tripflow.backend.repository.TripRepository;
 import com.tripflow.backend.repository.UserRepository;
 
 @ExtendWith(MockitoExtension.class)
 public class TripServiceTest {
-
 	@Mock private TripRepository tripRepository;
     @Mock private UserRepository userRepository;
     @Mock private PlaceRepository placeRepository;
@@ -46,7 +47,9 @@ public class TripServiceTest {
 
     @BeforeEach
     void setUp() {
-        tripService = new TripService(tripRepository, userRepository, placeRepository);
+        StopMapper stopMapper = new StopMapper();
+        TripMapper tripMapper = new TripMapper(stopMapper);
+        tripService = new TripService(tripRepository, userRepository, placeRepository, tripMapper, stopMapper);
     }
 
     @Test
@@ -58,7 +61,7 @@ public class TripServiceTest {
         when(placeRepository.findByNameAndLatitudeAndLongitude(any(), any(), any()))
                 .thenReturn(Optional.empty());
         when(placeRepository.save(any())).thenAnswer(inv -> {
-            var place = inv.getArgument(0, com.tripflow.backend.domain.Place.class);
+            Place place = inv.getArgument(0, Place.class);
             place.setId(10L);
             return place;
         });
@@ -68,22 +71,16 @@ public class TripServiceTest {
             return t;
         });
 
-        CreateStopRequest stopReq = new CreateStopRequest();
-        stopReq.setName("Cottage");
-        stopReq.setLatitude(45.0);
-        stopReq.setLongitude(-79.9);
-
-        CreateTripRequest request = new CreateTripRequest();
-        request.setTitle("Weekend Trip");
-        request.setVisibility(TripVisibility.PRIVATE);
-        request.setStops(List.of(stopReq));
+        CreateStopRequest stopReq = new CreateStopRequest("Cottage", 45.0, -79.9, null, null, null);
+        CreateTripRequest request = new CreateTripRequest(
+                "Weekend Trip", null, null, TripVisibility.PRIVATE, List.of(stopReq));
 
         TripResponse response = tripService.createTrip(1L, request);
 
-        assertThat(response.getId()).isEqualTo(100L);
-        assertThat(response.getTitle()).isEqualTo("Weekend Trip");
-        assertThat(response.getStops()).hasSize(1);
-        assertThat(response.getStops().get(0).getStopOrder()).isEqualTo(0);
+        assertThat(response.id()).isEqualTo(100L);
+        assertThat(response.title()).isEqualTo("Weekend Trip");
+        assertThat(response.stops()).hasSize(1);
+        assertThat(response.stops().get(0).stopOrder()).isEqualTo(0);
     }
 
     @Test
@@ -127,9 +124,10 @@ public class TripServiceTest {
 
         TripResponse response = tripService.getTrip(50L, 1L);
 
-        assertThat(response.getTitle()).isEqualTo("My Trip");
+        assertThat(response.title()).isEqualTo("My Trip");
     }
- // ---------- listTrips ----------
+
+    // ---------- listTrips ----------
 
     @Test
     void listTrips_returnsOwnersTripsInOrder() {
@@ -153,7 +151,7 @@ public class TripServiceTest {
         List<TripResponse> result = tripService.listTrips(1L);
 
         assertThat(result).hasSize(2);
-        assertThat(result.get(0).getTitle()).isEqualTo("Trip B");
+        assertThat(result.get(0).title()).isEqualTo("Trip B");
     }
 
     // ---------- updateTrip ----------
@@ -180,22 +178,17 @@ public class TripServiceTest {
         });
         when(tripRepository.save(any())).thenAnswer(inv -> inv.getArgument(0, Trip.class));
 
-        CreateStopRequest newStop = new CreateStopRequest();
-        newStop.setName("Niagara Falls");
-        newStop.setLatitude(43.0962);
-        newStop.setLongitude(-79.0377);
-
-        UpdateTripRequest request = new UpdateTripRequest();
-        request.setTitle("New Title");
-        request.setVisibility(TripVisibility.PUBLIC);
-        request.setStops(List.of(newStop));
+        CreateStopRequest newStop = new CreateStopRequest(
+                "Niagara Falls", 43.0962, -79.0377, null, null, null);
+        UpdateTripRequest request = new UpdateTripRequest(
+                "New Title", null, null, TripVisibility.PUBLIC, List.of(newStop));
 
         TripResponse response = tripService.updateTrip(50L, 1L, request);
 
-        assertThat(response.getTitle()).isEqualTo("New Title");
-        assertThat(response.getVisibility()).isEqualTo(TripVisibility.PUBLIC);
-        assertThat(response.getStops()).hasSize(1);
-        assertThat(response.getStops().get(0).getName()).isEqualTo("Niagara Falls");
+        assertThat(response.title()).isEqualTo("New Title");
+        assertThat(response.visibility()).isEqualTo(TripVisibility.PUBLIC);
+        assertThat(response.stops()).hasSize(1);
+        assertThat(response.stops().get(0).name()).isEqualTo("Niagara Falls");
     }
 
     @Test
@@ -210,10 +203,8 @@ public class TripServiceTest {
 
         when(tripRepository.findById(50L)).thenReturn(Optional.of(trip));
 
-        UpdateTripRequest request = new UpdateTripRequest();
-        request.setTitle("Hijacked");
-        request.setVisibility(TripVisibility.PRIVATE);
-        request.setStops(List.of());
+        UpdateTripRequest request = new UpdateTripRequest(
+                "Hijacked", null, null, TripVisibility.PRIVATE, List.of());
 
         assertThatThrownBy(() -> tripService.updateTrip(50L, 2L, request))
                 .isInstanceOf(ForbiddenException.class);
@@ -225,10 +216,8 @@ public class TripServiceTest {
     void updateTrip_missingTrip_throwsNotFound() {
         when(tripRepository.findById(999L)).thenReturn(Optional.empty());
 
-        UpdateTripRequest request = new UpdateTripRequest();
-        request.setTitle("X");
-        request.setVisibility(TripVisibility.PRIVATE);
-        request.setStops(List.of());
+        UpdateTripRequest request = new UpdateTripRequest(
+                "X", null, null, TripVisibility.PRIVATE, List.of());
 
         assertThatThrownBy(() -> tripService.updateTrip(999L, 1L, request))
                 .isInstanceOf(ResourceNotFoundException.class);
@@ -295,14 +284,12 @@ public class TripServiceTest {
         });
         when(tripRepository.save(any())).thenAnswer(inv -> inv.getArgument(0, Trip.class));
 
-        CreateStopRequest request = new CreateStopRequest();
-        request.setName("Gas Station");
-        request.setLatitude(44.5);
-        request.setLongitude(-79.6);
+        CreateStopRequest request = new CreateStopRequest(
+                "Gas Station", 44.5, -79.6, null, null, null);
 
         StopResponse response = tripService.addStop(50L, 1L, request);
 
-        assertThat(response.getStopOrder()).isEqualTo(1);
+        assertThat(response.stopOrder()).isEqualTo(1);
         assertThat(trip.getStops()).hasSize(2);
     }
 
@@ -337,18 +324,14 @@ public class TripServiceTest {
         });
         when(tripRepository.save(any())).thenAnswer(inv -> inv.getArgument(0, Trip.class));
 
-        UpdateStopRequest request = new UpdateStopRequest();
-        request.setName("New Place");
-        request.setLatitude(1.0);
-        request.setLongitude(2.0);
-        request.setNotes("Visit at sunset");
-        request.setStatus(StopStatus.VISITED);
+        UpdateStopRequest request = new UpdateStopRequest(
+                "New Place", 1.0, 2.0, null, null, "Visit at sunset", StopStatus.VISITED);
 
         StopResponse response = tripService.updateStop(50L, 5L, 1L, request);
 
-        assertThat(response.getName()).isEqualTo("New Place");
-        assertThat(response.getNotes()).isEqualTo("Visit at sunset");
-        assertThat(response.getStatus()).isEqualTo(StopStatus.VISITED);
+        assertThat(response.name()).isEqualTo("New Place");
+        assertThat(response.notes()).isEqualTo("Visit at sunset");
+        assertThat(response.status()).isEqualTo(StopStatus.VISITED);
     }
 
     @Test
@@ -363,10 +346,8 @@ public class TripServiceTest {
 
         when(tripRepository.findById(50L)).thenReturn(Optional.of(trip));
 
-        UpdateStopRequest request = new UpdateStopRequest();
-        request.setName("X");
-        request.setLatitude(1.0);
-        request.setLongitude(2.0);
+        UpdateStopRequest request = new UpdateStopRequest(
+                "X", 1.0, 2.0, null, null, null, null);
 
         assertThatThrownBy(() -> tripService.updateStop(50L, 999L, 1L, request))
                 .isInstanceOf(ResourceNotFoundException.class);

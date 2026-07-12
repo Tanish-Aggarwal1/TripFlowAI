@@ -10,21 +10,26 @@ import com.tripflow.backend.domain.Trip;
 import com.tripflow.backend.domain.User;
 import com.tripflow.backend.domain.enums.TripStatus;
 import com.tripflow.backend.domain.enums.TripVisibility;
+import com.tripflow.backend.dto.CreateStopRequest;
 import com.tripflow.backend.dto.CreateTripRequest;
 
 public class TripMapperTest {
-	@Test
+	private final TripMapper tripMapper = new TripMapper(new StopMapper());
+
+    @Test
     void toEntity_neverSetsServerOwnedFields() {
-        CreateTripRequest request = new CreateTripRequest();
-        request.setTitle("Weekend Trip");
-        request.setDescription("A nice trip");
-        request.setTags(List.of("cottage"));
-        request.setVisibility(TripVisibility.PRIVATE);
+        CreateTripRequest request = new CreateTripRequest(
+                "Weekend Trip",
+                "A nice trip",
+                List.of("cottage"),
+                TripVisibility.PRIVATE,
+                List.of(new CreateStopRequest("Cottage", 45.0, -79.9, null, null, null))
+        );
 
         User owner = new User();
         owner.setUsername("tanish");
 
-        Trip trip = TripMapper.toEntity(request, owner);
+        Trip trip = tripMapper.toEntity(request, owner);
 
         // id is server-owned (auto-generated) — must be null before persistence,
         // proving nothing in the request can set it
