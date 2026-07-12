@@ -2,16 +2,15 @@ package com.tripflow.backend.service;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.tripflow.backend.beans.Place;
-import com.tripflow.backend.beans.Stop;
-import com.tripflow.backend.beans.Trip;
-import com.tripflow.backend.beans.User;
-import com.tripflow.backend.beans.enums.TripVisibility;
+import com.tripflow.backend.domain.Place;
+import com.tripflow.backend.domain.Stop;
+import com.tripflow.backend.domain.Trip;
+import com.tripflow.backend.domain.User;
+import com.tripflow.backend.domain.enums.TripVisibility;
 import com.tripflow.backend.dto.CreateStopRequest;
 import com.tripflow.backend.dto.CreateTripRequest;
 import com.tripflow.backend.dto.StopResponse;
@@ -26,23 +25,25 @@ import com.tripflow.backend.repository.PlaceRepository;
 import com.tripflow.backend.repository.TripRepository;
 import com.tripflow.backend.repository.UserRepository;
 
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 
 @Service
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class TripService {
 
     private final TripRepository tripRepository;
     private final UserRepository userRepository;
     private final PlaceRepository placeRepository;
+    private final TripMapper tripMapper;
+    private final StopMapper stopMapper;
 
     // ---------- Trips ----------
 
     @Transactional(readOnly = true)
     public List<TripResponse> listTrips(Long ownerId) {
         return tripRepository.findByUserIdOrderByCreatedAtDesc(ownerId).stream()
-                .map(TripMapper::toResponse)
-                .collect(Collectors.toList());
+                .map(tripMapper::toResponse)
+                .toList();
     }
 
     @Transactional
@@ -50,16 +51,16 @@ public class TripService {
         User owner = userRepository.findById(ownerId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + ownerId));
 
-        Trip trip = TripMapper.toEntity(request, owner);
+        Trip trip = tripMapper.toEntity(request, owner);
 
         int order = 0;
-        for (CreateStopRequest stopRequest : request.getStops()) {
-            Stop stop = StopMapper.toEntity(stopRequest, resolvePlace(stopRequest), order++);
+        for (CreateStopRequest stopRequest : request.stops()) {
+            Stop stop = stopMapper.toEntity(stopRequest, resolvePlace(stopRequest), order++);
             stop.setTrip(trip);
             trip.getStops().add(stop);
         }
 
-        return TripMapper.toResponse(tripRepository.save(trip));
+        return tripMapper.toResponse(tripRepository.save(trip));
     }
 
     @Transactional(readOnly = true)
@@ -71,29 +72,29 @@ public class TripService {
         if (trip.getVisibility() == TripVisibility.PRIVATE && !isOwner) {
             throw new ForbiddenException("You do not have access to this trip");
         }
-        return TripMapper.toResponse(trip);
+        return tripMapper.toResponse(trip);
     }
 
     @Transactional
     public TripResponse updateTrip(Long tripId, Long requesterId, UpdateTripRequest request) {
         Trip trip = loadOwnedTrip(tripId, requesterId);
 
-        trip.setTitle(request.getTitle());
-        trip.setDescription(request.getDescription());
-        trip.setTags(request.getTags());
-        trip.setVisibility(request.getVisibility());
+        trip.setTitle(request.title());
+        trip.setDescription(request.description());
+        trip.setTags(request.tags());
+        trip.setVisibility(request.visibility());
         // status is server-owned lifecycle state — intentionally not touched here
 
         // Full itinerary replace. orphanRemoval deletes dropped stops; shared Places survive.
         trip.getStops().clear();
         int order = 0;
-        for (CreateStopRequest stopRequest : request.getStops()) {
-            Stop stop = StopMapper.toEntity(stopRequest, resolvePlace(stopRequest), order++);
+        for (CreateStopRequest stopRequest : request.stops()) {
+            Stop stop = stopMapper.toEntity(stopRequest, resolvePlace(stopRequest), order++);
             stop.setTrip(trip);
             trip.getStops().add(stop);
         }
 
-        return TripMapper.toResponse(tripRepository.save(trip));
+        return tripMapper.toResponse(tripRepository.save(trip));
     }
 
     @Transactional
@@ -102,29 +103,30 @@ public class TripService {
         tripRepository.delete(trip); // cascade + FK ON DELETE CASCADE remove stops; Places survive
     }
 
+
     // ---------- Nested stops (owner-scoped) ----------
 
     @Transactional(readOnly = true)
     public List<StopResponse> listStops(Long tripId, Long requesterId) {
         Trip trip = loadOwnedTrip(tripId, requesterId);
-        return trip.getStops().stream().map(StopMapper::toResponse).collect(Collectors.toList());
+        return trip.getStops().stream().map(stopMapper::toResponse).toList();
     }
 
     @Transactional(readOnly = true)
     public StopResponse getStop(Long tripId, Long stopId, Long requesterId) {
         Trip trip = loadOwnedTrip(tripId, requesterId);
-        return StopMapper.toResponse(findStop(trip, stopId));
+        return stopMapper.toResponse(findStop(trip, stopId));
     }
 
     @Transactional
     public StopResponse addStop(Long tripId, Long requesterId, CreateStopRequest request) {
         Trip trip = loadOwnedTrip(tripId, requesterId);
         int nextOrder = trip.getStops().stream().mapToInt(Stop::getStopOrder).max().orElse(-1) + 1;
-        Stop stop = StopMapper.toEntity(request, resolvePlace(request), nextOrder);
+        Stop stop = stopMapper.toEntity(request, resolvePlace(request), nextOrder);
         stop.setTrip(trip);
         trip.getStops().add(stop);
         tripRepository.save(trip);
-        return StopMapper.toResponse(stop);
+        return stopMapper.toResponse(stop);
     }
 
     @Transactional
@@ -132,15 +134,15 @@ public class TripService {
         Trip trip = loadOwnedTrip(tripId, requesterId);
         Stop stop = findStop(trip, stopId);
 
-        stop.setPlace(resolvePlace(request.getName(), request.getLatitude(), request.getLongitude(),
-                request.getAddress(), request.getExternalPlaceId()));
-        stop.setNotes(request.getNotes());
-        if (request.getStatus() != null) {
-            stop.setStatus(request.getStatus());
+        stop.setPlace(resolvePlace(request.name(), request.latitude(), request.longitude(),
+                request.address(), request.externalPlaceId()));
+        stop.setNotes(request.notes());
+        if (request.status() != null) {
+            stop.setStatus(request.status());
         }
 
         tripRepository.save(trip);
-        return StopMapper.toResponse(stop);
+        return stopMapper.toResponse(stop);
     }
 
     @Transactional
@@ -178,8 +180,8 @@ public class TripService {
     }
 
     private Place resolvePlace(CreateStopRequest request) {
-        return resolvePlace(request.getName(), request.getLatitude(), request.getLongitude(),
-                request.getAddress(), request.getExternalPlaceId());
+        return resolvePlace(request.name(), request.latitude(), request.longitude(),
+                request.address(), request.externalPlaceId());
     }
 
     private Place resolvePlace(String name, Double latitude, Double longitude, String address, String externalPlaceId) {

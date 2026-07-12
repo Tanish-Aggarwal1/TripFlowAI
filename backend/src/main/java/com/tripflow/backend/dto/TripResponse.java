@@ -3,22 +3,18 @@ package com.tripflow.backend.dto;
 import java.time.Instant;
 import java.util.List;
 
-import com.tripflow.backend.beans.enums.TripStatus;
-import com.tripflow.backend.beans.enums.TripVisibility;
+import com.tripflow.backend.domain.enums.TripStatus;
+import com.tripflow.backend.domain.enums.TripVisibility;
 
-import lombok.Getter;
-import lombok.Setter;
-
-@Getter @Setter
-public class TripResponse {
-	private Long id;
-    private String title;
-    private String description;
-    private List<String> tags;
-    private TripVisibility visibility;
-    private TripStatus status;
-    private Long ownerId;
-    private List<StopResponse> stops;
-    private Instant createdAt;
-    private Instant updatedAt;
-}
+public record TripResponse(
+        Long id,
+        String title,
+        String description,
+        List<String> tags,
+        TripVisibility visibility,
+        TripStatus status,
+        Long ownerId,
+        List<StopResponse> stops,
+        Instant createdAt,
+        Instant updatedAt
+) {}

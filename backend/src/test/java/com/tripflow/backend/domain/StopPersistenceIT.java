@@ -1,4 +1,4 @@
-package com.tripflow.backend.beans;
+package com.tripflow.backend.domain;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -12,6 +12,10 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 
 import com.tripflow.backend.config.JpaConfig;
+import com.tripflow.backend.domain.Place;
+import com.tripflow.backend.domain.Stop;
+import com.tripflow.backend.domain.Trip;
+import com.tripflow.backend.domain.User;
 import com.tripflow.backend.repository.PlaceRepository;
 import com.tripflow.backend.repository.TripRepository;
 import com.tripflow.backend.repository.UserRepository;

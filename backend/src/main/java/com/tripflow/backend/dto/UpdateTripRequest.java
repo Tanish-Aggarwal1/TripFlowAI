@@ -2,29 +2,18 @@ package com.tripflow.backend.dto;
 
 import java.util.List;
 
-import com.tripflow.backend.beans.enums.TripVisibility;
+import com.tripflow.backend.domain.enums.TripVisibility;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import lombok.Getter;
-import lombok.Setter;
 
-@Getter @Setter
-public class UpdateTripRequest {
-    @NotBlank
-    @Size(max = 150)
-    private String title;
-
-    private String description;
-
-    private List<String> tags;
-
-    @NotNull
-    private TripVisibility visibility;
-
-    @NotEmpty
-    private List<@Valid CreateStopRequest> stops;
-}
+public record UpdateTripRequest(
+        @NotBlank @Size(max = 150) String title,
+        String description,
+        List<String> tags,
+        @NotNull TripVisibility visibility,
+        @NotEmpty List<@Valid CreateStopRequest> stops
+) {}

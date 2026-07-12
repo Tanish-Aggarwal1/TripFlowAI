@@ -5,11 +5,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.List;
 import java.util.Set;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.tripflow.backend.beans.enums.TripVisibility;
+import com.tripflow.backend.domain.enums.TripVisibility;
 
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validation;
@@ -18,27 +16,17 @@ import jakarta.validation.ValidatorFactory;
 
 public class CreateTripRequestValidationTest {
 	
+	private final Validator validator;
 
-	private ValidatorFactory factory;
-    private Validator validator;
-    
-    @BeforeEach
-    void setUp() {
-        factory = Validation.buildDefaultValidatorFactory();
-        validator = factory.getValidator();
-    }
-
-    @AfterEach
-    void tearDown() {
-        factory.close();
+    CreateTripRequestValidationTest() {
+        ValidatorFactory factory = Validation.buildDefaultValidatorFactory();
+        this.validator = factory.getValidator();
     }
 
     @Test
     void blankTitle_isRejected() {
-        CreateTripRequest req = new CreateTripRequest();
-        req.setTitle("");
-        req.setVisibility(TripVisibility.PRIVATE);
-        req.setStops(List.of(validStop()));
+        CreateTripRequest req = new CreateTripRequest(
+                "", null, null, TripVisibility.PRIVATE, List.of(validStop()));
 
         Set<ConstraintViolation<CreateTripRequest>> violations = validator.validate(req);
 
@@ -47,10 +35,8 @@ public class CreateTripRequestValidationTest {
 
     @Test
     void emptyStops_isRejected() {
-        CreateTripRequest req = new CreateTripRequest();
-        req.setTitle("Weekend Trip");
-        req.setVisibility(TripVisibility.PRIVATE);
-        req.setStops(List.of());
+        CreateTripRequest req = new CreateTripRequest(
+                "Weekend Trip", null, null, TripVisibility.PRIVATE, List.of());
 
         Set<ConstraintViolation<CreateTripRequest>> violations = validator.validate(req);
 
@@ -59,19 +45,13 @@ public class CreateTripRequestValidationTest {
 
     @Test
     void validRequest_hasNoViolations() {
-        CreateTripRequest req = new CreateTripRequest();
-        req.setTitle("Weekend Trip");
-        req.setVisibility(TripVisibility.PRIVATE);
-        req.setStops(List.of(validStop()));
+        CreateTripRequest req = new CreateTripRequest(
+                "Weekend Trip", null, null, TripVisibility.PRIVATE, List.of(validStop()));
 
         assertThat(validator.validate(req)).isEmpty();
     }
 
     private CreateStopRequest validStop() {
-        CreateStopRequest stop = new CreateStopRequest();
-        stop.setName("Cottage");
-        stop.setLatitude(45.0);
-        stop.setLongitude(-79.9);
-        return stop;
+        return new CreateStopRequest("Cottage", 45.0, -79.9, null, null, null);
     }
 }

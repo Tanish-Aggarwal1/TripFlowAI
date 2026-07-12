@@ -1,47 +1,51 @@
 package com.tripflow.backend.mapper;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
-import com.tripflow.backend.beans.Trip;
-import com.tripflow.backend.beans.User;
-import com.tripflow.backend.beans.enums.TripStatus;
+import org.springframework.stereotype.Component;
+
+import com.tripflow.backend.domain.Trip;
+import com.tripflow.backend.domain.User;
+import com.tripflow.backend.domain.enums.TripStatus;
 import com.tripflow.backend.dto.CreateTripRequest;
+import com.tripflow.backend.dto.StopResponse;
 import com.tripflow.backend.dto.TripResponse;
 
-import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
 
-@NoArgsConstructor
+@Component
+@RequiredArgsConstructor
 public class TripMapper {
-	public static Trip toEntity(CreateTripRequest request, User owner) {
+	private final StopMapper stopMapper;
+
+    public Trip toEntity(CreateTripRequest request, User owner) {
         Trip trip = new Trip();
         trip.setUser(owner);
-        trip.setTitle(request.getTitle());
-        trip.setDescription(request.getDescription());
-        trip.setTags(request.getTags());
-        trip.setVisibility(request.getVisibility());
+        trip.setTitle(request.title());
+        trip.setDescription(request.description());
+        trip.setTags(request.tags());
+        trip.setVisibility(request.visibility());
         trip.setStatus(TripStatus.DRAFT);
         // id, routeGeometry intentionally NOT set from request — server-owned
         return trip;
     }
 
-    public static TripResponse toResponse(Trip trip) {
-        TripResponse response = new TripResponse();
-        response.setId(trip.getId());
-        response.setTitle(trip.getTitle());
-        response.setDescription(trip.getDescription());
-        response.setTags(trip.getTags());
-        response.setVisibility(trip.getVisibility());
-        response.setStatus(trip.getStatus());
-        response.setOwnerId(trip.getUser().getId());
-        response.setCreatedAt(trip.getCreatedAt());
-        response.setUpdatedAt(trip.getUpdatedAt());
+    public TripResponse toResponse(Trip trip) {
+        List<StopResponse> stopResponses = trip.getStops().stream()
+                .map(stopMapper::toResponse)
+                .toList();
 
-        List<com.tripflow.backend.dto.StopResponse> stopResponses = trip.getStops().stream()
-                .map(StopMapper::toResponse)
-                .collect(Collectors.toList());
-        response.setStops(stopResponses);
-
-        return response;
+        return new TripResponse(
+                trip.getId(),
+                trip.getTitle(),
+                trip.getDescription(),
+                trip.getTags(),
+                trip.getVisibility(),
+                trip.getStatus(),
+                trip.getUser().getId(),
+                stopResponses,
+                trip.getCreatedAt(),
+                trip.getUpdatedAt()
+        );
     }
 }

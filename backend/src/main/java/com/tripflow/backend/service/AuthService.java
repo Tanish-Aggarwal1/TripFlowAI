@@ -1,6 +1,6 @@
 package com.tripflow.backend.service;
 
-import com.tripflow.backend.beans.User;
+import com.tripflow.backend.domain.User;
 import com.tripflow.backend.dto.AuthResponse;
 import com.tripflow.backend.dto.LoginRequest;
 import com.tripflow.backend.dto.RegisterRequest;

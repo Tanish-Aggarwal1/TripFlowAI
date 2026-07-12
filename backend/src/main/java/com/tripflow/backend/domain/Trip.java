@@ -1,4 +1,4 @@
-package com.tripflow.backend.beans;
+package com.tripflow.backend.domain;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -6,8 +6,8 @@ import java.util.List;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
-import com.tripflow.backend.beans.enums.TripStatus;
-import com.tripflow.backend.beans.enums.TripVisibility;
+import com.tripflow.backend.domain.enums.TripStatus;
+import com.tripflow.backend.domain.enums.TripVisibility;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;

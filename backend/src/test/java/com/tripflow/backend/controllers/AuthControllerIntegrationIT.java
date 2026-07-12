@@ -16,7 +16,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.tripflow.backend.beans.User;
+import com.tripflow.backend.domain.User;
 import com.tripflow.backend.repository.UserRepository;
 import com.tripflow.backend.testsupport.PostgresTestcontainersConfiguration;
 

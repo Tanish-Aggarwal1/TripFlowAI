@@ -1,4 +1,4 @@
-package com.tripflow.backend.beans.enums;
+package com.tripflow.backend.domain.enums;
 
 public enum TripVisibility {
 	PUBLIC,
