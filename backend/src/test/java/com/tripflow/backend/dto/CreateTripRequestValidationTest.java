@@ -9,7 +9,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.tripflow.backend.beans.enums.TripVisibility;
+import com.tripflow.backend.domain.enums.TripVisibility;
 
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validation;

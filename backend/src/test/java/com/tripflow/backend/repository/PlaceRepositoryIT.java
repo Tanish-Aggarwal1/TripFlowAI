@@ -1,8 +1,7 @@
 package com.tripflow.backend.repository;
 
-import com.tripflow.backend.beans.Place;
-import com.tripflow.backend.config.JpaConfig;
-import com.tripflow.backend.testsupport.PostgresTestcontainersConfiguration;
+import static org.assertj.core.api.Assertions.assertThat;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
@@ -11,7 +10,9 @@ import org.springframework.boot.testcontainers.context.ImportTestcontainers;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import com.tripflow.backend.config.JpaConfig;
+import com.tripflow.backend.domain.Place;
+import com.tripflow.backend.testsupport.PostgresTestcontainersConfiguration;
 
 @DataJpaTest
 @Import(JpaConfig.class)

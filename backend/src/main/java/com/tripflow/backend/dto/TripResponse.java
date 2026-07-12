@@ -3,8 +3,8 @@ package com.tripflow.backend.dto;
 import java.time.Instant;
 import java.util.List;
 
-import com.tripflow.backend.beans.enums.TripStatus;
-import com.tripflow.backend.beans.enums.TripVisibility;
+import com.tripflow.backend.domain.enums.TripStatus;
+import com.tripflow.backend.domain.enums.TripVisibility;
 
 import lombok.Getter;
 import lombok.Setter;

@@ -1,4 +1,4 @@
-package com.tripflow.backend.beans;
+package com.tripflow.backend.domain;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -6,6 +6,8 @@ import java.util.HashSet;
 import java.util.Set;
 
 import org.junit.jupiter.api.Test;
+
+import com.tripflow.backend.domain.BaseEntity;
 
 class BaseEntityTest {
 

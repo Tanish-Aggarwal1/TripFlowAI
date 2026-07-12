@@ -3,8 +3,11 @@ package com.tripflow.backend.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -14,26 +17,23 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.tripflow.backend.beans.Trip;
-import com.tripflow.backend.beans.User;
-import com.tripflow.backend.beans.enums.TripVisibility;
+import com.tripflow.backend.domain.Place;
+import com.tripflow.backend.domain.Stop;
+import com.tripflow.backend.domain.Trip;
+import com.tripflow.backend.domain.User;
+import com.tripflow.backend.domain.enums.StopStatus;
+import com.tripflow.backend.domain.enums.TripVisibility;
 import com.tripflow.backend.dto.CreateStopRequest;
 import com.tripflow.backend.dto.CreateTripRequest;
+import com.tripflow.backend.dto.StopResponse;
 import com.tripflow.backend.dto.TripResponse;
+import com.tripflow.backend.dto.UpdateStopRequest;
+import com.tripflow.backend.dto.UpdateTripRequest;
 import com.tripflow.backend.exception.ForbiddenException;
 import com.tripflow.backend.exception.ResourceNotFoundException;
 import com.tripflow.backend.repository.PlaceRepository;
 import com.tripflow.backend.repository.TripRepository;
 import com.tripflow.backend.repository.UserRepository;
-import com.tripflow.backend.beans.Place;
-import com.tripflow.backend.beans.Stop;
-import com.tripflow.backend.beans.enums.StopStatus;
-import com.tripflow.backend.dto.StopResponse;
-import com.tripflow.backend.dto.UpdateStopRequest;
-import com.tripflow.backend.dto.UpdateTripRequest;
-import java.util.ArrayList;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.never;
 
 @ExtendWith(MockitoExtension.class)
 public class TripServiceTest {
@@ -58,7 +58,7 @@ public class TripServiceTest {
         when(placeRepository.findByNameAndLatitudeAndLongitude(any(), any(), any()))
                 .thenReturn(Optional.empty());
         when(placeRepository.save(any())).thenAnswer(inv -> {
-            var place = inv.getArgument(0, com.tripflow.backend.beans.Place.class);
+            var place = inv.getArgument(0, com.tripflow.backend.domain.Place.class);
             place.setId(10L);
             return place;
         });

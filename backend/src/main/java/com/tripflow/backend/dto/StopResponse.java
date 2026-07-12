@@ -1,6 +1,6 @@
 package com.tripflow.backend.dto;
 
-import com.tripflow.backend.beans.enums.StopStatus;
+import com.tripflow.backend.domain.enums.StopStatus;
 
 import lombok.Getter;
 import lombok.Setter;

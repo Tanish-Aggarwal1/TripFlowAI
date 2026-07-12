@@ -7,11 +7,11 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.tripflow.backend.beans.Place;
-import com.tripflow.backend.beans.Stop;
-import com.tripflow.backend.beans.Trip;
-import com.tripflow.backend.beans.User;
-import com.tripflow.backend.beans.enums.TripVisibility;
+import com.tripflow.backend.domain.Place;
+import com.tripflow.backend.domain.Stop;
+import com.tripflow.backend.domain.Trip;
+import com.tripflow.backend.domain.User;
+import com.tripflow.backend.domain.enums.TripVisibility;
 import com.tripflow.backend.dto.CreateStopRequest;
 import com.tripflow.backend.dto.CreateTripRequest;
 import com.tripflow.backend.dto.StopResponse;

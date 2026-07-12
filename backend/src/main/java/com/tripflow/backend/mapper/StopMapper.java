@@ -1,7 +1,7 @@
 package com.tripflow.backend.mapper;
 
-import com.tripflow.backend.beans.Place;
-import com.tripflow.backend.beans.Stop;
+import com.tripflow.backend.domain.Place;
+import com.tripflow.backend.domain.Stop;
 import com.tripflow.backend.dto.CreateStopRequest;
 import com.tripflow.backend.dto.StopResponse;
 

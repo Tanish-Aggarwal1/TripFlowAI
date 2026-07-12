@@ -1,4 +1,4 @@
-package com.tripflow.backend.beans;
+package com.tripflow.backend.domain;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

@@ -12,8 +12,8 @@ import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.context.ActiveProfiles;
 
-import com.tripflow.backend.beans.User;
 import com.tripflow.backend.config.JpaConfig;
+import com.tripflow.backend.domain.User;
 import com.tripflow.backend.testsupport.PostgresTestcontainersConfiguration;
 
 @DataJpaTest

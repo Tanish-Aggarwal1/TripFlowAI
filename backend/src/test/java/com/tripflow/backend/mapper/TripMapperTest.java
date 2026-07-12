@@ -6,10 +6,10 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
-import com.tripflow.backend.beans.Trip;
-import com.tripflow.backend.beans.User;
-import com.tripflow.backend.beans.enums.TripStatus;
-import com.tripflow.backend.beans.enums.TripVisibility;
+import com.tripflow.backend.domain.Trip;
+import com.tripflow.backend.domain.User;
+import com.tripflow.backend.domain.enums.TripStatus;
+import com.tripflow.backend.domain.enums.TripVisibility;
 import com.tripflow.backend.dto.CreateTripRequest;
 
 public class TripMapperTest {

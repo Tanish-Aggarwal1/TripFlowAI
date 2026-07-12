@@ -2,7 +2,7 @@ package com.tripflow.backend.dto;
 
 import java.util.List;
 
-import com.tripflow.backend.beans.enums.TripVisibility;
+import com.tripflow.backend.domain.enums.TripVisibility;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;

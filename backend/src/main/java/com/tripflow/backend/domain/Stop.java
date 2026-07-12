@@ -1,6 +1,6 @@
-package com.tripflow.backend.beans;
+package com.tripflow.backend.domain;
 
-import com.tripflow.backend.beans.enums.StopStatus;
+import com.tripflow.backend.domain.enums.StopStatus;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

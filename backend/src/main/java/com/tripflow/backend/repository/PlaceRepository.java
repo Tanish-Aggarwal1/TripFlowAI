@@ -4,7 +4,7 @@ import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import com.tripflow.backend.beans.Place;
+import com.tripflow.backend.domain.Place;
 
 public interface PlaceRepository extends JpaRepository<Place, Long> {
 	Optional<Place> findByExternalPlaceId(String externalPlaceId);

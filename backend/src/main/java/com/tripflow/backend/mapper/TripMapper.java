@@ -3,9 +3,9 @@ package com.tripflow.backend.mapper;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import com.tripflow.backend.beans.Trip;
-import com.tripflow.backend.beans.User;
-import com.tripflow.backend.beans.enums.TripStatus;
+import com.tripflow.backend.domain.Trip;
+import com.tripflow.backend.domain.User;
+import com.tripflow.backend.domain.enums.TripStatus;
 import com.tripflow.backend.dto.CreateTripRequest;
 import com.tripflow.backend.dto.TripResponse;
 
