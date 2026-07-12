@@ -7,8 +7,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.testcontainers.context.ImportTestcontainers;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
@@ -29,9 +29,9 @@ import com.tripflow.backend.testsupport.PostgresTestcontainersConfiguration;
  * Runs only under the {@code ci} Maven profile via Failsafe (see REF-05 / SCRUM-91).
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@ImportTestcontainers(PostgresTestcontainersConfiguration.class)
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-@Import(PostgresTestcontainersConfiguration.class)
 @Transactional
 public class AuthControllerIntegrationIT {
 
