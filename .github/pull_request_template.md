@@ -6,11 +6,12 @@
 <!-- Link: https://atanish6.atlassian.net/jira/software/projects/SCRUM/boards/1/backlog?selectedIssue=SCRUM-XX -->
 
 ## Type of Change
-- [ ] feat
-- [ ] fix
-- [ ] docs
+- [ ] feat (feature)
+- [ ] fix 
+- [ ] docs (documentation)
 - [ ] test
-- [ ] refactor
+- [ ] ref (refactor)
+- [ ] perf (performance)
 
 ## Breaking Change?
 - [ ] Yes — describe impact below
