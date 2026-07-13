@@ -26,7 +26,9 @@ import com.tripflow.backend.repository.TripRepository;
 import com.tripflow.backend.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class TripService {
@@ -59,8 +61,11 @@ public class TripService {
             stop.setTrip(trip);
             trip.getStops().add(stop);
         }
+        
+        Trip saved = tripRepository.save(trip);
+        log.info("Trip created id={} ownerId={} stops={}", saved.getId(), ownerId, saved.getStops().size());
 
-        return tripMapper.toResponse(tripRepository.save(trip));
+        return tripMapper.toResponse(saved);
     }
 
     @Transactional(readOnly = true)
@@ -70,6 +75,7 @@ public class TripService {
 
         boolean isOwner = trip.getUser().getId().equals(requesterId);
         if (trip.getVisibility() == TripVisibility.PRIVATE && !isOwner) {
+        	log.debug("Private trip access denied tripId={} requesterId={}", tripId, requesterId);
             throw new ForbiddenException("You do not have access to this trip");
         }
         return tripMapper.toResponse(trip);
@@ -94,13 +100,16 @@ public class TripService {
             trip.getStops().add(stop);
         }
 
-        return tripMapper.toResponse(tripRepository.save(trip));
+        Trip saved = tripRepository.save(trip);
+        log.info("Trip updated id={} ownerId={} stops={}", saved.getId(), requesterId, saved.getStops().size());
+        return tripMapper.toResponse(saved);
     }
 
     @Transactional
     public void deleteTrip(Long tripId, Long requesterId) {
         Trip trip = loadOwnedTrip(tripId, requesterId);
         tripRepository.delete(trip); // cascade + FK ON DELETE CASCADE remove stops; Places survive
+        log.info("Trip deleted id={} ownerId={}", tripId, requesterId);
     }
 
 
@@ -126,6 +135,7 @@ public class TripService {
         stop.setTrip(trip);
         trip.getStops().add(stop);
         tripRepository.save(trip);
+        log.info("Stop added tripId={} stopId={} order={}", tripId, stop.getId(), nextOrder);
         return stopMapper.toResponse(stop);
     }
 
@@ -142,6 +152,7 @@ public class TripService {
         }
 
         tripRepository.save(trip);
+        log.info("Stop updated tripId={} stopId={}", tripId, stopId);
         return stopMapper.toResponse(stop);
     }
 
@@ -152,6 +163,7 @@ public class TripService {
         trip.getStops().remove(stop); // orphanRemoval deletes the row; Place survives
         renumber(trip.getStops());
         tripRepository.save(trip);
+        log.info("Stop deleted tripId={} stopId={}", tripId, stopId);
     }
 
     // ---------- helpers ----------
@@ -160,6 +172,8 @@ public class TripService {
         Trip trip = tripRepository.findById(tripId)
                 .orElseThrow(() -> new ResourceNotFoundException("Trip not found: " + tripId));
         if (!trip.getUser().getId().equals(requesterId)) {
+        	log.debug("Trip ownership check failed tripId={} ownerId={} requesterId={}",
+                    tripId, trip.getUser().getId(), requesterId);
             throw new ForbiddenException("You do not have access to this trip");
         }
         return trip;

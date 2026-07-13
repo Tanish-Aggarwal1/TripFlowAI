@@ -1,5 +1,8 @@
 package com.tripflow.backend.service;
 
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+
 import com.tripflow.backend.domain.User;
 import com.tripflow.backend.dto.AuthResponse;
 import com.tripflow.backend.dto.LoginRequest;
@@ -10,13 +13,12 @@ import com.tripflow.backend.exception.InvalidCredentialsException;
 import com.tripflow.backend.repository.UserRepository;
 import com.tripflow.backend.security.JwtService;
 
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-
+@Slf4j
 @Service
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class AuthService {
 
     private final UserRepository userRepository;
@@ -43,6 +45,7 @@ public class AuthService {
         user.setPasswordHash(passwordEncoder.encode(request.password()));
         userRepository.save(user);
 
+        log.info("User registered id={} username={}", user.getId(), user.getUsername());
         return buildAuthResponse(user);
     }
 
@@ -54,6 +57,7 @@ public class AuthService {
             throw new InvalidCredentialsException();
         }
 
+        log.info("User logged in id={} username={}", user.getId(), user.getUsername());
         return buildAuthResponse(user);
     }
 
