@@ -55,6 +55,12 @@ public class GlobalExceptionHandler {
 		log.error("500 Internal Server Error on {}: {}", req.getRequestURI(), ex.getMessage(), ex);
 	    return error(HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected error", req, null);
 	}
+	
+	@ExceptionHandler(OrsClientException.class)
+	public ResponseEntity<ApiError> handleOrsFailure(OrsClientException ex, HttpServletRequest req) {
+	    log.error("502 Bad Gateway on {}: {}", req.getRequestURI(), ex.getMessage(), ex);
+	    return error(HttpStatus.BAD_GATEWAY, "Route service is temporarily unavailable", req, null);
+	}
 
     private ResponseEntity<ApiError> error(HttpStatus status, String message, HttpServletRequest req,
             List<ApiError.FieldError> fieldErrors) {

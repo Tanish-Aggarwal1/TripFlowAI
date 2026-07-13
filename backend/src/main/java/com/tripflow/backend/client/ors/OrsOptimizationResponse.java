@@ -9,7 +9,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
  * steps[].type: "start" | "job" | "end"; steps[].job holds the job id for type "job".
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
-public record OrsOptimizationResponse() {
+public record OrsOptimizationResponse(Integer code, Summary summary, List<Route> routes) {
 
 	@JsonIgnoreProperties(ignoreUnknown = true)
     public record Summary(Double cost, Double duration) {}

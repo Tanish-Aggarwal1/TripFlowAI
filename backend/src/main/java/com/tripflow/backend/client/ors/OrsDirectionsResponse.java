@@ -9,7 +9,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
  * Only the fields we consume are mapped.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
-public record OrsDirectionsResponse() {
+public record OrsDirectionsResponse(List<Feature> features) {
 
 	@JsonIgnoreProperties(ignoreUnknown = true)
     public record Feature(Geometry geometry, Properties properties) {}
