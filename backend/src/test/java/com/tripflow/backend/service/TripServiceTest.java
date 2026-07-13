@@ -93,7 +93,7 @@ public class TripServiceTest {
         trip.setUser(owner);
         trip.setVisibility(TripVisibility.PRIVATE);
 
-        when(tripRepository.findById(50L)).thenReturn(Optional.of(trip));
+        when(tripRepository.findWithStopsById(50L)).thenReturn(Optional.of(trip));
 
         assertThatThrownBy(() -> tripService.getTrip(50L, 2L))
                 .isInstanceOf(ForbiddenException.class);
@@ -101,7 +101,7 @@ public class TripServiceTest {
 
     @Test
     void getTrip_missingTrip_throwsNotFound() {
-        when(tripRepository.findById(999L)).thenReturn(Optional.empty());
+        when(tripRepository.findWithStopsById(999L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> tripService.getTrip(999L, 1L))
                 .isInstanceOf(ResourceNotFoundException.class);
@@ -120,7 +120,7 @@ public class TripServiceTest {
         trip.setTitle("My Trip");
         trip.setStops(List.of());
 
-        when(tripRepository.findById(50L)).thenReturn(Optional.of(trip));
+        when(tripRepository.findWithStopsById(50L)).thenReturn(Optional.of(trip));
 
         TripResponse response = tripService.getTrip(50L, 1L);
 
@@ -168,7 +168,7 @@ public class TripServiceTest {
         trip.setVisibility(TripVisibility.PRIVATE);
         trip.setStops(new ArrayList<>());
 
-        when(tripRepository.findById(50L)).thenReturn(Optional.of(trip));
+        when(tripRepository.findWithStopsById(50L)).thenReturn(Optional.of(trip));
         when(placeRepository.findByNameAndLatitudeAndLongitude(any(), any(), any()))
                 .thenReturn(Optional.empty());
         when(placeRepository.save(any())).thenAnswer(inv -> {
@@ -201,7 +201,7 @@ public class TripServiceTest {
         trip.setUser(owner);
         trip.setStops(new ArrayList<>());
 
-        when(tripRepository.findById(50L)).thenReturn(Optional.of(trip));
+        when(tripRepository.findWithStopsById(50L)).thenReturn(Optional.of(trip));
 
         UpdateTripRequest request = new UpdateTripRequest(
                 "Hijacked", null, null, TripVisibility.PRIVATE, List.of());
@@ -214,7 +214,7 @@ public class TripServiceTest {
 
     @Test
     void updateTrip_missingTrip_throwsNotFound() {
-        when(tripRepository.findById(999L)).thenReturn(Optional.empty());
+        when(tripRepository.findWithStopsById(999L)).thenReturn(Optional.empty());
 
         UpdateTripRequest request = new UpdateTripRequest(
                 "X", null, null, TripVisibility.PRIVATE, List.of());
@@ -234,7 +234,7 @@ public class TripServiceTest {
         trip.setId(50L);
         trip.setUser(owner);
 
-        when(tripRepository.findById(50L)).thenReturn(Optional.of(trip));
+        when(tripRepository.findWithStopsById(50L)).thenReturn(Optional.of(trip));
 
         tripService.deleteTrip(50L, 1L);
 
@@ -250,7 +250,7 @@ public class TripServiceTest {
         trip.setId(50L);
         trip.setUser(owner);
 
-        when(tripRepository.findById(50L)).thenReturn(Optional.of(trip));
+        when(tripRepository.findWithStopsById(50L)).thenReturn(Optional.of(trip));
 
         assertThatThrownBy(() -> tripService.deleteTrip(50L, 2L))
                 .isInstanceOf(ForbiddenException.class);
@@ -274,7 +274,7 @@ public class TripServiceTest {
         trip.setUser(owner);
         trip.setStops(new ArrayList<>(List.of(existing)));
 
-        when(tripRepository.findById(50L)).thenReturn(Optional.of(trip));
+        when(tripRepository.findWithStopsById(50L)).thenReturn(Optional.of(trip));
         when(placeRepository.findByNameAndLatitudeAndLongitude(any(), any(), any()))
                 .thenReturn(Optional.empty());
         when(placeRepository.save(any())).thenAnswer(inv -> {
@@ -314,7 +314,7 @@ public class TripServiceTest {
         trip.setStops(new ArrayList<>(List.of(stop)));
         stop.setTrip(trip);
 
-        when(tripRepository.findById(50L)).thenReturn(Optional.of(trip));
+        when(tripRepository.findWithStopsById(50L)).thenReturn(Optional.of(trip));
         when(placeRepository.findByNameAndLatitudeAndLongitude(any(), any(), any()))
                 .thenReturn(Optional.empty());
         when(placeRepository.save(any())).thenAnswer(inv -> {
@@ -344,7 +344,7 @@ public class TripServiceTest {
         trip.setUser(owner);
         trip.setStops(new ArrayList<>());
 
-        when(tripRepository.findById(50L)).thenReturn(Optional.of(trip));
+        when(tripRepository.findWithStopsById(50L)).thenReturn(Optional.of(trip));
 
         UpdateStopRequest request = new UpdateStopRequest(
                 "X", 1.0, 2.0, null, null, null, null);
@@ -375,7 +375,7 @@ public class TripServiceTest {
         trip.setUser(owner);
         trip.setStops(new ArrayList<>(List.of(stop0, stop1, stop2)));
 
-        when(tripRepository.findById(50L)).thenReturn(Optional.of(trip));
+        when(tripRepository.findWithStopsById(50L)).thenReturn(Optional.of(trip));
         when(tripRepository.save(any())).thenAnswer(inv -> inv.getArgument(0, Trip.class));
 
         tripService.deleteStop(50L, 2L, 1L); // remove the middle stop
@@ -401,7 +401,7 @@ public class TripServiceTest {
         trip.setUser(owner);
         trip.setStops(new ArrayList<>(List.of(stop)));
 
-        when(tripRepository.findById(50L)).thenReturn(Optional.of(trip));
+        when(tripRepository.findWithStopsById(50L)).thenReturn(Optional.of(trip));
 
         assertThatThrownBy(() -> tripService.deleteStop(50L, 1L, 2L))
                 .isInstanceOf(ForbiddenException.class);

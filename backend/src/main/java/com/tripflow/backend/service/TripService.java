@@ -70,7 +70,7 @@ public class TripService {
 
     @Transactional(readOnly = true)
     public TripResponse getTrip(Long tripId, Long requesterId) {
-        Trip trip = tripRepository.findById(tripId)
+        Trip trip = tripRepository.findWithStopsById(tripId)
                 .orElseThrow(() -> new ResourceNotFoundException("Trip not found: " + tripId));
 
         boolean isOwner = trip.getUser().getId().equals(requesterId);
@@ -169,7 +169,7 @@ public class TripService {
     // ---------- helpers ----------
 
     private Trip loadOwnedTrip(Long tripId, Long requesterId) {
-        Trip trip = tripRepository.findById(tripId)
+        Trip trip = tripRepository.findWithStopsById(tripId)
                 .orElseThrow(() -> new ResourceNotFoundException("Trip not found: " + tripId));
         if (!trip.getUser().getId().equals(requesterId)) {
         	log.debug("Trip ownership check failed tripId={} ownerId={} requesterId={}",
