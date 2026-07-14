@@ -20,14 +20,14 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/trips/dashboard/dashboard.page').then(m => m.DashboardPage),
     canActivate: [authGuard]
   },
-  // {
-  //   path: 'trips/new',
-  //   loadComponent: () => import('./pages/trips/trip-edit/trip-edit.page').then(m => m.TripEditPage),
-  //   canActivate: [authGuard]
-  // },
-  // {
-  //   path: 'trips/:id/edit',
-  //   loadComponent: () => import('./pages/trips/trip-edit/trip-edit.page').then(m => m.TripEditPage),
-  //   canActivate: [authGuard]
-  // },
+  {
+    path: 'trips/new',
+    loadComponent: () => import('./pages/trips/trip-edit/trip-edit.page').then(m => m.TripEditPage),
+    canActivate: [authGuard]
+  },
+  {
+    path: 'trips/:id/edit',
+    loadComponent: () => import('./pages/trips/trip-edit/trip-edit.page').then(m => m.TripEditPage),
+    canActivate: [authGuard]
+  },
 ];

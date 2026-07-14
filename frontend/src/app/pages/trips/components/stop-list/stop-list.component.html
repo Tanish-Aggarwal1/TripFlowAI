@@ -1,0 +1,66 @@
+<ion-reorder-group (ionItemReorder)="handleReorder($event)" [disabled]="false">
+  @for (stop of stops; track stop.name; let i = $index) {
+    <ion-item>
+      <ion-reorder slot="start"></ion-reorder>
+
+      <ion-label>
+        <h3>{{ i + 1 }}. {{ stop.name }}</h3>
+        @if (stop.address) {
+          <p>{{ stop.address }}</p>
+        }
+        <p>{{ stop.latitude }}, {{ stop.longitude }}</p>
+        @if (stop.notes) {
+          <p class="notes">{{ stop.notes }}</p>
+        }
+      </ion-label>
+
+      <ion-button slot="end" fill="clear" color="danger" (click)="removeStop(i)">
+        <ion-icon slot="icon-only" name="trash"></ion-icon>
+      </ion-button>
+    </ion-item>
+  }
+</ion-reorder-group>
+
+@if (stops.length === 0) {
+  <div class="empty">
+    <p>No stops yet. Add one below.</p>
+  </div>
+}
+
+<div class="add-form">
+  <h4>Add a Stop</h4>
+
+  <ion-item>
+    <ion-label position="stacked">Name *</ion-label>
+    <ion-input [(ngModel)]="newName" placeholder="e.g. CN Tower"></ion-input>
+  </ion-item>
+
+  <ion-item>
+    <ion-label position="stacked">Latitude *</ion-label>
+    <ion-input [(ngModel)]="newLat" type="number" placeholder="e.g. 43.6426"></ion-input>
+  </ion-item>
+
+  <ion-item>
+    <ion-label position="stacked">Longitude *</ion-label>
+    <ion-input [(ngModel)]="newLng" type="number" placeholder="e.g. -79.3871"></ion-input>
+  </ion-item>
+
+  <ion-item>
+    <ion-label position="stacked">Address</ion-label>
+    <ion-input [(ngModel)]="newAddress" placeholder="Optional"></ion-input>
+  </ion-item>
+
+  <ion-item>
+    <ion-label position="stacked">Notes</ion-label>
+    <ion-input [(ngModel)]="newNotes" placeholder="Optional"></ion-input>
+  </ion-item>
+
+  @if (formError) {
+    <p class="form-error">{{ formError }}</p>
+  }
+
+  <ion-button expand="block" fill="outline" class="ion-margin-top" (click)="addStop()">
+    <ion-icon slot="start" name="add"></ion-icon>
+    Add Stop
+  </ion-button>
+</div>
