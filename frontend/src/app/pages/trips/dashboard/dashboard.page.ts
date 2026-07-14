@@ -1,10 +1,11 @@
-import { Component, OnInit } from '@angular/core';
+import { Component } from '@angular/core';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import {
   IonHeader, IonToolbar, IonTitle, IonContent, IonButton,
   IonList, IonItem, IonLabel, IonBadge, IonIcon,
-  IonFab, IonFabButton, IonSpinner, AlertController
+  IonFab, IonFabButton, IonSpinner, AlertController,
+  ViewWillEnter
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import { add, lockClosed, globeOutline, trash } from 'ionicons/icons';
@@ -22,7 +23,7 @@ import { TripResponse } from '../../../core/models/trip.model';
     IonFab, IonFabButton, IonSpinner,
   ],
 })
-export class DashboardPage implements OnInit {
+export class DashboardPage implements ViewWillEnter  {
   trips: TripResponse[] = [];
   loading = true;
   error: string | null = null;
@@ -35,7 +36,7 @@ export class DashboardPage implements OnInit {
     addIcons({ add, lockClosed, globeOutline, trash });
   }
 
-  ngOnInit(): void {
+  ionViewWillEnter(): void {
     this.loadTrips();
   }
 
