@@ -1,0 +1,64 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-title>My Trips</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="center">
+    <ion-spinner name="crescent" />
+  </div>
+
+  <!-- Error -->
+  <div *ngIf="!loading && error" class="center error">
+    <p>{{ error }}</p>
+    <ion-button fill="outline" (click)="loadTrips()">Retry</ion-button>
+  </div>
+
+  <!-- Empty state -->
+  <div *ngIf="!loading && !error && trips.length === 0" class="center">
+    <p>No trips yet. Tap + to create your first trip!</p>
+  </div>
+
+  <!-- Trip list -->
+  <ion-list *ngIf="!loading && !error && trips.length > 0">
+    <ion-item
+      *ngFor="let trip of trips"
+      button
+      detail
+      (click)="openTrip(trip)">
+      <ion-label>
+        <h2>{{ trip.title }}</h2>
+        <p>{{ trip.stops.length }} stop{{ trip.stops.length !== 1 ? 's' : '' }}</p>
+      </ion-label>
+
+      <ion-badge slot="end" [color]="statusColor(trip.status)">
+        {{ trip.status }}
+      </ion-badge>
+
+      <ion-icon
+        slot="end"
+        [name]="trip.visibility === 'PUBLIC' ? 'globe-outline' : 'lock-closed'"
+        class="visibility-icon">
+      </ion-icon>
+
+      <ion-button
+        slot="end"
+        fill="clear"
+        color="danger"
+        (click)="confirmDelete(trip, $event)">
+        <ion-icon slot="icon-only" name="trash"></ion-icon>
+      </ion-button>
+    </ion-item>
+  </ion-list>
+
+  <!-- FAB create button -->
+  <ion-fab vertical="bottom" horizontal="end" slot="fixed">
+    <ion-fab-button (click)="createTrip()">
+      <ion-icon name="add"></ion-icon>
+    </ion-fab-button>
+  </ion-fab>
+
+</ion-content>

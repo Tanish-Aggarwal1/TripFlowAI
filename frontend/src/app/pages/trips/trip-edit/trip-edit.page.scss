@@ -1,0 +1,22 @@
+.center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 60%;
+}
+
+.error-banner {
+  background: var(--ion-color-danger-tint);
+  color: var(--ion-color-danger-contrast);
+  padding: 10px 16px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  font-size: 14px;
+}
+
+.section-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 20px 0 8px 4px;
+  color: var(--ion-color-dark);
+}

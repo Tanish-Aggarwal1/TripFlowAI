@@ -1,0 +1,83 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-buttons slot="start">
+      <ion-button (click)="confirmBack()">
+        <ion-icon slot="icon-only" name="arrow-back"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>{{ isEditMode ? 'Edit Trip' : 'New Trip' }}</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="save()" [disabled]="saving">
+        <ion-icon slot="icon-only" name="save"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+
+  @if (loading) {
+    <div class="center">
+      <ion-spinner name="crescent" />
+    </div>
+  }
+
+  @if (!loading) {
+    <div>
+
+      @if (error) {
+        <div class="error-banner">{{ error }}</div>
+      }
+
+      <ion-item>
+        <ion-label position="stacked">Title *</ion-label>
+        <ion-input
+          [(ngModel)]="title"
+          placeholder="e.g. Weekend in Muskoka"
+          maxlength="150">
+        </ion-input>
+      </ion-item>
+
+      <ion-item>
+        <ion-label position="stacked">Description</ion-label>
+        <ion-textarea
+          [(ngModel)]="description"
+          placeholder="Optional description"
+          rows="3">
+        </ion-textarea>
+      </ion-item>
+
+      <ion-item>
+        <ion-label position="stacked">Tags (comma separated)</ion-label>
+        <ion-input
+          [(ngModel)]="tagsInput"
+          placeholder="e.g. road trip, family, ontario">
+        </ion-input>
+      </ion-item>
+
+      <ion-item>
+        <ion-label>Visibility</ion-label>
+        <ion-select [(ngModel)]="visibility">
+          <ion-select-option value="PRIVATE">Private</ion-select-option>
+          <ion-select-option value="PUBLIC">Public</ion-select-option>
+        </ion-select>
+      </ion-item>
+
+      <h3 class="section-title">Stops</h3>
+      <app-stop-list
+        [stops]="stops"
+        (stopsChanged)="onStopsChanged($event)">
+      </app-stop-list>
+
+      <ion-button
+        expand="block"
+        class="ion-margin-top"
+        (click)="save()"
+        [disabled]="saving">
+        {{ saving ? 'Saving...' : (isEditMode ? 'Update Trip' : 'Create Trip') }}
+      </ion-button>
+
+    </div>
+  }
+
+</ion-content>
