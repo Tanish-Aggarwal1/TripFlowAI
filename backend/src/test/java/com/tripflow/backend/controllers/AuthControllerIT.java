@@ -33,7 +33,7 @@ import com.tripflow.backend.testsupport.PostgresTestcontainersConfiguration;
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Transactional
-public class AuthControllerIntegrationIT {
+public class AuthControllerIT {
 
 	@Autowired
 	private MockMvc mockMvc;
