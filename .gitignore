@@ -3,6 +3,7 @@ backend/target/
 backend/*.jar
 backend/*.war
 backend/.mvn/wrapper/maven-wrapper.jar
+backend/bin/
 
 # === Frontend (Ionic / Angular / Node) ===
 frontend/node_modules/
