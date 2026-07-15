@@ -9,7 +9,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class JwtServiceTest {
-
+	
 	private static final String SECRET =
 			"test-jwt-secret-must-be-at-least-256-bits-long-for-hmac-sha256";
 	private static final long EXPIRY_MS = 3_600_000L;
