@@ -3,6 +3,7 @@ package com.tripflow.backend.controllers;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -217,4 +218,40 @@ public class AuthControllerIT {
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.username").value("joann"));
 	}
+	
+	// ---------- real JWT end-to-end path ----------
+
+		@Test
+		void registeredToken_grantsAccessToProtectedEndpoint() throws Exception {
+			String response = mockMvc.perform(post("/api/auth/register")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(registerJson("pratham", "pratham@tripflow.com", "password123")))
+					.andExpect(status().isCreated())
+					.andReturn().getResponse().getContentAsString();
+
+			String token = objectMapper.readTree(response).get("token").asText();
+
+			mockMvc.perform(get("/api/trips")
+					.header("Authorization", "Bearer " + token))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$").isArray())
+					.andExpect(jsonPath("$").isEmpty());
+		}
+
+		@Test
+		void loggedInToken_grantsAccessToProtectedEndpoint() throws Exception {
+			persistUser("neel", "neel@tripflow.com", "password123");
+
+			String response = mockMvc.perform(post("/api/auth/login")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(loginJson("neel@tripflow.com", "password123")))
+					.andExpect(status().isOk())
+					.andReturn().getResponse().getContentAsString();
+
+			String token = objectMapper.readTree(response).get("token").asText();
+
+			mockMvc.perform(get("/api/trips")
+					.header("Authorization", "Bearer " + token))
+					.andExpect(status().isOk());
+		}
 }
