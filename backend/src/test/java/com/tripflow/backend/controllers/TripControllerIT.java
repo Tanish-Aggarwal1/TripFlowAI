@@ -37,7 +37,8 @@ import com.tripflow.backend.testsupport.PostgresTestcontainersConfiguration;
 @AutoConfigureMockMvc
 @Transactional
 class TripControllerIT {
-	
+	@Autowired
+	private com.tripflow.backend.security.JwtService jwtService;
 	@Autowired
 	private MockMvc mockMvc;
 
@@ -144,5 +145,50 @@ class TripControllerIT {
 				.andExpect(status().isNoContent());
 
 		mockMvc.perform(get("/api/trips/" + tripId).with(csrf()).with(user(userId))).andExpect(status().isNotFound());
+	}
+	@Test
+	void getTrip_nonExistentId_returns404() throws Exception {
+		String userId = createTestUser("getnotfound");
+
+		mockMvc.perform(get("/api/trips/999999").with(csrf()).with(user(userId)))
+				.andExpect(status().isNotFound());
+	}
+
+	@Test
+	void deleteTrip_nonOwner_returns403() throws Exception {
+		String ownerId = createTestUser("delowner");
+		String otherId = createTestUser("delother");
+
+		Long tripId = createTrip(ownerId, sampleTripRequest("Not Yours", TripVisibility.PRIVATE));
+
+		mockMvc.perform(delete("/api/trips/" + tripId).with(csrf()).with(user(otherId)))
+				.andExpect(status().isForbidden());
+	}
+
+	@Test
+	void listTrips_noAuthentication_rejectedByDefaultEntryPoint() throws Exception {
+		// NOTE: SecurityConfig has no custom AuthenticationEntryPoint yet (REF-11 is still open).
+		// Spring Security's default Http403ForbiddenEntryPoint returns 403 for unauthenticated
+		// requests to a protected route in this config. Once REF-11 lands and registers a real
+		// 401 entry point, change this assertion to status().isUnauthorized() — don't leave both
+		// passing silently.
+		mockMvc.perform(get("/api/trips").with(csrf()))
+				.andExpect(status().isForbidden());
+	}
+
+	@Test
+	void createTrip_withRealJwt_authenticatesThroughFilterAndPersists() throws Exception {
+		String userId = createTestUser("realjwt");
+		String token = jwtService.generateToken(Long.parseLong(userId), "realjwt@example.com");
+
+		CreateTripRequest tripRequest = sampleTripRequest("Real JWT Trip", TripVisibility.PRIVATE);
+
+		mockMvc.perform(post("/api/trips")
+						.with(csrf())
+						.contentType(MediaType.APPLICATION_JSON)
+						.header("Authorization", "Bearer " + token)
+						.content(objectMapper.writeValueAsString(tripRequest)))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.title").value("Real JWT Trip"));
 	}
 }
