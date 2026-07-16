@@ -1,0 +1,31 @@
+name: PR Title Check
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+    branches: [main]
+
+permissions:
+  pull-requests: read
+
+jobs:
+  check-title:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate PR title format
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = context.payload.pull_request.title;
+            const pattern = /^\[SCRUM-\d+\] (feat|fix|docs|test|ref|refactor|perf|chore|ci|build|style)(\([a-z0-9.\-]+\))?: .+$/;
+
+            if (!pattern.test(title)) {
+              core.setFailed(
+                `PR title "${title}" doesn't match the required format.\n\n` +
+                `Expected: [SCRUM-XXX] type(scope): message\n` +
+                `Example:  [SCRUM-182] ci(conventions): enforce PR title format\n\n` +
+                `Allowed types: feat, fix, docs, test, ref, refactor, perf, chore, ci, build, style`
+              );
+            } else {
+              core.info(`PR title "${title}" is valid.`);
+            }
