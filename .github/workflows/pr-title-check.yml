@@ -12,7 +12,17 @@ jobs:
   check-title:
     runs-on: ubuntu-latest
     steps:
+      # Automated dependency bumps (Dependabot) aren't tied to a Jira ticket,
+      # so they're exempt from the [SCRUM-XXX] tag requirement below.
+      # This step (not a job-level `if:`) so the job always runs and reports
+      # a status — a job skipped via job-level `if:` can leave a required
+      # check permanently "waiting" instead of passing.
+      - name: Skip title validation for automated bots
+        if: github.actor == 'dependabot[bot]' || github.actor == 'github-actions[bot]'
+        run: echo "Skipping PR title format check for ${{ github.actor }} — automated PRs aren't tied to a Jira ticket."
+
       - name: Validate PR title format
+        if: github.actor != 'dependabot[bot]' && github.actor != 'github-actions[bot]'
         uses: actions/github-script@v7
         with:
           script: |
