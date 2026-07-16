@@ -38,6 +38,18 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
+            // CSRF protection intentionally disabled: this API is stateless (JWT
+            // bearer-token auth via the Authorization header only, see
+            // SessionCreationPolicy.STATELESS below). No cookie-based session
+            // state exists anywhere in this app, so CSRF -- which relies on
+            // browsers auto-attaching cookies cross-origin -- is not an
+            // applicable attack vector here. This is Spring Security's own
+            // recommended configuration for stateless, non-browser-session APIs.
+            // See: https://docs.spring.io/spring-security/reference/servlet/exploits/csrf.html
+            // Flagged by CodeQL (java/spring-disabled-csrf-protection) and
+            // dismissed as a false positive for this reason -- revisit only if
+            // cookie-based auth is ever introduced (SSR, admin console, webhook
+            // callback needing cookie state).
             .csrf(AbstractHttpConfigurer::disable)
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
