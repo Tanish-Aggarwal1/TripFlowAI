@@ -4,6 +4,21 @@
 # Backend
 /backend/               @Tanish-Aggarwal1 @Coding-Pratham
 
+# Fine-grained backend ownership (overrides the broad /backend/ rule above
+# for these paths only — CODEOWNERS uses last-match-wins)
+
+# DTOs and mappers: Neel is required reviewer on any API/contract shape change
+backend/src/main/java/**/dto/**              @NeelLogic
+backend/src/main/java/**/mapper/**           @NeelLogic
+
+# Security package + SecurityConfig: Pratham is standing reviewer
+backend/src/main/java/**/security/**         @Coding-Pratham
+backend/src/main/java/**/config/SecurityConfig.java @Coding-Pratham
+
+# Auth-named files span controller/service/dto and need both the contract
+# reviewer (Neel) and the auth owner (Pratham)
+backend/src/main/java/**/*Auth*.java         @NeelLogic @Coding-Pratham
+
 # Frontend
 /frontend/               @NeelLogic
 
@@ -11,4 +26,4 @@
 /.github/                @JoannMonteiro
 
 # Documentation
-/docs/                   @Tanish-Aggarwal1
+/docs/                   @Tanish-Aggarwal1 @JoannMonteiro
