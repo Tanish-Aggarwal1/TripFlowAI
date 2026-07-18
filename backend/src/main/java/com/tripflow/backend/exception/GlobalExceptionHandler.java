@@ -50,11 +50,11 @@ public class GlobalExceptionHandler {
         return error(HttpStatus.UNAUTHORIZED, "Invalid email or password", req, null);
 	}
 
-	@ExceptionHandler(IllegalStateException.class)
-    public ResponseEntity<ApiError> handleIllegalState(IllegalStateException ex, HttpServletRequest req) {
-        log.warn("422 Unprocessable Entity on {}: {}", req.getRequestURI(), ex.getMessage());
-        return error(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage(), req, null);
-    }
+	@ExceptionHandler(InsufficientStopsException.class)
+	public ResponseEntity<ApiError> handleInsufficientStops(InsufficientStopsException ex, HttpServletRequest req) {
+		log.warn("422 Unprocessable Entity on {}: {}", req.getRequestURI(), ex.getMessage());
+		return error(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage(), req, null);
+	}
 	
 	@ExceptionHandler(Exception.class)
 	public ResponseEntity<ApiError> handleGeneric(Exception ex, HttpServletRequest req) {

@@ -23,6 +23,7 @@ import com.tripflow.backend.domain.Stop;
 import com.tripflow.backend.domain.Trip;
 import com.tripflow.backend.dto.TripResponse;
 import com.tripflow.backend.exception.ForbiddenException;
+import com.tripflow.backend.exception.InsufficientStopsException;
 import com.tripflow.backend.exception.ResourceNotFoundException;
 import com.tripflow.backend.mapper.TripMapper;
 import com.tripflow.backend.repository.TripRepository;
@@ -78,7 +79,7 @@ public class RouteOptimizationService {
 	        List<Stop> stops = trip.getStops();
 	 
 	        if (stops.size() < 2) {
-	            throw new IllegalStateException(
+	            throw new InsufficientStopsException(
 	                    "Trip must have at least 2 stops to optimize (tripId=" + tripId + ")");
 	        }
 	 

@@ -35,6 +35,7 @@ import com.tripflow.backend.domain.enums.TripStatus;
 import com.tripflow.backend.domain.enums.TripVisibility;
 import com.tripflow.backend.dto.TripResponse;
 import com.tripflow.backend.exception.ForbiddenException;
+import com.tripflow.backend.exception.InsufficientStopsException;
 import com.tripflow.backend.exception.ResourceNotFoundException;
 import com.tripflow.backend.mapper.StopMapper;
 import com.tripflow.backend.mapper.TripMapper;
@@ -285,14 +286,14 @@ class RouteOptimizationServiceTest {
         }
 
         @Test
-        void optimize_singleStop_throwsIllegalStateException() {
+        void optimize_singleStop_throwsInsufficientStopsException() {
             Trip trip = tripWith3Stops();
             // Keep only one stop
             trip.getStops().subList(1, 3).clear();
             given(tripRepository.findWithStopsById(TRIP_ID)).willReturn(Optional.of(trip));
 
             assertThatThrownBy(() -> service.optimize(TRIP_ID, OWNER_ID))
-                    .isInstanceOf(IllegalStateException.class)
+                    .isInstanceOf(InsufficientStopsException.class)
                     .hasMessageContaining("at least 2 stops");
 
             verify(orsClient, never()).optimize(any());
