@@ -60,7 +60,7 @@ public class RouteOptimizationService {
 	    private final TripRepository tripRepository;
 	    private final OrsClient orsClient;
 	    private final TripMapper tripMapper;
-	    private final ObjectMapper objectMapper;
+	    private final ObjectMapper objectMapper = new ObjectMapper();
 	 
 	    /**
 	     * Optimize a trip's stop order and persist the result.
