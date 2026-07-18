@@ -45,7 +45,7 @@ class RouteOptimizationServiceTest {
 
     @Mock private TripRepository tripRepository;
     @Mock private OrsClient orsClient;
-    @Spy  private ObjectMapper objectMapper = new ObjectMapper();
+    @Spy  private ObjectMapper objectMapper;
 
     private TripMapper tripMapper;
 
@@ -60,7 +60,7 @@ class RouteOptimizationServiceTest {
         // Real mapper (no mock) so we can assert the full TripResponse shape
         tripMapper = new TripMapper(new StopMapper());
         service = new RouteOptimizationService(
-                tripRepository, orsClient, tripMapper);
+                tripRepository, orsClient, tripMapper, objectMapper);
     }
 
     // ── test data builders ───────────────────────────────────────────────────
