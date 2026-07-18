@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.tripflow.backend.dto.CreateTripRequest;
 import com.tripflow.backend.dto.TripResponse;
 import com.tripflow.backend.dto.UpdateTripRequest;
+import com.tripflow.backend.service.RouteOptimizationService;
 import com.tripflow.backend.service.TripService;
 import com.tripflow.backend.util.AuthUtils;
 
@@ -29,7 +30,9 @@ import lombok.AllArgsConstructor;
 public class TripController {
 
     private final TripService tripService;
+    private final RouteOptimizationService routeOptimizationService;
 
+    
     @GetMapping
     public ResponseEntity<List<TripResponse>> listTrips(Authentication authentication) {
         Long requesterId = AuthUtils.currentUserId(authentication);
@@ -66,5 +69,12 @@ public class TripController {
         Long requesterId = AuthUtils.currentUserId(authentication);
         tripService.deleteTrip(id, requesterId);
         return ResponseEntity.noContent().build();
+    }
+    
+    @PostMapping("/{id}/optimize")
+    public ResponseEntity<TripResponse> optimizeTrip(
+            @PathVariable Long id, Authentication authentication) {
+        Long requesterId = AuthUtils.currentUserId(authentication);
+        return ResponseEntity.ok(routeOptimizationService.optimize(id, requesterId));
     }
 }
