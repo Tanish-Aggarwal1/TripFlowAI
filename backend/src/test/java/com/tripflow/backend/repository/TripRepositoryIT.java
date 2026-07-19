@@ -109,16 +109,15 @@ class TripRepositoryIT {
 
 		long statementCount = stats.getPrepareStatementCount();
 
-		// TEMP: no Docker available locally on any team machine, so this can only be
-		// measured via CI. Printed here for the first CI run — check the Actions log,
-		// then replace this println + the loose upper bound below with an exact
-		// isEqualTo(<measured value>) and a dated comment, per SCRUM-196's AC.
-		System.out.println("MEASURED findWithStopsById statement count: " + statementCount);
-
+		// Measured 2026-07-19 via CI (no Docker available locally on any team machine):
+		// findWithStopsById issues exactly 1 SQL statement for a 10-stop trip — Hibernate
+		// resolves the @EntityGraph("stops", "stops.place") as a single query with JOINs
+		// across trips -> stops -> places, not the naive 1-per-stop N+1 pattern SCRUM-108
+		// was fixing. If this number ever regresses upward, the entity graph likely broke.
 		assertThat(statementCount)
-				.as("findWithStopsById should issue a small constant number of queries, "
+				.as("findWithStopsById should issue a single query for trip+stops+place, "
 						+ "not one per stop (10 stops in this trip)")
-				.isLessThanOrEqualTo(5);
+				.isEqualTo(1);
 	}
 
 	@Test
