@@ -87,4 +87,23 @@ class JwtAuthFilterTest {
 		assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
 		verify(filterChain).doFilter(request, response);
 	}
+
+	@Test
+	void expiredToken_leavesContextUnauthenticated() throws Exception {
+		// Separate JwtService instance configured with an already-elapsed expiry, used
+		// only to mint a token whose exp claim is in the past. The filter still validates
+		// with the normal jwtService from setUp() — JJWT's parser reads the exp claim
+		// embedded in the token itself, not the verifying service's own configured expiry.
+		JwtService expiredJwtService = new JwtService(SECRET, -1_000L);
+		String expiredToken = expiredJwtService.generateToken(55L, "user@example.com");
+
+		MockHttpServletRequest request = new MockHttpServletRequest();
+		request.addHeader("Authorization", "Bearer " + expiredToken);
+		MockHttpServletResponse response = new MockHttpServletResponse();
+
+		filter.doFilterInternal(request, response, filterChain);
+
+		assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+		verify(filterChain).doFilter(request, response);
+	}
 }
