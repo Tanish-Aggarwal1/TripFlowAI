@@ -87,8 +87,10 @@
 			<scope>runtime</scope>
 			<optional>true</optional>
 		</dependency>
-		<!-- Jackson 2 databind: not provided by Boot 4.1 web starters (they use Jackson 3).
-		     Required at compile scope by JacksonConfig + RouteOptimizationService, which use
+		<!-- Jackson 2 databind: not provided by Boot 4.1 web starters (they use
+		Jackson 3).
+		     Required at compile scope by JacksonConfig + RouteOptimizationService, which
+		use
 		     com.fasterxml.jackson.databind.ObjectMapper. Do not remove (REF-08 risk item). -->
 		<dependency>
 			<groupId>com.fasterxml.jackson.core</groupId>
@@ -164,7 +166,7 @@
 			<scope>test</scope>
 		</dependency>
 
-		<!-- Health Actuator -->	
+		<!-- Health Actuator -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-actuator</artifactId>
@@ -231,7 +233,7 @@
 				</configuration>
 			</plugin>
 
-
+			<!-- Jacoco -->
 			<plugin>
 				<groupId>org.jacoco</groupId>
 				<artifactId>jacoco-maven-plugin</artifactId>
@@ -250,14 +252,38 @@
 						</goals>
 					</execution>
 					<execution>
+						<id>merge-results</id>
+						<phase>verify</phase>
+						<goals>
+							<goal>merge</goal>
+						</goals>
+						<configuration>
+							<fileSets>
+								<fileSet>
+									<directory>${project.build.directory}</directory>
+									<includes>
+										<include>*.exec</include>
+									</includes>
+								</fileSet>
+							</fileSets>
+							<destFile>
+								${project.build.directory}/jacoco-merged.exec</destFile>
+						</configuration>
+					</execution>
+					<execution>
 						<id>report</id>
 						<phase>verify</phase>
 						<goals>
 							<goal>report</goal>
 						</goals>
+						<configuration>
+							<dataFile>
+								${project.build.directory}/jacoco-merged.exec</dataFile>
+						</configuration>
 					</execution>
 				</executions>
 			</plugin>
+
 		</plugins>
 	</build>
 
