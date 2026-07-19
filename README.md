@@ -41,3 +41,13 @@ TripFlowAI/
 - `feature/<Jira-Key><name>` — new features
 - `fix/<Jira-Key><name>` — bug fixes
 - All merges require a PR with at least 1 reviewer
+
+## Deployment
+
+**Health check:** `GET /actuator/health` — no authentication required, returns
+`{"status":"UP"}` when the app and its dependencies are healthy. Configure this as
+the health check path in Render (or any platform requiring a deploy-verification probe).
+
+Only the `health` endpoint is exposed (`management.endpoints.web.exposure.include=health`
+in `application.properties`) — all other actuator endpoints (`env`, `beans`, `heapdump`,
+etc.) are intentionally never exposed.
