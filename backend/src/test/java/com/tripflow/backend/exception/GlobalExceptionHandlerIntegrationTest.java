@@ -12,6 +12,7 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultActions;
@@ -116,6 +117,60 @@ public class GlobalExceptionHandlerIntegrationTest {
 		assertApiErrorKeys(result.andReturn());
 	}
 
+	@Test
+	void insufficientStops_returns422ApiError() throws Exception {
+		ResultActions result = mockMvc.perform(get("/test/insufficient-stops"))
+				.andExpect(status().isUnprocessableEntity())
+				.andExpect(jsonPath("$.status").value(422))
+				.andExpect(jsonPath("$.error").value("Unprocessable Entity"))
+				.andExpect(jsonPath("$.message").value("Trip needs at least 2 stops to optimize"))
+				.andExpect(jsonPath("$.path").value("/test/insufficient-stops"));
+
+		assertApiErrorKeys(result.andReturn());
+	}
+
+	@Test
+	void orsClientFailure_returns502ApiErrorWithoutLeakingDetails() throws Exception {
+		ResultActions result = mockMvc.perform(get("/test/ors-failure"))
+				.andExpect(status().isBadGateway())
+				.andExpect(jsonPath("$.status").value(502))
+				.andExpect(jsonPath("$.error").value("Bad Gateway"))
+				.andExpect(jsonPath("$.message").value("Route service is temporarily unavailable"))
+				.andExpect(jsonPath("$.path").value("/test/ors-failure"));
+
+		assertApiErrorKeys(result.andReturn());
+	}
+
+	// Bonus, not coverage-critical: handleDuplicate and handleBadCredentials each match two
+	// exception types via @ExceptionHandler({A.class, B.class}). JaCoCo already counts every
+	// line in these methods as covered from the single-type tests above (Spring's exception-
+	// to-handler dispatch isn't in-method branching), so these two tests don't move the
+	// coverage percentage — they exist purely to confirm the second type in each group
+	// actually reaches the same handler at runtime.
+	@Test
+	void duplicateUsername_returns409ApiError() throws Exception {
+		ResultActions result = mockMvc.perform(get("/test/conflict-username"))
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.status").value(409))
+				.andExpect(jsonPath("$.error").value("Conflict"))
+				.andExpect(jsonPath("$.message").value("Username already taken: takenuser"))
+				.andExpect(jsonPath("$.path").value("/test/conflict-username"));
+
+		assertApiErrorKeys(result.andReturn());
+	}
+
+	@Test
+	void springSecurityBadCredentials_returns401ApiError() throws Exception {
+		ResultActions result = mockMvc.perform(get("/test/unauthorized-spring"))
+				.andExpect(status().isUnauthorized())
+				.andExpect(jsonPath("$.status").value(401))
+				.andExpect(jsonPath("$.error").value("Unauthorized"))
+				.andExpect(jsonPath("$.message").value("Invalid email or password"))
+				.andExpect(jsonPath("$.path").value("/test/unauthorized-spring"));
+
+		assertApiErrorKeys(result.andReturn());
+	}
+
 	private void assertApiErrorKeys(MvcResult result) throws Exception {
 		JsonNode body = objectMapper.readTree(result.getResponse().getContentAsString());
 
@@ -160,6 +215,26 @@ public class GlobalExceptionHandlerIntegrationTest {
 		@GetMapping("/test/server-error")
 		public void serverError() {
 			throw new IllegalStateException("boom");
+		}
+
+		@GetMapping("/test/insufficient-stops")
+		public void insufficientStops() {
+			throw new InsufficientStopsException("Trip needs at least 2 stops to optimize");
+		}
+
+		@GetMapping("/test/ors-failure")
+		public void orsFailure() {
+			throw new OrsClientException("ORS request failed");
+		}
+
+		@GetMapping("/test/conflict-username")
+		public void conflictUsername() {
+			throw new DuplicateUsernameException("takenuser");
+		}
+
+		@GetMapping("/test/unauthorized-spring")
+		public void unauthorizedSpring() {
+			throw new BadCredentialsException("bad creds");
 		}
 	}
 }
