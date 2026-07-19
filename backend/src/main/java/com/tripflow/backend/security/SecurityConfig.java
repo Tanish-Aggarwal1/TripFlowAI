@@ -1,4 +1,4 @@
-package com.tripflow.backend.config;
+package com.tripflow.backend.security;
 
 import java.util.List;
 
@@ -15,8 +15,6 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-
-import com.tripflow.backend.security.JwtAuthFilter;
 
 import lombok.AllArgsConstructor;
 
