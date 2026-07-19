@@ -1,4 +1,4 @@
-package com.tripflow.backend.config;
+package com.tripflow.backend.client.ors;
 
 import java.time.Duration;
 

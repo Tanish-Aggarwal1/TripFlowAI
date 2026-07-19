@@ -1,4 +1,4 @@
-package com.tripflow.backend.config;
+package com.tripflow.backend.client.ors;
 
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.http.client.ClientHttpRequestFactoryBuilder;
