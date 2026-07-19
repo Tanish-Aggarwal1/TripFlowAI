@@ -15,7 +15,29 @@ GitHub Actions runs on every PR targeting main. A failing pipeline blocks merge 
 2. Set up JDK 21
 3. Cache Maven dependencies
 4. Run `mvn -B verify -Pci` (unit tests + Testcontainers integration tests)
-5. [Optional] Generate JaCoCo coverage report
+5. Merge JaCoCo unit + integration coverage data and generate the HTML/XML report
+6. Upload JaCoCo HTML report as a build artifact
+7. Post JaCoCo coverage summary as a PR comment
+
+## Coverage Measurement
+
+JaCoCo instruments two separate test runs:
+- **Surefire** (`*Test.java`, unit tests) → writes `target/jacoco.exec`
+- **Failsafe** (`*IT.java`, integration tests, CI-only via `-Pci`) → writes `target/jacoco-it.exec`
+
+A `merge` execution combines both `.exec` files into `target/jacoco-merged.exec` before the
+`report` execution reads it. Both executions are bound to the Maven `verify` phase, declared
+in that order inside the same `jacoco-maven-plugin` block in `backend/pom.xml`.
+
+**Locally** (`mvn verify`, no `-Pci`, no Docker): only `jacoco.exec` exists — Failsafe never runs.
+The report reflects unit-test coverage only. This is expected, not a bug.
+
+**In CI** (`mvn verify -Pci`): both `.exec` files exist and get merged, so the report reflects
+true combined coverage — including everything only exercised by `*IT` tests (e.g. controller
+endpoints hit exclusively through `TripIntegrationIT`, `AuthControllerIntegrationIT`, etc.).
+
+Before this fix, `report` only ever read `jacoco.exec`, so any line covered exclusively by an
+`*IT` test reported as 0% regardless of actual test coverage.
 
 ## Local commands
 
