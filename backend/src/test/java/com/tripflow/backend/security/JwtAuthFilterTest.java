@@ -62,7 +62,7 @@ class JwtAuthFilterTest {
 	}
 
 	@Test
-	void validBearerToken_setsAuthenticationWithUserIdPrincipal() throws Exception {
+	void validBearerToken_setsAuthenticationWithUserPrincipal() throws Exception {
 		String token = jwtService.generateToken(55L, "user@example.com");
 		MockHttpServletRequest request = new MockHttpServletRequest();
 		request.addHeader("Authorization", "Bearer " + token);
@@ -72,7 +72,10 @@ class JwtAuthFilterTest {
 
 		var auth = SecurityContextHolder.getContext().getAuthentication();
 		assertThat(auth).isNotNull();
-		assertThat(auth.getPrincipal()).isEqualTo(55L);
+		assertThat(auth.getPrincipal()).isInstanceOf(UserPrincipal.class);
+		UserPrincipal principal = (UserPrincipal) auth.getPrincipal();
+		assertThat(principal.userId()).isEqualTo(55L);
+		assertThat(principal.email()).isEqualTo("user@example.com");
 		verify(filterChain).doFilter(request, response);
 	}
 

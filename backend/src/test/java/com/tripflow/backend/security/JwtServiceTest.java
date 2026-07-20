@@ -30,6 +30,13 @@ class JwtServiceTest {
 	}
 
 	@Test
+	void extractEmail_returnsEmailClaim() {
+		String token = jwtService.generateToken(1L, "user@example.com");
+
+		assertThat(jwtService.extractEmail(token)).isEqualTo("user@example.com");
+	}
+
+	@Test
 	void getExpiry_returnsConfiguredOffset() {
 		Instant before = Instant.now();
 		String token = jwtService.generateToken(1L, "user@example.com");
