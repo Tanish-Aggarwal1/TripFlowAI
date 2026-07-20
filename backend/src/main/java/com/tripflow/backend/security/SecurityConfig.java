@@ -23,6 +23,8 @@ import lombok.AllArgsConstructor;
 public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
+    private final JsonAuthenticationEntryPoint jsonAuthenticationEntryPoint;
+    private final JsonAccessDeniedHandler jsonAccessDeniedHandler;
 
 //    public SecurityConfig(JwtAuthFilter jwtAuthFilter) {
 //        this.jwtAuthFilter = jwtAuthFilter;
@@ -55,8 +57,10 @@ public class SecurityConfig {
             		.requestMatchers("/api/auth/**", "/actuator/health").permitAll()
                 .anyRequest().authenticated()
             )
+            .exceptionHandling(ex -> ex
+                    .authenticationEntryPoint(jsonAuthenticationEntryPoint)
+                    .accessDeniedHandler(jsonAccessDeniedHandler))
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
-
         return http.build();
     }
 
