@@ -32,12 +32,13 @@ public class HealthEndpointIT {
 
 	@Test
 	void envEndpoint_neverExposed() throws Exception {
-		// Measured 2026-07-19: 403, confirming WB-01's documented finding — unauthenticated
-		// requests currently fall through to Spring Security's default and return 403, not
-		// 401. This will become 401 once REF-11 (SCRUM-100) lands its custom entry point;
-		// update this assertion then. AC amended from the ticket's original 401/404 guess.
+		// Updated after SCRUM-100 (REF-11) landed its custom AuthenticationEntryPoint —
+		// unauthenticated requests to protected paths now correctly return 401, not the
+		// pre-REF-11 default of 403.
 		mockMvc.perform(get("/actuator/env"))
-				.andExpect(status().isForbidden());
+				.andExpect(status().isUnauthorized())
+				.andExpect(jsonPath("$.status").value(401))
+				.andExpect(jsonPath("$.message").value("Authentication required"));
 	}
 
 }
