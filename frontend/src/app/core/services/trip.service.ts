@@ -1,4 +1,4 @@
-import { Injectable, signal } from '@angular/core';
+import { inject, Injectable, signal } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, tap, catchError, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
@@ -12,25 +12,24 @@ import {
 @Injectable({ providedIn: 'root' })
 export class TripService {
   private baseUrl = `${environment.apiBaseUrl}/trips`;
+  private http = inject(HttpClient);
 
   // Reactive list — dashboard subscribes to this
   trips = signal<TripResponse[]>([]);
-
-  constructor(private http: HttpClient) {}
 
   // ── READ ────────────────────────────────────────────────────────────────────
 
   listTrips(): Observable<TripResponse[]> {
     return this.http.get<TripResponse[]>(this.baseUrl).pipe(
       tap((trips) => this.trips.set(trips)),
-      catchError((err: HttpErrorResponse) => this.handleError(err))
+      catchError((err: HttpErrorResponse) => this.handleError(err)),
     );
   }
 
   getTrip(id: number): Observable<TripResponse> {
-    return this.http.get<TripResponse>(`${this.baseUrl}/${id}`).pipe(
-      catchError((err: HttpErrorResponse) => this.handleError(err))
-    );
+    return this.http
+      .get<TripResponse>(`${this.baseUrl}/${id}`)
+      .pipe(catchError((err: HttpErrorResponse) => this.handleError(err)));
   }
 
   // ── WRITE ───────────────────────────────────────────────────────────────────
@@ -38,7 +37,7 @@ export class TripService {
   createTrip(request: CreateTripRequest): Observable<TripResponse> {
     return this.http.post<TripResponse>(this.baseUrl, request).pipe(
       tap((created) => this.trips.update((list) => [created, ...list])),
-      catchError((err: HttpErrorResponse) => this.handleError(err))
+      catchError((err: HttpErrorResponse) => this.handleError(err)),
     );
   }
 
@@ -46,17 +45,17 @@ export class TripService {
     return this.http.put<TripResponse>(`${this.baseUrl}/${id}`, request).pipe(
       tap((updated) =>
         this.trips.update((list) =>
-          list.map((t) => (t.id === updated.id ? updated : t))
-        )
+          list.map((t) => (t.id === updated.id ? updated : t)),
+        ),
       ),
-      catchError((err: HttpErrorResponse) => this.handleError(err))
+      catchError((err: HttpErrorResponse) => this.handleError(err)),
     );
   }
 
   deleteTrip(id: number): Observable<void> {
     return this.http.delete<void>(`${this.baseUrl}/${id}`).pipe(
       tap(() => this.trips.update((list) => list.filter((t) => t.id !== id))),
-      catchError((err: HttpErrorResponse) => this.handleError(err))
+      catchError((err: HttpErrorResponse) => this.handleError(err)),
     );
   }
 

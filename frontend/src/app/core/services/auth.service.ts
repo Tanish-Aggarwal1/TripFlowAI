@@ -1,4 +1,4 @@
-import { Injectable, signal } from '@angular/core';
+import { inject, Injectable, signal } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable, tap, catchError, throwError } from 'rxjs';
@@ -11,12 +11,13 @@ const USER_KEY = 'tripflow_user';
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private baseUrl = `${environment.apiBaseUrl}/auth`;
+  private http = inject(HttpClient);
+  private router = inject(Router);
 
   // Reactive auth state other components/guards can read
   isAuthenticated = signal<boolean>(this.hasValidToken());
   currentUsername = signal<string | null>(this.getStoredUsername());
 
-  constructor(private http: HttpClient, private router: Router) {}
 
   login(request: LoginRequest): Observable<AuthResponse> {
     return this.http.post<AuthResponse>(`${this.baseUrl}/login`, request).pipe(
