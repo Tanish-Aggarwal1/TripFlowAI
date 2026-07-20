@@ -25,4 +25,13 @@ class JacksonConfigTest {
 
 		assertThat(json).isEqualTo("{\"k\":\"v\"}");
 	}
+	
+	@Test
+	void objectMapperSerializesInstantAsIsoString() throws Exception {
+		// Regression test for the InvalidDefinitionException found while building
+		// SCRUM-100: this bean previously had no java.time support at all.
+		String json = objectMapper.writeValueAsString(java.time.Instant.parse("2026-07-19T21:29:59.437Z"));
+
+		assertThat(json).isEqualTo("\"2026-07-19T21:29:59.437Z\"");
+	}
 }
