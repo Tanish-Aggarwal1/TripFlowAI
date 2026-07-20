@@ -3,6 +3,12 @@ name: Backend CI
 on:
   pull_request:
     branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -33,7 +39,7 @@ jobs:
           retention-days: 14
 
       - name: Post JaCoCo PR comment
-        if: always()
+        if: always() && github.event_name == 'pull_request'
         uses: madrapps/jacoco-report@v1.8.0
         with:
           paths: ${{ github.workspace }}/backend/target/site/jacoco/jacoco.xml
