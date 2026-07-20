@@ -28,7 +28,7 @@
     "@capacitor/keyboard": "8.0.5",
     "@capacitor/status-bar": "8.0.2",
     "@ionic/angular": "^8.0.0",
-    "ionicons": "^7.0.0",
+    "ionicons": "^8.0.13",
     "mapbox-gl": "^3.25.0",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
