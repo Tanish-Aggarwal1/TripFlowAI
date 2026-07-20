@@ -40,6 +40,8 @@ Living document. Add a new section per epic as endpoints are built. Update if a 
 ## Auth Header
 Protected endpoints require: `Authorization: Bearer <token>`
 
+Missing, malformed, or expired token → `401 Unauthorized` with the standard `ApiError` body (see below). Valid token but not authorized for the resource (e.g. non-owner) → `403 Forbidden`, same body shape. See `docs/auth.md` for the full breakdown of which mechanism handles which case.
+
 ## Trips & Stops (SCRUM-52)
 
 ### GET /api/trips
