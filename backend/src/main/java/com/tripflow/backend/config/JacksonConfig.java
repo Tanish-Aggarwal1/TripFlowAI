@@ -24,6 +24,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
  * disabled so Instant fields serialize as ISO-8601 strings, matching the
  * autoconfigured Jackson 3 mapper's behavior elsewhere in the app rather than a
  * numeric array.
+ * 
  */
 @Configuration
 public class JacksonConfig {
