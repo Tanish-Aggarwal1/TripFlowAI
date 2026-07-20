@@ -166,14 +166,13 @@ class TripControllerIT {
 	}
 
 	@Test
-	void listTrips_noAuthentication_rejectedByDefaultEntryPoint() throws Exception {
-		// NOTE: SecurityConfig has no custom AuthenticationEntryPoint yet (REF-11 is still open).
-		// Spring Security's default Http403ForbiddenEntryPoint returns 403 for unauthenticated
-		// requests to a protected route in this config. Once REF-11 lands and registers a real
-		// 401 entry point, change this assertion to status().isUnauthorized() — don't leave both
-		// passing silently.
+	void listTrips_noAuthentication_returns401ViaJsonEntryPoint() throws Exception {
+		// Updated by this same PR (SCRUM-100/REF-11) landing its custom AuthenticationEntryPoint —
+		// unauthenticated requests now correctly return 401, not Spring Security's pre-REF-11
+		// default of 403.
 		mockMvc.perform(get("/api/trips").with(csrf()))
-				.andExpect(status().isForbidden());
+				.andExpect(status().isUnauthorized())
+				.andExpect(jsonPath("$.status").value(401));
 	}
 
 	@Test
