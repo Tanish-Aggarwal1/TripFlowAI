@@ -35,7 +35,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 			try {
 				if (jwtService.isValid(token)) {
 					Long userId = jwtService.extractUserId(token);
-					var authToken = new UsernamePasswordAuthenticationToken(userId, null, List.of());
+					String email = jwtService.extractEmail(token);
+					UserPrincipal principal = new UserPrincipal(userId, email);
+					var authToken = new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
 					SecurityContextHolder.getContext().setAuthentication(authToken);
 					log.debug("JWT authenticated userId={} on {}", userId, request.getRequestURI());
 				} else {

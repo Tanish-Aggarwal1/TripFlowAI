@@ -45,6 +45,10 @@ public class JwtService {
         return Long.parseLong(parseClaims(token).getSubject());
     }
 
+    public String extractEmail(String token) {
+        return parseClaims(token).get("email", String.class);
+    }
+
     public boolean isValid(String token) {
         try {
             parseClaims(token);
