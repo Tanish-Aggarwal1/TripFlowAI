@@ -11,7 +11,7 @@ updates:
       - "dependencies"
       - "backend"
     commit-message:
-      prefix: "chore(deps)"
+      prefix: "chore(deps-backend)"
 
   # Frontend — npm dependencies (package.json)
   - package-ecosystem: "npm"
@@ -23,8 +23,17 @@ updates:
     labels:
       - "dependencies"
       - "frontend"
+    ignore:
+      - dependency-name: "@angular/*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@angular-devkit/*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@angular-eslint/*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "jasmine-core"
+        update-types: ["version-update:semver-major"]
     commit-message:
-      prefix: "chore(deps)"
+      prefix: "chore(deps-frontend)"
 
   # GitHub Actions workflow versions (e.g. actions/checkout@v4)
   - package-ecosystem: "github-actions"
@@ -36,4 +45,4 @@ updates:
       - "dependencies"
       - "ci"
     commit-message:
-      prefix: "chore(deps)"
+      prefix: "chore(deps-github-actions)"
