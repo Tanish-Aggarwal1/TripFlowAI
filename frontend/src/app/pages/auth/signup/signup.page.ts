@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -14,15 +14,15 @@ import { FieldError } from '../../../core/models/auth.model';
   styleUrls: ['./signup.page.scss'],
 })
 export class SignupPage {
+
+  private fb = inject(FormBuilder);
+  private authService = inject(AuthService);
+  private router = inject(Router);
   form: FormGroup;
   isSubmitting = false;
   generalError: string | null = null;
 
-  constructor(
-    private fb: FormBuilder,
-    private authService: AuthService,
-    private router: Router
-  ) {
+  constructor() {
     this.form = this.fb.group(
       {
         username: ['', [Validators.required, Validators.minLength(3)]],

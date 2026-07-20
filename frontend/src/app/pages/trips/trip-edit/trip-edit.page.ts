@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -28,6 +28,13 @@ import { StopListComponent } from '../components/stop-list/stop-list.component';
   ],
 })
 export class TripEditPage implements OnInit {
+
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private tripService = inject(TripService);
+  private alertCtrl = inject(AlertController);
+  private toastCtrl = inject(ToastController);
+
   // ── Mode ──────────────────────────────────────────────────────────────────
   isEditMode = false;
   tripId: number | null = null;
@@ -44,13 +51,7 @@ export class TripEditPage implements OnInit {
   // ── Stops (managed by stop-list child — passed via binding) ───────────────
   stops: CreateStopRequest[] = [];
 
-  constructor(
-    private route: ActivatedRoute,
-    private router: Router,
-    private tripService: TripService,
-    private alertCtrl: AlertController,
-    private toastCtrl: ToastController,
-  ) {
+  constructor() {
     addIcons({ save, arrowBack });
   }
 
