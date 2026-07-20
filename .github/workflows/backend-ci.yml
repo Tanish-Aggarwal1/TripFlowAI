@@ -45,6 +45,10 @@ jobs:
           paths: ${{ github.workspace }}/backend/target/site/jacoco/jacoco.xml
           token: ${{ secrets.GITHUB_TOKEN }}
           title: Backend coverage
-          min-coverage-overall: 0
-          min-coverage-changed-files: 0
+          # TEMP placeholder — Actions was queued/down when this was written, so there's
+          # no real coverage number to lock yet. Once a run succeeds, check the JaCoCo
+          # PR comment's overall %, set min-coverage-overall a few points below it (never
+          # above), and min-coverage-changed-files something reasonable like 70-80.
+          min-coverage-overall: 80
+          min-coverage-changed-files: 80
           update-comment: true
