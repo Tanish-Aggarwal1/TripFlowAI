@@ -43,7 +43,7 @@
     "@angular-eslint/template-parser": "20.7.0",
     "@angular/cli": "20.3.28",
     "@angular/compiler-cli": "20.3.25",
-    "@angular/language-service": "20.3.25",
+    "@angular/language-service": "20.3.26",
     "@capacitor/cli": "8.4.2",
     "@ionic/angular-toolkit": "^12.0.0",
     "@types/jasmine": "~5.1.0",
