@@ -58,7 +58,8 @@ Returns the authenticated user's trips.
     "status": "string",
     "createdAt": "ISO-8601 datetime",
     "updatedAt": "ISO-8601 datetime",
-    "stops": [ /* StopResponse[], see below */ ]
+    "stops": [ /* StopResponse[], see below */ ],
+    "routeGeometry": "string"
   }
 ]
 ```
