@@ -24,12 +24,12 @@ class JwtAuthFilterTest {
 
 	@Mock private FilterChain filterChain;
 
-	private JwtService jwtService;
+	private JwtService expiredJwtService;
 	private JwtAuthFilter filter;
 
 	@BeforeEach
 	void setUp() {
-		JwtService expiredJwtService = new JwtService(new JwtProperties(SECRET, -1_000L));
+		expiredJwtService = new JwtService(new JwtProperties(SECRET, -1_000L));
 		filter = new JwtAuthFilter(expiredJwtService);
 	}
 
@@ -63,7 +63,7 @@ class JwtAuthFilterTest {
 
 	@Test
 	void validBearerToken_setsAuthenticationWithUserPrincipal() throws Exception {
-		String token = jwtService.generateToken(55L, "user@example.com");
+		String token = expiredJwtService.generateToken(55L, "user@example.com");
 		MockHttpServletRequest request = new MockHttpServletRequest();
 		request.addHeader("Authorization", "Bearer " + token);
 		MockHttpServletResponse response = new MockHttpServletResponse();
@@ -95,7 +95,7 @@ class JwtAuthFilterTest {
 	void expiredToken_leavesContextUnauthenticated() throws Exception {
 		// Separate JwtService instance configured with an already-elapsed expiry, used
 		// only to mint a token whose exp claim is in the past. The filter still validates
-		// with the normal jwtService from setUp() — JJWT's parser reads the exp claim
+		// with the normal expiredJwtService from setUp() — JJWT's parser reads the exp claim
 		// embedded in the token itself, not the verifying service's own configured expiry.
 		JwtService expiredJwtService = new JwtService(new JwtProperties(SECRET, -1_000L));
 		String expiredToken = expiredJwtService.generateToken(55L, "user@example.com");
