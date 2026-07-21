@@ -30,7 +30,7 @@ class JwtAuthFilterTest {
 	@BeforeEach
 	void setUp() {
 		JwtService expiredJwtService = new JwtService(new JwtProperties(SECRET, -1_000L));
-		filter = new JwtAuthFilter(jwtService);
+		filter = new JwtAuthFilter(expiredJwtService);
 	}
 
 	@AfterEach
