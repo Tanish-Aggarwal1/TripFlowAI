@@ -16,5 +16,6 @@ public record TripResponse(
         Long ownerId,
         List<StopResponse> stops,
         Instant createdAt,
-        Instant updatedAt
+        Instant updatedAt,
+        String routeGeometry
 ) {}

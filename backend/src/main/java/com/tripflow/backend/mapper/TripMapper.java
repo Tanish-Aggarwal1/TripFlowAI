@@ -45,7 +45,8 @@ public class TripMapper {
                 trip.getUser().getId(),
                 stopResponses,
                 trip.getCreatedAt(),
-                trip.getUpdatedAt()
+                trip.getUpdatedAt(),
+                trip.getRouteGeometry()
         );
     }
 }
