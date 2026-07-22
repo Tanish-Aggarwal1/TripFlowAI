@@ -57,7 +57,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           working-directory: frontend
           update-comment: true
-          ignore-errors: true  # Add this to ignore LCOV errors
+          ignore-errors: category
           # TEMP: no frontend coverage baseline exists yet — informational only,
           # same reasoning as SCRUM-136 for backend. Once a real PR run reports
           # a number, raise this a few points below actual (never above).
