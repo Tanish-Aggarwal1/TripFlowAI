@@ -63,20 +63,23 @@ class JwtAuthFilterTest {
 
 	@Test
 	void validBearerToken_setsAuthenticationWithUserPrincipal() throws Exception {
-		String token = expiredJwtService.generateToken(55L, "user@example.com");
-		MockHttpServletRequest request = new MockHttpServletRequest();
-		request.addHeader("Authorization", "Bearer " + token);
-		MockHttpServletResponse response = new MockHttpServletResponse();
+	    // Create a JwtService with a valid (future) expiration for this test
+	    JwtService validJwtService = new JwtService(new JwtProperties(SECRET, 3600000L));
+	    String token = validJwtService.generateToken(55L, "user@example.com");
+	    
+	    MockHttpServletRequest request = new MockHttpServletRequest();
+	    request.addHeader("Authorization", "Bearer " + token);
+	    MockHttpServletResponse response = new MockHttpServletResponse();
 
-		filter.doFilterInternal(request, response, filterChain);
+	    filter.doFilterInternal(request, response, filterChain);
 
-		var auth = SecurityContextHolder.getContext().getAuthentication();
-		assertThat(auth).isNotNull();
-		assertThat(auth.getPrincipal()).isInstanceOf(UserPrincipal.class);
-		UserPrincipal principal = (UserPrincipal) auth.getPrincipal();
-		assertThat(principal.userId()).isEqualTo(55L);
-		assertThat(principal.email()).isEqualTo("user@example.com");
-		verify(filterChain).doFilter(request, response);
+	    var auth = SecurityContextHolder.getContext().getAuthentication();
+	    assertThat(auth).isNotNull();
+	    assertThat(auth.getPrincipal()).isInstanceOf(UserPrincipal.class);
+	    UserPrincipal principal = (UserPrincipal) auth.getPrincipal();
+	    assertThat(principal.userId()).isEqualTo(55L);
+	    assertThat(principal.email()).isEqualTo("user@example.com");
+	    verify(filterChain).doFilter(request, response);
 	}
 
 	@Test
