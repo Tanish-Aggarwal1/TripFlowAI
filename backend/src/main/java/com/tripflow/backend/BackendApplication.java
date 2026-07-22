@@ -7,7 +7,6 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import com.tripflow.backend.security.JwtProperties;
 
 @SpringBootApplication
-@EnableConfigurationProperties(JwtProperties.class)
 public class BackendApplication {
 
 	public static void main(String[] args) {

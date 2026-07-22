@@ -24,13 +24,13 @@ class JwtAuthFilterTest {
 
 	@Mock private FilterChain filterChain;
 
-	private JwtService expiredJwtService;
+	private JwtService jwtService;
 	private JwtAuthFilter filter;
 
 	@BeforeEach
 	void setUp() {
-		expiredJwtService = new JwtService(new JwtProperties(SECRET, -1_000L));
-		filter = new JwtAuthFilter(expiredJwtService);
+		jwtService = new JwtService(new JwtProperties(SECRET, 3_600_000L));
+		filter = new JwtAuthFilter(jwtService);
 	}
 
 	@AfterEach
@@ -63,23 +63,20 @@ class JwtAuthFilterTest {
 
 	@Test
 	void validBearerToken_setsAuthenticationWithUserPrincipal() throws Exception {
-	    // Create a JwtService with a valid (future) expiration for this test
-	    JwtService validJwtService = new JwtService(new JwtProperties(SECRET, 3600000L));
-	    String token = validJwtService.generateToken(55L, "user@example.com");
-	    
-	    MockHttpServletRequest request = new MockHttpServletRequest();
-	    request.addHeader("Authorization", "Bearer " + token);
-	    MockHttpServletResponse response = new MockHttpServletResponse();
+		String token = jwtService.generateToken(55L, "user@example.com");
+		MockHttpServletRequest request = new MockHttpServletRequest();
+		request.addHeader("Authorization", "Bearer " + token);
+		MockHttpServletResponse response = new MockHttpServletResponse();
 
-	    filter.doFilterInternal(request, response, filterChain);
+		filter.doFilterInternal(request, response, filterChain);
 
-	    var auth = SecurityContextHolder.getContext().getAuthentication();
-	    assertThat(auth).isNotNull();
-	    assertThat(auth.getPrincipal()).isInstanceOf(UserPrincipal.class);
-	    UserPrincipal principal = (UserPrincipal) auth.getPrincipal();
-	    assertThat(principal.userId()).isEqualTo(55L);
-	    assertThat(principal.email()).isEqualTo("user@example.com");
-	    verify(filterChain).doFilter(request, response);
+		var auth = SecurityContextHolder.getContext().getAuthentication();
+		assertThat(auth).isNotNull();
+		assertThat(auth.getPrincipal()).isInstanceOf(UserPrincipal.class);
+		UserPrincipal principal = (UserPrincipal) auth.getPrincipal();
+		assertThat(principal.userId()).isEqualTo(55L);
+		assertThat(principal.email()).isEqualTo("user@example.com");
+		verify(filterChain).doFilter(request, response);
 	}
 
 	@Test
@@ -98,7 +95,7 @@ class JwtAuthFilterTest {
 	void expiredToken_leavesContextUnauthenticated() throws Exception {
 		// Separate JwtService instance configured with an already-elapsed expiry, used
 		// only to mint a token whose exp claim is in the past. The filter still validates
-		// with the normal expiredJwtService from setUp() — JJWT's parser reads the exp claim
+		// with the normal jwtService from setUp() — JJWT's parser reads the exp claim
 		// embedded in the token itself, not the verifying service's own configured expiry.
 		JwtService expiredJwtService = new JwtService(new JwtProperties(SECRET, -1_000L));
 		String expiredToken = expiredJwtService.generateToken(55L, "user@example.com");
