@@ -111,4 +111,64 @@ describe('TripMapComponent', () => {
     const popup = (component as any)['popup'];
     expect(popup).toBeNull(); // Initially null until map is initialized
   });
+
+  it('should include notes in popup when notes exist', () => {
+  const mockStop: StopResponse = {
+    id: 1,
+    name: 'Test Stop',
+    latitude: 40.7128,
+    longitude: -74.006,
+    address: '123 Main St',
+    stopOrder: 0,
+    status: 'PLANNED',
+    notes: 'Important note',  // ✓ This triggers the true branch
+  };
+
+  component.trip = {
+    id: 1,
+    title: 'Test Trip',
+    description: null,
+    tags: [],
+    visibility: 'PUBLIC',
+    status: 'DRAFT',
+    ownerId: 100,
+    stops: [mockStop],
+    createdAt: '2026-07-22T00:00:00Z',
+    updatedAt: '2026-07-22T00:00:00Z',
+    routeGeometry: null,
+  };
+
+  component['showPopup'](mockStop, 1);
+  expect(component['popup']).toBeTruthy();
+});
+
+it('should exclude notes from popup when notes are null', () => {
+  const mockStop: StopResponse = {
+    id: 1,
+    name: 'Test Stop',
+    latitude: 40.7128,
+    longitude: -74.006,
+    address: '123 Main St',
+    stopOrder: 0,
+    status: 'PLANNED',
+    notes: null,  // ✓ This triggers the false branch
+  };
+
+  component.trip = {
+    id: 1,
+    title: 'Test Trip',
+    description: null,
+    tags: [],
+    visibility: 'PUBLIC',
+    status: 'DRAFT',
+    ownerId: 100,
+    stops: [mockStop],
+    createdAt: '2026-07-22T00:00:00Z',
+    updatedAt: '2026-07-22T00:00:00Z',
+    routeGeometry: null,
+  };
+
+  component['showPopup'](mockStop, 1);
+  expect(component['popup']).toBeTruthy();
+});
 });
