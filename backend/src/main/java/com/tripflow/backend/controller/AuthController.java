@@ -1,26 +1,27 @@
 package com.tripflow.backend.controller;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.tripflow.backend.dto.AuthResponse;
 import com.tripflow.backend.dto.LoginRequest;
 import com.tripflow.backend.dto.RegisterRequest;
 import com.tripflow.backend.service.AuthService;
-import jakarta.validation.Valid;
-import lombok.AllArgsConstructor;
 
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/auth")
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class AuthController {
 
     private final AuthService authService;
 
-//    public AuthController(AuthService authService) {
-//        this.authService = authService;
-//    }
 
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
