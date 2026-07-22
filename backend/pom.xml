@@ -96,15 +96,17 @@
 			<groupId>com.fasterxml.jackson.core</groupId>
 			<artifactId>jackson-databind</artifactId>
 		</dependency>
-		
-		<!-- java.time support for the Jackson 2 ObjectMapper above — without this,
-		     serializing anything with an Instant/LocalDateTime field (e.g. ApiError.timestamp)
+
+		<!-- java.time support for the Jackson 2 ObjectMapper above — without
+		this,
+		     serializing anything with an Instant/LocalDateTime field (e.g.
+		ApiError.timestamp)
 		     throws InvalidDefinitionException. Version resolved from Boot's parent BOM. -->
 		<dependency>
 			<groupId>com.fasterxml.jackson.datatype</groupId>
 			<artifactId>jackson-datatype-jsr310</artifactId>
 		</dependency>
-		
+
 		<dependency>
 			<groupId>org.postgresql</groupId>
 			<artifactId>postgresql</artifactId>
@@ -239,6 +241,7 @@
 					<excludes>
 						<exclude>**/*IT.java</exclude>
 					</excludes>
+					<argLine>@{argLine} -javaagent:${org.mockito:mockito-core:jar}</argLine>
 				</configuration>
 			</plugin>
 
