@@ -1,6 +1,7 @@
 package com.tripflow.backend.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -18,7 +19,7 @@ class JwtServiceTest {
 
 	@BeforeEach
 	void setUp() {
-		jwtService = new JwtService(SECRET, EXPIRY_MS);
+		jwtService = new JwtService(new JwtProperties(SECRET, EXPIRY_MS));
 	}
 
 	@Test
@@ -56,10 +57,23 @@ class JwtServiceTest {
 
 	@Test
 	void isValid_rejectsExpiredToken() throws InterruptedException {
-		JwtService shortLived = new JwtService(SECRET, 1L);
+		JwtService shortLived = new JwtService(new JwtProperties(SECRET, 1L));
 		String token = shortLived.generateToken(1L, "user@example.com");
 		Thread.sleep(50);
 
 		assertThat(shortLived.isValid(token)).isFalse();
+	}
+
+	@Test
+	void constructor_rejectsSecretShorterThan32Bytes() {
+		assertThatThrownBy(() -> new JwtProperties("too-short", EXPIRY_MS))
+				.isInstanceOf(IllegalStateException.class)
+				.hasMessageContaining("32 bytes");
+	}
+
+	@Test
+	void constructor_rejectsNullSecret() {
+		assertThatThrownBy(() -> new JwtProperties(null, EXPIRY_MS))
+				.isInstanceOf(IllegalStateException.class);
 	}
 }
