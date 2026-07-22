@@ -1,5 +1,6 @@
 package com.tripflow.backend.security;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Date;
 
@@ -18,7 +19,7 @@ public class JwtService {
     private final long expirationMs;
 
     public JwtService(JwtProperties jwtProperties) {
-        this.key = Keys.hmacShaKeyFor(jwtProperties.secret().getBytes());
+        this.key = Keys.hmacShaKeyFor(jwtProperties.secret().getBytes(StandardCharsets.UTF_8));
         this.expirationMs = jwtProperties.expirationMs();
     }
 
