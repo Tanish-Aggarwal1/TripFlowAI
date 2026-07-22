@@ -234,6 +234,23 @@
 					</execution>
 				</executions>
 			</plugin>
+			<!-- Populates ${groupId:artifactId:type} properties (e.g.
+			${org.mockito:mockito-core:jar})
+     pointing to each resolved dependency's JAR path. Must run before
+			Surefire/Failsafe
+     read their argLine, so bind it early — default binding (initialize) is fine. -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-dependency-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>get-mockito-agent-path</id>
+						<goals>
+							<goal>properties</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-surefire-plugin</artifactId>
@@ -241,7 +258,8 @@
 					<excludes>
 						<exclude>**/*IT.java</exclude>
 					</excludes>
-					<argLine>@{argLine} -javaagent:${org.mockito:mockito-core:jar}</argLine>
+					<argLine>@{argLine}
+						-javaagent:${org.mockito:mockito-core:jar}</argLine>
 				</configuration>
 			</plugin>
 
@@ -317,6 +335,9 @@
 									<includes>
 										<include>**/*IT.java</include>
 									</includes>
+									<argLine>
+										@{argLine}
+										-javaagent:${org.mockito:mockito-core:jar}</argLine>
 								</configuration>
 							</execution>
 						</executions>
