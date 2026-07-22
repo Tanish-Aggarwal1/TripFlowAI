@@ -45,23 +45,53 @@ jobs:
           path: frontend/coverage/app/
           retention-days: 14
 
-      - name: Setup LCOV
-        if: always() && github.event_name == 'pull_request'
-        uses: hrishikesh-kadam/setup-lcov@v1
-
-      - name: Sanitize LCOV report
-        if: always() && github.event_name == 'pull_request'
-        run: |
-          lcov --remove frontend/coverage/app/lcov.info '**/__nonexistent__/**' \
-            --ignore-errors unused,category \
-            --output-file frontend/coverage/app/lcov.info
-
       - name: Post coverage PR comment
         if: always() && github.event_name == 'pull_request'
-        uses: zgosalvez/github-actions-report-lcov@v4
+        uses: actions/github-script@v7
         with:
-          coverage-files: frontend/coverage/app/lcov.info
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          working-directory: frontend
-          update-comment: true
-          minimum-coverage: 0
+          script: |
+            const fs = require('fs');
+            const summaryPath = 'frontend/coverage/app/coverage-summary.json';
+            if (!fs.existsSync(summaryPath)) {
+              console.log('No coverage-summary.json found, skipping comment.');
+              return;
+            }
+            const t = JSON.parse(fs.readFileSync(summaryPath, 'utf8')).total;
+            const pct = (m) => `${m.pct}% (${m.covered}/${m.total})`;
+            const marker = '<!-- frontend-coverage-comment -->';
+            const body = [
+              marker,
+              '### Frontend Coverage (Karma)',
+              '',
+              '| Metric | Coverage |',
+              '|---|---|',
+              `| Statements | ${pct(t.statements)} |`,
+              `| Branches | ${pct(t.branches)} |`,
+              `| Functions | ${pct(t.functions)} |`,
+              `| Lines | ${pct(t.lines)} |`,
+              '',
+              '_Full HTML report attached as a workflow artifact._'
+            ].join('\n');
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const existing = comments.find(c => c.body.includes(marker));
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }

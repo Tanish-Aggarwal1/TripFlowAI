@@ -25,22 +25,15 @@ module.exports = function (config) {
       suppressAll: true, // removes the duplicated traces
     },
     coverageReporter: {
-      dir: require("path").join(__dirname, "./coverage/app"),
-      subdir: ".",
-      reporters: [
-        { type: "html" },
-        { type: "text-summary" },
-        { type: "lcovonly" },
-      ],
-      check: {
-        global: {
-          statements: 0, // Adjust based on requirements
-          branches: 0,
-          lines: 0,
-          functions: 0,
-        }
-      }
-    },
+  dir: require('path').join(__dirname, './coverage/app'),
+  subdir: '.',
+  reporters: [
+    { type: 'html' },
+    { type: 'text-summary' },
+    { type: 'lcovonly' },
+    { type: 'json-summary' }   // ← add this
+  ]
+},
     reporters: ["progress", "kjhtml"],
     port: 9876,
     colors: true,
