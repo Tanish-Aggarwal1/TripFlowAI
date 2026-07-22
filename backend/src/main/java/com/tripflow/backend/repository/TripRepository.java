@@ -9,7 +9,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import com.tripflow.backend.domain.Trip;
 
 public interface TripRepository extends JpaRepository<Trip, Long> {
-    List<Trip> findByUserId(Long userId);
     @EntityGraph(attributePaths = {"stops", "stops.place"})
     List<Trip> findByUserIdOrderByCreatedAtDesc(Long userId);
     
