@@ -1,6 +1,5 @@
 package com.tripflow.backend.controller;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -41,4 +40,17 @@ public class HealthEndpointIT {
 				.andExpect(jsonPath("$.message").value("Authentication required"));
 	}
 
+	@Test
+	void metricsEndpoint_unauthenticated_returnsMetricsList() throws Exception {
+		mockMvc.perform(get("/actuator/metrics"))
+	        .andExpect(status().isOk())
+	        .andExpect(jsonPath("$.names").isArray());
+	}
+
+	@Test
+	void httpServerRequestsMetric_returnsData() throws Exception {
+		mockMvc.perform(get("/actuator/metrics/http.server.requests"))
+	        .andExpect(status().isOk())
+	        .andExpect(jsonPath("$.name").value("http.server.requests"));
+	}
 }
