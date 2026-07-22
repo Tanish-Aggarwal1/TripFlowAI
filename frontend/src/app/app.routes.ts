@@ -25,9 +25,20 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/trips/trip-edit/trip-edit.page').then(m => m.TripEditPage),
     canActivate: [authGuard]
   },
+
+  {
+  path: 'trips/:id',
+  loadComponent: () => import('./pages/trips/trip-view/trip-view.page').then(m => m.TripViewPage),
+  canActivate: [authGuard]
+  },
   {
     path: 'trips/:id/edit',
     loadComponent: () => import('./pages/trips/trip-edit/trip-edit.page').then(m => m.TripEditPage),
     canActivate: [authGuard]
   },
+  {
+    path: 'trip-view',
+    loadComponent: () => import('./pages/trips/trip-view/trip-view.page').then( m => m.TripViewPage)
+  },
+
 ];

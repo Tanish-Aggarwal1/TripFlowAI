@@ -47,6 +47,13 @@
       <ion-button
         slot="end"
         fill="clear"
+        (click)="editTrip(trip, $event)">
+        <ion-icon slot="icon-only" name="create"></ion-icon>
+      </ion-button>
+
+      <ion-button
+        slot="end"
+        fill="clear"
         color="danger"
         (click)="confirmDelete(trip, $event)">
         <ion-icon slot="icon-only" name="trash"></ion-icon>

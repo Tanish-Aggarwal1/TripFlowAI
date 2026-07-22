@@ -1,0 +1,22 @@
+<div class="trip-map-wrapper">
+  <div #mapContainer class="trip-map-container"></div>
+
+  @if (mapFailed) {
+    <div class="trip-map-fallback">
+      <p>Map couldn't load. Showing stop list instead.</p>
+      <ion-button size="small" (click)="retry()">Retry</ion-button>
+      <ol class="fallback-stop-list">
+        @for (stop of sortedStops; track stop.id) {
+          <li>{{ stop.name }}</li>
+        }
+      </ol>
+    </div>
+  }
+
+  @if (!mapFailed && routeMissing) {
+    <div class="trip-map-warning-banner">
+      <span>Route not yet optimized.</span>
+      <ion-button size="small" fill="clear" (click)="requestOptimize()">Optimize now</ion-button>
+    </div>
+  }
+</div>

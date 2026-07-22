@@ -1,0 +1,50 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/dashboard"></ion-back-button>
+    </ion-buttons>
+    <ion-title>{{ trip?.title ?? 'Trip' }}</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="editTrip()" [disabled]="!trip">
+        <ion-icon name="create" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  @if (loading) {
+    <div class="centered">
+      <ion-spinner></ion-spinner>
+    </div>
+  }
+
+  @if (error) {
+    <div class="centered error-block">
+      <p>{{ error }}</p>
+      <ion-button (click)="loadTrip()">Retry</ion-button>
+    </div>
+  }
+
+  @if (trip && !loading) {
+    <div class="trip-map-host">
+      <app-trip-map
+        [trip]="trip"
+        (optimizeRequested)="onOptimizeRequested()">
+      </app-trip-map>
+    </div>
+
+    <ion-list>
+      @for (stop of trip.stops; track stop.id) {
+        <ion-item>
+          <ion-label>
+            <h3>{{ stop.stopOrder + 1 }}. {{ stop.name }}</h3>
+            @if (stop.address) {
+              <p>{{ stop.address }}</p>
+            }
+          </ion-label>
+        </ion-item>
+      }
+    </ion-list>
+  }
+</ion-content>

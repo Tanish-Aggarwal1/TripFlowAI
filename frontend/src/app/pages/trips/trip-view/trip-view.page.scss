@@ -1,0 +1,18 @@
+.trip-map-host {
+  height: 45vh;
+  min-height: 260px;
+}
+
+.centered {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 60vh;
+  gap: 12px;
+}
+
+.error-block {
+  padding: 16px;
+  text-align: center;
+}
