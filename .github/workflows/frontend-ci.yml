@@ -42,7 +42,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: karma-coverage-report
-          path: frontend/coverage/
+          path: frontend/coverage/app/
           retention-days: 14
 
       - name: Setup LCOV
