@@ -7,6 +7,11 @@
     </ion-buttons>
     <ion-title>{{ isEditMode ? 'Edit Trip' : 'New Trip' }}</ion-title>
     <ion-buttons slot="end">
+      @if (isEditMode) {
+        <ion-button (click)="viewOnMap()">
+          <ion-icon slot="icon-only" name="map"></ion-icon>
+        </ion-button>
+      }
       <ion-button (click)="save()" [disabled]="saving">
         <ion-icon slot="icon-only" name="save"></ion-icon>
       </ion-button>

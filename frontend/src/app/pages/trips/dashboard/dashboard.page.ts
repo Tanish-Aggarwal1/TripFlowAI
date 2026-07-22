@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component } from '@angular/core';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import {
@@ -8,7 +8,7 @@ import {
   ViewWillEnter
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { add, lockClosed, globeOutline, trash } from 'ionicons/icons';
+import { add, lockClosed, globeOutline, trash, create } from 'ionicons/icons';
 import { TripService } from '../../../core/services/trip.service';
 import { TripResponse } from '../../../core/models/trip.model';
 
@@ -23,18 +23,17 @@ import { TripResponse } from '../../../core/models/trip.model';
     IonFab, IonFabButton, IonSpinner,
   ],
 })
-export class DashboardPage implements ViewWillEnter  {
-
-  private tripService = inject(TripService);
-  private router = inject(Router);
-  private alertCtrl = inject(AlertController);
-
+export class DashboardPage implements ViewWillEnter {
   trips: TripResponse[] = [];
   loading = true;
   error: string | null = null;
 
-  constructor() {
-    addIcons({ add, lockClosed, globeOutline, trash });
+  constructor(
+    private tripService: TripService,
+    private router: Router,
+    private alertCtrl: AlertController
+  ) {
+    addIcons({ add, lockClosed, globeOutline, trash, create });
   }
 
   ionViewWillEnter(): void {
@@ -57,6 +56,11 @@ export class DashboardPage implements ViewWillEnter  {
   }
 
   openTrip(trip: TripResponse): void {
+    this.router.navigate(['/trips', trip.id]);
+  }
+
+  editTrip(trip: TripResponse, event: Event): void {
+    event.stopPropagation();
     this.router.navigate(['/trips', trip.id, 'edit']);
   }
 

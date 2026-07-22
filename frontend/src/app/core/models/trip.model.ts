@@ -58,6 +58,8 @@ export interface TripResponse {
   stops: StopResponse[];
   createdAt: string;  // ISO-8601 UTC Instant e.g. "2026-07-13T14:20:00Z"
   updatedAt: string;
+  routeGeometry: string | null; //// JSON-encoded GeoJSON LineString; JSON.parse before use. Null pre-optimization. 
+
 }
 
 // ── API error shape (matches ApiError as of REF-10) ──────────────────────────

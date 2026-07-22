@@ -59,6 +59,17 @@ export class TripService {
     );
   }
 
+  optimizeTrip(id: number): Observable<TripResponse> {
+  return this.http.post<TripResponse>(`${this.baseUrl}/${id}/optimize`, {}).pipe(
+    tap((updated) =>
+      this.trips.update((list) =>
+        list.map((t) => (t.id === updated.id ? updated : t))
+      )
+    ),
+    catchError((err: HttpErrorResponse) => this.handleError(err))
+  );
+}
+
   // ── ERROR HANDLING ───────────────────────────────────────────────────────────
 
   private handleError(err: HttpErrorResponse): Observable<never> {
