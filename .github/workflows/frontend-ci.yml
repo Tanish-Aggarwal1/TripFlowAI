@@ -53,7 +53,7 @@ jobs:
         if: always() && github.event_name == 'pull_request'
         uses: zgosalvez/github-actions-report-lcov@v4
         with:
-          coverage-files: frontend/coverage/lcov.info
+          coverage-files: frontend/coverage/app/lcov.info
           github-token: ${{ secrets.GITHUB_TOKEN }}
           working-directory: frontend
           update-comment: true
