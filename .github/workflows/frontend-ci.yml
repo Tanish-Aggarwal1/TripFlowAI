@@ -49,6 +49,13 @@ jobs:
         if: always() && github.event_name == 'pull_request'
         uses: hrishikesh-kadam/setup-lcov@v1
 
+      - name: Sanitize LCOV report
+        if: always() && github.event_name == 'pull_request'
+        run: |
+          lcov --remove frontend/coverage/app/lcov.info '**/__nonexistent__/**' \
+            --ignore-errors unused,category \
+            --output-file frontend/coverage/app/lcov.info
+
       - name: Post coverage PR comment
         if: always() && github.event_name == 'pull_request'
         uses: zgosalvez/github-actions-report-lcov@v4
@@ -57,8 +64,4 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           working-directory: frontend
           update-comment: true
-          ignore-errors: category
-          # TEMP: no frontend coverage baseline exists yet — informational only,
-          # same reasoning as SCRUM-136 for backend. Once a real PR run reports
-          # a number, raise this a few points below actual (never above).
           minimum-coverage: 0
