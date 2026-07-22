@@ -1,0 +1,2 @@
+- Add: "Dependency injection uses @RequiredArgsConstructor with private final fields.
+- @AllArgsConstructor is not used in production code.
