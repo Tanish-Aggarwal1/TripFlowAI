@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import {
@@ -24,15 +24,17 @@ import { TripResponse } from '../../../core/models/trip.model';
   ],
 })
 export class DashboardPage implements ViewWillEnter {
+
+  
+    private tripService = inject(TripService);
+    private router = inject(Router);
+    private alertCtrl = inject(AlertController);
+
   trips: TripResponse[] = [];
   loading = true;
   error: string | null = null;
 
-  constructor(
-    private tripService: TripService,
-    private router: Router,
-    private alertCtrl: AlertController
-  ) {
+  constructor() {
     addIcons({ add, lockClosed, globeOutline, trash, create });
   }
 

@@ -1,10 +1,20 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import {
-  IonHeader, IonToolbar, IonTitle, IonContent, IonButton, IonButtons,
-  IonBackButton, IonSpinner, IonIcon, IonList, IonItem, IonLabel,
-  ToastController
+  IonHeader,
+  IonToolbar,
+  IonTitle,
+  IonContent,
+  IonButton,
+  IonButtons,
+  IonBackButton,
+  IonSpinner,
+  IonIcon,
+  IonList,
+  IonItem,
+  IonLabel,
+  ToastController,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import { create } from 'ionicons/icons';
@@ -18,12 +28,27 @@ import { TripMapComponent } from '../components/trip-map/trip-map.component';
   styleUrls: ['trip-view.page.scss'],
   imports: [
     CommonModule,
-    IonHeader, IonToolbar, IonTitle, IonContent, IonButton, IonButtons,
-    IonBackButton, IonSpinner, IonIcon, IonList, IonItem, IonLabel,
+    IonHeader,
+    IonToolbar,
+    IonTitle,
+    IonContent,
+    IonButton,
+    IonButtons,
+    IonBackButton,
+    IonSpinner,
+    IonIcon,
+    IonList,
+    IonItem,
+    IonLabel,
     TripMapComponent,
   ],
 })
 export class TripViewPage implements OnInit {
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private tripService = inject(TripService);
+  private toastCtrl = inject(ToastController);
+
   trip: TripResponse | null = null;
   loading = true;
   error: string | null = null;
@@ -31,12 +56,7 @@ export class TripViewPage implements OnInit {
 
   private tripId = 0;
 
-  constructor(
-    private route: ActivatedRoute,
-    private router: Router,
-    private tripService: TripService,
-    private toastCtrl: ToastController,
-  ) {
+  constructor() {
     addIcons({ create });
   }
 

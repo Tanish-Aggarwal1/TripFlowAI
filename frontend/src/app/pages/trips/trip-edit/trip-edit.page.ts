@@ -1,19 +1,35 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
-  IonHeader, IonToolbar, IonTitle, IonContent, IonButton,
-  IonItem, IonLabel, IonInput, IonTextarea, IonSelect,
-  IonSelectOption, IonSpinner, IonBackButton, IonButtons,
-  IonIcon, AlertController, ToastController
+  IonHeader,
+  IonToolbar,
+  IonTitle,
+  IonContent,
+  IonButton,
+  IonItem,
+  IonLabel,
+  IonInput,
+  IonTextarea,
+  IonSelect,
+  IonSelectOption,
+  IonSpinner,
+  IonBackButton,
+  IonButtons,
+  IonIcon,
+  AlertController,
+  ToastController,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import { save, arrowBack, map as mapIcon } from 'ionicons/icons';
 import { TripService } from '../../../core/services/trip.service';
 import {
-  TripResponse, CreateTripRequest, UpdateTripRequest,
-  CreateStopRequest, TripVisibility
+  TripResponse,
+  CreateTripRequest,
+  UpdateTripRequest,
+  CreateStopRequest,
+  TripVisibility,
 } from '../../../core/models/trip.model';
 import { StopListComponent } from '../components/stop-list/stop-list.component';
 
@@ -22,13 +38,32 @@ import { StopListComponent } from '../components/stop-list/stop-list.component';
   templateUrl: 'trip-edit.page.html',
   styleUrls: ['trip-edit.page.scss'],
   imports: [
-    CommonModule, FormsModule,
-    IonHeader, IonToolbar, IonTitle, IonContent, IonButton,
-    IonItem, IonLabel, IonInput, IonTextarea, IonSelect,
-    IonSelectOption, IonSpinner, IonButtons, IonIcon, StopListComponent,
+    CommonModule,
+    FormsModule,
+    IonHeader,
+    IonToolbar,
+    IonTitle,
+    IonContent,
+    IonButton,
+    IonItem,
+    IonLabel,
+    IonInput,
+    IonTextarea,
+    IonSelect,
+    IonSelectOption,
+    IonSpinner,
+    IonButtons,
+    IonIcon,
+    StopListComponent,
   ],
 })
 export class TripEditPage implements OnInit {
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private tripService = inject(TripService);
+  private alertCtrl = inject(AlertController);
+  private toastCtrl = inject(ToastController);
+
   // ── Mode ──────────────────────────────────────────────────────────────────
   isEditMode = false;
   tripId: number | null = null;
@@ -39,19 +74,13 @@ export class TripEditPage implements OnInit {
   // ── Form fields ───────────────────────────────────────────────────────────
   title = '';
   description = '';
-  tagsInput = '';           // comma-separated string → string[] on save
+  tagsInput = ''; // comma-separated string → string[] on save
   visibility: TripVisibility = 'PRIVATE';
 
   // ── Stops (managed by stop-list child — passed via binding) ───────────────
   stops: CreateStopRequest[] = [];
 
-  constructor(
-    private route: ActivatedRoute,
-    private router: Router,
-    private tripService: TripService,
-    private alertCtrl: AlertController,
-    private toastCtrl: ToastController,
-  ) {
+  constructor() {
     addIcons({ save, arrowBack, map: mapIcon });
   }
 
@@ -69,17 +98,17 @@ export class TripEditPage implements OnInit {
     this.loading = true;
     this.tripService.getTrip(id).subscribe({
       next: (trip: TripResponse) => {
-        this.title       = trip.title;
+        this.title = trip.title;
         this.description = trip.description ?? '';
-        this.tagsInput   = (trip.tags ?? []).join(', ');
-        this.visibility  = trip.visibility;
-        this.stops       = trip.stops.map(s => ({
-          name:            s.name,
-          latitude:        s.latitude,
-          longitude:       s.longitude,
-          address:         s.address ?? undefined,
+        this.tagsInput = (trip.tags ?? []).join(', ');
+        this.visibility = trip.visibility;
+        this.stops = trip.stops.map((s) => ({
+          name: s.name,
+          latitude: s.latitude,
+          longitude: s.longitude,
+          address: s.address ?? undefined,
           externalPlaceId: undefined,
-          notes:           s.notes ?? undefined,
+          notes: s.notes ?? undefined,
         }));
         this.loading = false;
       },
@@ -103,18 +132,18 @@ export class TripEditPage implements OnInit {
 
     const tags = this.tagsInput
       .split(',')
-      .map(t => t.trim())
-      .filter(t => t.length > 0);
+      .map((t) => t.trim())
+      .filter((t) => t.length > 0);
 
     this.saving = true;
 
     if (this.isEditMode && this.tripId !== null) {
       const request: UpdateTripRequest = {
-        title:       this.title.trim(),
+        title: this.title.trim(),
         description: this.description.trim() || undefined,
         tags,
-        visibility:  this.visibility,
-        stops:       this.stops,
+        visibility: this.visibility,
+        stops: this.stops,
       };
       this.tripService.updateTrip(this.tripId, request).subscribe({
         next: () => {
@@ -129,11 +158,11 @@ export class TripEditPage implements OnInit {
       });
     } else {
       const request: CreateTripRequest = {
-        title:       this.title.trim(),
+        title: this.title.trim(),
         description: this.description.trim() || undefined,
         tags,
-        visibility:  this.visibility,
-        stops:       this.stops,
+        visibility: this.visibility,
+        stops: this.stops,
       };
       this.tripService.createTrip(request).subscribe({
         next: () => {
@@ -163,8 +192,11 @@ export class TripEditPage implements OnInit {
       message: 'You have unsaved changes. Leave anyway?',
       buttons: [
         { text: 'Stay', role: 'cancel' },
-        { text: 'Discard', role: 'destructive',
-          handler: () => this.router.navigate(['/dashboard']) },
+        {
+          text: 'Discard',
+          role: 'destructive',
+          handler: () => this.router.navigate(['/dashboard']),
+        },
       ],
     });
     await alert.present();
@@ -177,7 +209,11 @@ export class TripEditPage implements OnInit {
 
   // ── Helpers ───────────────────────────────────────────────────────────────
   private async showToast(message: string, color: string): Promise<void> {
-    const toast = await this.toastCtrl.create({ message, color, duration: 2000 });
+    const toast = await this.toastCtrl.create({
+      message,
+      color,
+      duration: 2000,
+    });
     await toast.present();
   }
 }
