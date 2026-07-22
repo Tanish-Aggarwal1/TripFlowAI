@@ -78,6 +78,32 @@ class AuthServiceTest {
 		assertThat(response.username()).isEqualTo(USERNAME);
 		assertThat(response.expiresAt()).isEqualTo(EXPIRY);
 	}
+	
+	@Test
+	void register_usernameWithSurroundingWhitespace_trimsBeforeCheckAndPersist() {
+		String padded = "  " + USERNAME + "  ";
+		RegisterRequest request = new RegisterRequest(padded, EMAIL, PASSWORD);
+		when(userRepository.existsByEmail(EMAIL)).thenReturn(false);
+		when(userRepository.existsByUsername(USERNAME)).thenReturn(false);
+		when(passwordEncoder.encode(PASSWORD)).thenReturn(HASHED);
+		when(userRepository.save(any(User.class))).thenAnswer(inv -> {
+			User user = inv.getArgument(0, User.class);
+			user.setId(42L);
+			return user;
+		});
+		when(jwtService.generateToken(42L, EMAIL)).thenReturn(TOKEN);
+		when(jwtService.getExpiry(TOKEN)).thenReturn(EXPIRY);
+
+		authService.register(request);
+
+		// The duplicate check must run against the trimmed value too - otherwise
+		// "user" and "user " could both sail past existsByUsername and collide at
+		// the DB's unique constraint instead of a clean DuplicateUsernameException.
+		verify(userRepository).existsByUsername(USERNAME);
+		ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
+		verify(userRepository).save(userCaptor.capture());
+		assertThat(userCaptor.getValue().getUsername()).isEqualTo(USERNAME);
+	}
 
 	@Test
 	void register_duplicateEmail_throwsDuplicateEmailException() {

@@ -2,6 +2,7 @@ package com.tripflow.backend.service;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.tripflow.backend.domain.User;
 import com.tripflow.backend.dto.AuthResponse;
@@ -21,41 +22,44 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class AuthService {
 
-    private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
-    private final JwtService jwtService;
+	private final UserRepository userRepository;
+	private final PasswordEncoder passwordEncoder;
+	private final JwtService jwtService;
 
-    public AuthResponse register(RegisterRequest request) {
-        if (userRepository.existsByEmail(request.email())) {
-            throw new DuplicateEmailException(request.email());
-        }
-        if (userRepository.existsByUsername(request.username())) {
-            throw new DuplicateUsernameException(request.username());
-        }
+	public AuthResponse register(RegisterRequest request) {
+		String username = request.username().trim();
 
-        User user = new User();
-        user.setUsername(request.username());
-        user.setEmail(request.email());
-        user.setPasswordHash(passwordEncoder.encode(request.password()));
-        userRepository.save(user);
+		if (userRepository.existsByEmail(request.email())) {
+			throw new DuplicateEmailException(request.email());
+		}
+		if (userRepository.existsByUsername(username)) {
+			throw new DuplicateUsernameException(username);
+		}
 
-        log.info("User registered id={} username={}", user.getId(), user.getUsername());
-        return buildAuthResponse(user);
-    }
+		User user = new User();
+		user.setUsername(username);
+		user.setEmail(request.email());
+		user.setPasswordHash(passwordEncoder.encode(request.password()));
+		userRepository.save(user);
 
-    public AuthResponse login(LoginRequest request) {
-        User user = userRepository.findByEmail(request.email())
-                .orElseThrow(InvalidCredentialsException::new);
+		log.info("User registered id={} username={}", user.getId(), user.getUsername());
+		return buildAuthResponse(user);
+	}
 
-        if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
-            throw new InvalidCredentialsException();
-        }
+	@Transactional(readOnly = true)
+	public AuthResponse login(LoginRequest request) {
+		User user = userRepository.findByEmail(request.email()).orElseThrow(InvalidCredentialsException::new);
 
-        log.info("User logged in id={} username={}", user.getId(), user.getUsername());
-        return buildAuthResponse(user);
-    }
+		if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+			throw new InvalidCredentialsException();
+		}
 
-    private AuthResponse buildAuthResponse(User user) {
-        String token = jwtService.generateToken(user.getId(), user.getEmail());
-        return new AuthResponse(token, "Bearer", user.getId(), user.getUsername(), jwtService.getExpiry(token));    }
+		log.info("User logged in id={} username={}", user.getId(), user.getUsername());
+		return buildAuthResponse(user);
+	}
+
+	private AuthResponse buildAuthResponse(User user) {
+		String token = jwtService.generateToken(user.getId(), user.getEmail());
+		return new AuthResponse(token, "Bearer", user.getId(), user.getUsername(), jwtService.getExpiry(token));
+	}
 }
