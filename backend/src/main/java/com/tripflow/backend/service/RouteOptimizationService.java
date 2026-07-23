@@ -3,10 +3,11 @@ package com.tripflow.backend.service;
 
 
 import java.util.List;
+
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-
+import com.tripflow.backend.exception.OrsClientException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -72,6 +73,7 @@ public class RouteOptimizationService {
 	     * @throws ResourceNotFoundException if the trip does not exist
 	     * @throws ForbiddenException        if the requester is not the trip owner
 	     * @throws IllegalStateException     if the trip has fewer than 2 stops
+	     * @throws OrsClientException        if VROOM fails, times out, or returns an incomplete/invalid result
 	     */
 	    @Transactional
 	    public TripResponse optimize(Long tripId, Long requesterId) {
@@ -138,21 +140,27 @@ public class RouteOptimizationService {
 	                .filter(step -> "job".equals(step.type()))
 	                .map(OrsOptimizationResponse.Step::job)
 	                .toList();
-	 
+
+	        if (optimizedOrder.size() != stops.size()) {
+	            int unassignedCount = response.unassigned() == null ? -1 : response.unassigned().size();
+	            throw new OrsClientException("VROOM routed " + optimizedOrder.size() + " of " + stops.size()
+	                    + " stop(s); " + (unassignedCount >= 0 ? unassignedCount : "some")
+	                    + " stop(s) were left unassigned");
+	        }
+
 	        // Build a lookup: stop.id → Stop
 	        Map<Long, Stop> stopById = stops.stream()
 	                .collect(Collectors.toMap(Stop::getId, Function.identity()));
-	 
+
 	        // Assign new stopOrder based on position in optimized sequence
 	        for (int i = 0; i < optimizedOrder.size(); i++) {
 	            Stop stop = stopById.get(optimizedOrder.get(i));
 	            if (stop == null) {
-	                throw new IllegalStateException(
-	                        "VROOM returned unknown job id " + optimizedOrder.get(i));
+	                throw new OrsClientException("VROOM returned unknown job id " + optimizedOrder.get(i));
 	            }
 	            stop.setStopOrder(i);
 	        }
-	 
+
 	        // Re-sort the in-memory list to match new order (Hibernate persists by index)
 	        stops.sort(java.util.Comparator.comparingInt(Stop::getStopOrder));
 	    }
