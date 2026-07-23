@@ -1,0 +1,8 @@
+{
+  "summary": "A relaxed cultural loop through Paris and Lyon, favouring museums and markets over rushed sightseeing.",
+  "stops": [
+    { "order": 0, "name": "Musée d'Orsay", "latitude": 48.8600, "longitude": 2.3266, "reason": "Fits your interest in art without the Louvre's crowds." },
+    { "order": 1, "name": "Marché des Enfants Rouges", "latitude": 48.8631, "longitude": 2.3630, "reason": "Budget-friendly food stalls, good for a slow afternoon." },
+    { "order": 2, "name": "Vieux Lyon", "latitude": 45.7620, "longitude": 4.8271, "reason": "Walkable historic district matching your unhurried pace." }
+  ]
+}
