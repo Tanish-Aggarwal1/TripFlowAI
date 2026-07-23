@@ -1,0 +1,8 @@
+{
+  "summary": "A fast-paced backpacking route through Peru focused on trekking and outdoor adventure.",
+  "stops": [
+    { "order": 0, "name": "Rainbow Mountain", "latitude": -13.8813, "longitude": -71.3106, "reason": "High-intensity day hike matching your fast pace and adventure interest." },
+    { "order": 1, "name": "Sacred Valley", "latitude": -13.3200, "longitude": -72.1100, "reason": "Budget-friendly hostels and multiple trekking trailheads." },
+    { "order": 2, "name": "Huacachina", "latitude": -14.0873, "longitude": -75.7635, "reason": "Sandboarding stop that fits an adrenaline-focused itinerary." }
+  ]
+}

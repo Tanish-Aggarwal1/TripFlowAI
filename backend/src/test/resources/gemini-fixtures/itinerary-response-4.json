@@ -1,0 +1,8 @@
+{
+  "summary": "A family-friendly, moderately paced itinerary around Orlando balancing theme parks with downtime.",
+  "stops": [
+    { "order": 0, "name": "Magic Kingdom", "latitude": 28.4177, "longitude": -81.5812, "reason": "Core family destination suited to mixed-age groups." },
+    { "order": 1, "name": "Lake Eola Park", "latitude": 28.5439, "longitude": -81.3712, "reason": "Low-key downtime stop to balance the pace after a theme park day." },
+    { "order": 2, "name": "Kennedy Space Center", "latitude": 28.5729, "longitude": -80.6490, "reason": "Educational stop appealing to varied family interests." }
+  ]
+}

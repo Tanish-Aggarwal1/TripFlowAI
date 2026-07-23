@@ -1,0 +1,8 @@
+{
+  "summary": "A slow, solo photography-focused route around Iceland's south coast, prioritizing golden-hour locations.",
+  "stops": [
+    { "order": 0, "name": "Reynisfjara Black Sand Beach", "latitude": 63.4048, "longitude": -19.0459, "reason": "Iconic photography location best visited unhurried at sunrise." },
+    { "order": 1, "name": "Skógafoss", "latitude": 63.5320, "longitude": -19.5116, "reason": "Accessible waterfall well suited to a slow solo shooting pace." },
+    { "order": 2, "name": "Jökulsárlón", "latitude": 64.0784, "longitude": -16.2300, "reason": "Glacier lagoon with strong golden-hour light, matches your interest." }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "summary": "A moderately paced food-forward itinerary through Tokyo, mixing high-end dining with iconic markets.",
+  "stops": [
+    { "order": 0, "name": "Tsukiji Outer Market", "latitude": 35.6654, "longitude": 139.7707, "reason": "Essential for a food-focused traveler, best visited mid-morning." },
+    { "order": 1, "name": "Sukiyabashi Jiro", "latitude": 35.6721, "longitude": 139.7639, "reason": "Fits your luxury budget and interest in exceptional dining." },
+    { "order": 2, "name": "Omoide Yokocho", "latitude": 35.6938, "longitude": 139.6997, "reason": "Contrasts fine dining with an authentic, lively food alley." },
+    { "order": 3, "name": "Ginza", "latitude": 35.6717, "longitude": 139.7650, "reason": "Upscale shopping and dining district matching your budget tier." }
+  ]
+}
