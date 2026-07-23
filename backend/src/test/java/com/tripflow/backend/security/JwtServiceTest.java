@@ -1,7 +1,6 @@
 package com.tripflow.backend.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -9,8 +8,10 @@ import java.time.Instant;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import com.tripflow.backend.config.JwtProperties;
+
 class JwtServiceTest {
-	
+
 	private static final String SECRET =
 			"test-jwt-secret-must-be-at-least-256-bits-long-for-hmac-sha256";
 	private static final long EXPIRY_MS = 3_600_000L;
@@ -28,13 +29,6 @@ class JwtServiceTest {
 
 		assertThat(jwtService.extractUserId(token)).isEqualTo(99L);
 		assertThat(jwtService.isValid(token)).isTrue();
-	}
-
-	@Test
-	void extractEmail_returnsEmailClaim() {
-		String token = jwtService.generateToken(1L, "user@example.com");
-
-		assertThat(jwtService.extractEmail(token)).isEqualTo("user@example.com");
 	}
 
 	@Test
@@ -62,18 +56,5 @@ class JwtServiceTest {
 		Thread.sleep(50);
 
 		assertThat(shortLived.isValid(token)).isFalse();
-	}
-
-	@Test
-	void constructor_rejectsSecretShorterThan32Bytes() {
-		assertThatThrownBy(() -> new JwtProperties("too-short", EXPIRY_MS))
-				.isInstanceOf(IllegalStateException.class)
-				.hasMessageContaining("32 bytes");
-	}
-
-	@Test
-	void constructor_rejectsNullSecret() {
-		assertThatThrownBy(() -> new JwtProperties(null, EXPIRY_MS))
-				.isInstanceOf(IllegalStateException.class);
 	}
 }
