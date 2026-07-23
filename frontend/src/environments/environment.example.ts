@@ -5,7 +5,7 @@
 export const environment = {
   production: false,
   apiBaseUrl: 'http://localhost:8080/api',
-  mapboxToken: 'YOUR_MAPBOX_TOKEN_HERE'
+  mapboxToken: 'token_goes_here'
 };
 
 /*
