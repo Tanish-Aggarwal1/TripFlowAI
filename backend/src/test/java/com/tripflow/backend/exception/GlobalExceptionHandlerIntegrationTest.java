@@ -140,6 +140,17 @@ public class GlobalExceptionHandlerIntegrationTest {
 
 		assertApiErrorKeys(result.andReturn());
 	}
+	
+	@Test
+	void orsRateLimit_returns429ApiError() throws Exception {
+		ResultActions result = mockMvc.perform(get("/test/ors-rate-limit"))
+				.andExpect(status().isTooManyRequests())
+				.andExpect(jsonPath("$.status").value(429))
+				.andExpect(jsonPath("$.error").value("Too Many Requests"))
+				.andExpect(jsonPath("$.path").value("/test/ors-rate-limit"));
+
+		assertApiErrorKeys(result.andReturn());
+	}
 
 	// Bonus, not coverage-critical: handleDuplicate and handleBadCredentials each match two
 	// exception types via @ExceptionHandler({A.class, B.class}). JaCoCo already counts every
@@ -225,6 +236,11 @@ public class GlobalExceptionHandlerIntegrationTest {
 		@GetMapping("/test/ors-failure")
 		public void orsFailure() {
 			throw new OrsClientException("ORS request failed");
+		}
+		
+		@GetMapping("/test/ors-rate-limit")
+		public void orsRateLimit() {
+			throw new OrsRateLimitException("ORS rate limited", null);
 		}
 
 		@GetMapping("/test/conflict-username")

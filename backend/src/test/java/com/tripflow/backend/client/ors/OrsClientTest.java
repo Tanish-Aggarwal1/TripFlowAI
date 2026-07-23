@@ -1,5 +1,11 @@
 package com.tripflow.backend.client.ors;
 
+
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
+
+import org.springframework.http.HttpStatus;
+
+import com.tripflow.backend.exception.OrsRateLimitException;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
@@ -125,5 +131,40 @@ public class OrsClientTest {
         assertThatThrownBy(() -> orsClient.optimize(request))
                 .isInstanceOf(OrsClientException.class)
                 .hasMessageContaining("code 3");
+    }
+    
+    @Test
+    void optimize_emptyRoutes_throwsOrsClientException() {
+        server.expect(requestTo(BASE_URL + "/optimization"))
+                .andRespond(withSuccess("""
+                        { "code": 0, "summary": { "cost": 0.0, "duration": 0.0 }, "routes": [] }
+                        """, MediaType.APPLICATION_JSON));
+
+        OrsOptimizationRequest request = new OrsOptimizationRequest(
+                List.of(new OrsOptimizationRequest.Job(1, List.of(-79.9, 45.0))),
+                List.of(new OrsOptimizationRequest.Vehicle(1, "driving-car",
+                        List.of(-79.4, 43.7), List.of(-79.4, 43.7))));
+
+        assertThatThrownBy(() -> orsClient.optimize(request))
+                .isInstanceOf(OrsClientException.class)
+                .hasMessageContaining("no routes");
+        server.verify();
+    }
+
+    @Test
+    void optimize_tooManyRequests_throwsOrsRateLimitException() {
+        server.expect(requestTo(BASE_URL + "/optimization"))
+                .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS)
+                        .body("{\"error\":\"quota exceeded\"}")
+                        .contentType(MediaType.APPLICATION_JSON));
+
+        OrsOptimizationRequest request = new OrsOptimizationRequest(
+                List.of(new OrsOptimizationRequest.Job(1, List.of(-79.9, 45.0))),
+                List.of(new OrsOptimizationRequest.Vehicle(1, "driving-car",
+                        List.of(-79.4, 43.7), List.of(-79.4, 43.7))));
+
+        assertThatThrownBy(() -> orsClient.optimize(request))
+                .isInstanceOf(OrsRateLimitException.class);
+        server.verify();
     }
 }

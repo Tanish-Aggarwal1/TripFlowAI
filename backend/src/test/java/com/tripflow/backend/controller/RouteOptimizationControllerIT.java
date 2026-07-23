@@ -1,6 +1,9 @@
 package com.tripflow.backend.controller;
 
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
+
+import org.springframework.http.HttpStatus;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
@@ -256,6 +259,66 @@ public class RouteOptimizationControllerIT {
 
 		// No expectation was registered for /v2/directions/... — if optimize() somehow
 		// still called it after the 502, verify() below fails and catches the regression.
+		orsMockServer.verify();
+	}
+	
+	@Test
+	void optimizeTrip_orsRateLimited_returns429() throws Exception {
+		User user = createTestUser("rate-limited");
+		JsonNode trip = createTrip(user, threeStopTripRequest());
+		Long tripId = trip.get("id").asLong();
+
+		orsMockServer.expect(requestTo(ORS_BASE_URL + "/optimization"))
+				.andExpect(method(HttpMethod.POST))
+				.andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS)
+						.body("{\"error\":\"quota exceeded\"}")
+						.contentType(MediaType.APPLICATION_JSON));
+
+		mockMvc.perform(post("/api/trips/" + tripId + "/optimize").with(csrf()).with(asUser(user)))
+				.andExpect(status().isTooManyRequests())
+				.andExpect(jsonPath("$.status").value(429))
+				.andExpect(jsonPath("$.path").value("/api/trips/" + tripId + "/optimize"));
+
+		orsMockServer.verify();
+	}
+
+	@Test
+	void optimizeTrip_orsLeavesStopUnassigned_returns502() throws Exception {
+		User user = createTestUser("unassigned");
+		JsonNode trip = createTrip(user, threeStopTripRequest());
+		Long tripId = trip.get("id").asLong();
+
+		long torontoId = stopIdByName(trip, "Toronto");
+		long ottawaId = stopIdByName(trip, "Ottawa");
+		long montrealId = stopIdByName(trip, "Montreal");
+
+		String partialOptimizationResponse = """
+				{
+				  "code": 0,
+				  "summary": { "cost": 500.0, "duration": 7200.0 },
+				  "routes": [{
+				    "vehicle": 1,
+				    "duration": 7200.0,
+				    "steps": [
+				      { "type": "start", "job": null, "location": [-79.38, 43.65] },
+				      { "type": "job", "job": %d, "location": [-79.38, 43.65] },
+				      { "type": "job", "job": %d, "location": [-75.70, 45.42] },
+				      { "type": "end", "job": null, "location": [-79.38, 43.65] }
+				    ]
+				  }],
+				  "unassigned": [{ "id": %d, "location": [-73.57, 45.50] }]
+				}
+				""".formatted(torontoId, ottawaId, montrealId);
+
+		orsMockServer.expect(requestTo(ORS_BASE_URL + "/optimization"))
+				.andExpect(method(HttpMethod.POST))
+				.andRespond(withSuccess(partialOptimizationResponse, MediaType.APPLICATION_JSON));
+
+		mockMvc.perform(post("/api/trips/" + tripId + "/optimize").with(csrf()).with(asUser(user)))
+				.andExpect(status().isBadGateway())
+				.andExpect(jsonPath("$.status").value(502));
+
+		// No directions call should follow an incomplete optimization result.
 		orsMockServer.verify();
 	}
 

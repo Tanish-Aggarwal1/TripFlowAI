@@ -1,10 +1,11 @@
 package com.tripflow.backend.client.ors;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Component; 
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
 import com.tripflow.backend.exception.OrsClientException;
-
+import org.springframework.web.client.HttpClientErrorException;
+import com.tripflow.backend.exception.OrsRateLimitException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -56,8 +57,15 @@ public class OrsClient {
                 throw new OrsClientException("ORS optimization returned error code "
                         + (response == null ? "null" : response.code()));
             }
+            if (response.routes() == null || response.routes().isEmpty()) {
+                throw new OrsClientException("ORS optimization returned no routes for "
+                        + request.jobs().size() + " job(s)");
+            }
             log.debug("ORS optimization ok jobs={}", request.jobs().size());
             return response;
+        } catch (HttpClientErrorException.TooManyRequests ex) {
+            log.warn("ORS optimization rate-limited (429): {}", ex.getMessage());
+            throw new OrsRateLimitException("OpenRouteService optimization quota exceeded", ex);
         } catch (RestClientException ex) {
             log.warn("ORS optimization call failed: {}", ex.getMessage());
             throw new OrsClientException("OpenRouteService optimization request failed", ex);

@@ -1,5 +1,7 @@
 package com.tripflow.backend.service;
 
+import com.tripflow.backend.exception.OrsClientException;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -344,22 +346,41 @@ class RouteOptimizationServiceTest {
         }
 
         @Test
-        void reorderStops_unknownJobId_throwsIllegalStateException() {
+        void reorderStops_unknownJobId_throwsOrsClientException() {
             Trip trip = tripWith3Stops();
             OrsOptimizationResponse badResponse = new OrsOptimizationResponse(
                     0, null,
                     List.of(new OrsOptimizationResponse.Route(1L, 100.0, List.of(
                             new OrsOptimizationResponse.Step("start", null, List.of(0.0, 0.0)),
+                            new OrsOptimizationResponse.Step("job", 200L, List.of(0.0, 0.0)),
                             new OrsOptimizationResponse.Step("job", 9999L, List.of(0.0, 0.0)),
+                            new OrsOptimizationResponse.Step("job", 202L, List.of(0.0, 0.0)),
                             new OrsOptimizationResponse.Step("end", null, List.of(0.0, 0.0))
                     ))));
 
             assertThatThrownBy(() -> service.reorderStops(trip.getStops(), badResponse))
-                    .isInstanceOf(IllegalStateException.class)
+                    .isInstanceOf(OrsClientException.class)
                     .hasMessageContaining("9999");
         }
-    }
-    
+
+        @Test
+        void reorderStops_fewerJobsThanStops_throwsOrsClientException() {
+            Trip trip = tripWith3Stops();
+            // Only 2 of 3 stops routed — VROOM left Montreal (202L) unassigned.
+            OrsOptimizationResponse partialResponse = new OrsOptimizationResponse(
+                    0, null,
+                    List.of(new OrsOptimizationResponse.Route(1L, 100.0, List.of(
+                            new OrsOptimizationResponse.Step("start", null, List.of(0.0, 0.0)),
+                            new OrsOptimizationResponse.Step("job", 200L, List.of(0.0, 0.0)),
+                            new OrsOptimizationResponse.Step("job", 201L, List.of(0.0, 0.0)),
+                            new OrsOptimizationResponse.Step("end", null, List.of(0.0, 0.0))
+                    ))),
+                    List.of(new OrsOptimizationResponse.Unassigned(202L, List.of(-73.57, 45.50))));
+
+            assertThatThrownBy(() -> service.reorderStops(trip.getStops(), partialResponse))
+                    .isInstanceOf(OrsClientException.class)
+                    .hasMessageContaining("2 of 3");
+        }
     void optimize_persistsRouteGeometry() {
         Trip trip = tripWith3Stops();
         given(tripRepository.findWithStopsById(TRIP_ID)).willReturn(Optional.of(trip));
@@ -381,4 +402,4 @@ class RouteOptimizationServiceTest {
         assertThat(result.routeGeometry()).isNotNull();
         assertThat(result.routeGeometry()).isEqualTo(geometry);
     }
-}
+}}
