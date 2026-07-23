@@ -68,6 +68,12 @@ public class GlobalExceptionHandler {
 	    return error(HttpStatus.BAD_GATEWAY, "Route service is temporarily unavailable", req, null);
 	}
 	
+	@ExceptionHandler(GeminiClientException.class)
+	public ResponseEntity<ApiError> handleGeminiFailure(GeminiClientException ex, HttpServletRequest req) {
+	    log.error("502 Bad Gateway on {}: {}", req.getRequestURI(), ex.getMessage(), ex);
+	    return error(HttpStatus.BAD_GATEWAY, "AI itinerary service is temporarily unavailable", req, null);
+	}
+	
 	@ExceptionHandler(OrsRateLimitException.class)
 	public ResponseEntity<ApiError> handleOrsRateLimit(OrsRateLimitException ex, HttpServletRequest req) {
 		log.warn("429 Too Many Requests on {}: {}", req.getRequestURI(), ex.getMessage());
