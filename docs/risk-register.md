@@ -13,6 +13,11 @@ Updated weekly. Format: ID, Description, Category, Likelihood, Impact, Mitigatio
 | R7 | Ontario Civic Holiday (Aug 3) reduces capacity in Sprint 5 presentation week | Schedule | High | Medium | Deploy completed by Aug 4, rehearsal Aug 5 | Open (future sprint) |
 | R8 | No Docker on any team machine — `*IT` tests can't run or be debugged locally, only in CI | Technical | High | Medium | `-Pci` profile scopes IT tests to CI only; documented in `docs/ci.md` | Mitigated |
 | R9 | GitHub Actions platform outages block PR merges with no team-side fix | Schedule | Low | Medium | Continue local development on stacked branches during outages; check githubstatus.com before assuming a repo-side config issue | Open |
+| R10 | Neel at ~12h sprint capacity ceiling — SCRUM-67 (AI preferences UI) flagged as first ticket to slip to Sprint 5 | Schedule | High | Medium | Flagged during Sprint 3 planning; SCRUM-67 has explicit slip-to-Sprint-5 note in Jira description | Open |
+| R11 | SCRUM-173 (Bucket4j rate limiting) blocked on SCRUM-149 (AI-suggest endpoint) — cannot start until dependency merges | Integration | Medium | Low | Tracked in Sprint 4 plan; will unblock once Gemini PR lands | Open |
+| R12 | Smart Commit email mismatch silently left merged PRs stuck at "To Do" in Jira — multiple sprints of stale status data | Process | High | Medium | Root-caused to transposed-letter typo in git config email; fixed in SCRUM-191, verified fix works on subsequent merges | Mitigated |
+| R13 | GitHub push protection blocked a token commit (Mapbox scoped token classified as secret) — caused a branch deletion/recreation cycle | Technical | Low | Low | Resolved by moving Mapbox token to GitHub Actions secrets with build-time injection; added verification step to CI | Mitigated |
+
 
 ## Sprint 1 Update Log
 - Jul 7: Initial risks logged during planning.
@@ -20,3 +25,6 @@ Updated weekly. Format: ID, Description, Category, Likelihood, Impact, Mitigatio
 
 ## Sprint 3 Update Log
 - Jul 19: R8 and R9 added — surfaced during a live GitHub Actions outage (runs stuck "queued") mid-sprint. R2 remains relevant — SecurityConfig changed twice this sprint (SCRUM-197 move, SCRUM-100 wiring); Postman regression discipline held.
+
+## Sprint 4 Update Log
+- Jul 23: R10–R14 added. R12 (Smart Commit email) mitigated via SCRUM-191. R2 (JWT filter lockout) remains relevant — SecurityConfig modified again for actuator metrics exposure (SCRUM-174). R13 mitigated via CI-injection pattern.

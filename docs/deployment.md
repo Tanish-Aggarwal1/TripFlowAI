@@ -29,7 +29,11 @@ Set these in the Render/Railway dashboard under the service's Environment settin
 | `JWT_SECRET` | Base64-encoded signing secret for JWTs | Generated via PowerShell (see below) |
 | `JWT_EXPIRY_MS` | Token expiry in milliseconds | `3600000` |
 | `ORS_API_KEY` | OpenRouteService API key (500 req/day free tier) | — |
+| `GEMINI_API_KEY` | Google Gemini API key for AI itinerary generation | — |
+| `MAPBOX_TOKEN` | Mapbox public token (frontend CI injection only — not used by the backend) | `pk.eyJ1...` |
 | `CORS_ALLOWED_ORIGINS` | Comma-separated list of allowed frontend origins | `https://tripflowai.app` |
+
+**Frontend tokens:** `MAPBOX_TOKEN` is injected at CI build time via `frontend-ci.yml` (see `docs/frontend-standards.md` §Environment Files). It is a GitHub Actions secret, not a backend environment variable — the backend never uses it.
 
 ### Generating `JWT_SECRET` locally (PowerShell)
 

@@ -42,6 +42,8 @@ Protected endpoints require: `Authorization: Bearer <token>`
 
 Missing, malformed, or expired token → `401 Unauthorized` with the standard `ApiError` body (see below). Valid token but not authorized for the resource (e.g. non-owner) → `403 Forbidden`, same body shape. See `docs/auth.md` for the full breakdown of which mechanism handles which case.
 
+---
+
 ## Trips & Stops (SCRUM-52)
 
 ### GET /api/trips
@@ -167,6 +169,109 @@ Appends a stop at the next `stopOrder`.
 Remaining stops are automatically renumbered (`stopOrder` closes the gap).
 **Success (204):** no body.
 **Errors:** 404, 403
+
+---
+
+
+## Route Optimization (SCRUM-58)
+
+### POST /api/trips/{id}/optimize
+Reorders the trip's stops for shortest travel time via OpenRouteService VROOM. Requires ≥2 stops with valid coordinates.
+
+**Auth:** Bearer token required. Only the trip owner can optimize.
+
+**Request:** No body — the endpoint reads the trip's existing stops.
+
+**Success (200):** Returns the full `TripResponse` with stops reordered by optimized `orderIndex` and `routeGeometry` populated with an encoded polyline string.
+```json
+{
+  "id": 1,
+  "title": "string",
+  "description": "string",
+  "tags": ["string"],
+  "visibility": "PRIVATE",
+  "status": "DRAFT",
+  "ownerId": 1,
+  "stops": [
+    {
+      "id": 1,
+      "name": "string",
+      "latitude": 43.65,
+      "longitude": -79.38,
+      "orderIndex": 0,
+      "notes": "string"
+    }
+  ],
+  "createdAt": "2026-07-20T15:30:00Z",
+  "updatedAt": "2026-07-20T15:31:00Z",
+  "routeGeometry": "encoded_polyline_string"
+}
+```
+
+**Errors:**
+- 403 — authenticated user is not the trip owner
+- 404 — trip not found
+- 422 — trip has fewer than 2 stops (nothing to optimize)
+- 502 — OpenRouteService is unreachable or returned a server error (`OrsClientException`)
+- 429 — ORS rate limit exceeded (`OrsRateLimitException`)
+
+All errors return the standard `ApiError` body.
+
+---
+
+## AI Itinerary Suggestions (SCRUM-64 / SCRUM-146)
+
+### POST /api/trips/{id}/ai-suggest
+Sends user preferences to Google Gemini and returns structured itinerary suggestions. Does not persist anything — the frontend accepts individual stops via the existing `POST /api/trips/{id}/stops` endpoint.
+
+**Auth:** Bearer token required. Only the trip owner can request suggestions.
+
+**Request:**
+```json
+{
+  "interests": ["history", "food", "nature"],
+  "budget": "moderate",
+  "pace": "relaxed"
+}
+```
+All fields are optional lists/strings. Gemini uses them as prompt context alongside the trip's existing stops.
+
+**Success (200):**
+```json
+{
+  "tripId": 1,
+  "summary": "A 3-day cultural and culinary tour of...",
+  "stops": [
+    {
+      "order": 1,
+      "name": "St. Lawrence Market",
+      "latitude": 43.6487,
+      "longitude": -79.3715,
+      "reason": "Historic market with local food vendors — fits your interest in food and history."
+    }
+  ]
+}
+```
+
+**Errors:**
+- 403 — authenticated user is not the trip owner
+- 404 — trip not found
+- 502 — Gemini API unreachable (`GeminiClientException`) or returned an unparseable response (`GeminiParsingException`)
+
+**Note:** The `502` on parsing failure is intentional — `SuggestedItinerary` uses `@JsonIgnoreProperties(ignoreUnknown = false)` so unexpected fields in Gemini's response fail loudly rather than being silently dropped. The error message distinguishes between connectivity failure ("AI itinerary service is temporarily unavailable") and parsing failure ("AI itinerary service returned an unreadable response").
+
+---
+
+## Photo Upload — Cloudinary (SCRUM-66, planned)
+
+*Not yet implemented. Endpoint contract will be added here once SCRUM-66 lands.*
+
+**Planned flow:**
+1. `POST /api/trips/{tripId}/stops/{stopId}/photos/upload-params` — backend issues Cloudinary signed upload parameters.
+2. Client uploads directly to Cloudinary using the signed params (no binary data passes through our backend).
+3. Client sends the resulting Cloudinary URL back via `POST /api/trips/{tripId}/stops/{stopId}/photos` to persist the reference.
+
+**Prerequisite:** A `Photo` entity and Flyway migration (not yet created) to store the Cloudinary URL against a stop.
 
 ---
 
