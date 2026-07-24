@@ -3,6 +3,7 @@
 Living document. Reflects actual current practice, not aspirational process — update this whenever a real convention changes, not just at sprint boundaries. This is the practical/ technical counterpart to the formal academic SDP deliverable (SYST38634); this one is the one the team actually follows day to day.
 
 **Last updated:** 2026-07-19
+**Last updated:** 2026-07-23
 
 ---
 
@@ -35,21 +36,38 @@ TripFlowAI (Jira project "Wanderlust", key `SCRUM`) is a Spring Boot 4.1 / Java 
 Layered, not feature-sliced — chosen deliberately (see SCRUM-197) because it matches conventions every grader has seen, and minimizes cross-package import churn for a 4-person team on a 12-week timeline.
 
 com.tripflow.backend
+
 ├── BackendApplication.java
-├── domain/                 entities + enums
-│   └── enums/
+
+├── domain/                 entities 
+
+│   └── enums/              + enums
+
 ├── repository/              JPA repositories
+
 ├── service/                 business logic
+
 ├── controller/               REST endpoints
+
 ├── dto/                      request/response records
+
 ├── mapper/                   DTO <-> entity
+
 ├── exception/                 GlobalExceptionHandler, ApiError, custom exceptions
+
 ├── security/                 SecurityConfig, JwtAuthFilter, JwtService, UserPrincipal,
+
 │                              JsonAuthenticationEntryPoint, JsonAccessDeniedHandler
+
 ├── config/                   ONLY cross-cutting @Configuration (JacksonConfig, etc.)
+
 └── client/
-├── ors/                   OpenRouteService client, config, properties, wire DTOs
-└── gemini/                (planned, SCRUM-146)
+
+│   ├── ors/                   OpenRouteService client, config, properties, wire DTOs
+
+│   └── gemini/                GeminiClient, config, properties, wire DTOs
+
+├── ai/                     SuggestedItinerary, GeminiResponseParser, ItineraryPromptTemplate
 
 **Rule for adding a new top-level package:** only when a cross-cutting concern has ≥3 related classes (e.g. `security/` earned its own package; `exception/` stays flat until it crosses ~15 files or gains a genuinely separate domain family).
 
@@ -126,3 +144,4 @@ See `docs/ci.md` for the full pipeline. Summary: PR + push to `main` triggers `b
 | Date | Change |
 |---|---|
 | 2026-07-19 | Initial SDP.md created, consolidating conventions established across Sprint 3 |
+| 2026-07-23 | Updated package tree (gemini client landed, ai package added), coverage-floor provenance closed, risk register synced through Sprint 4 pre-work, frontend-standards.md created |
