@@ -1,5 +1,6 @@
 package com.tripflow.backend.mapper;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.stereotype.Component;
@@ -23,7 +24,7 @@ public class TripMapper {
         trip.setUser(owner);
         trip.setTitle(request.title());
         trip.setDescription(request.description());
-        trip.setTags(request.tags());
+        trip.setTags(request.tags() != null ? request.tags() : new ArrayList<>());
         trip.setVisibility(request.visibility());
         trip.setStatus(TripStatus.DRAFT);
         // id, routeGeometry intentionally NOT set from request — server-owned
