@@ -46,24 +46,35 @@ Missing, malformed, or expired token → `401 Unauthorized` with the standard `A
 
 ## Trips & Stops (SCRUM-52)
 
-### GET /api/trips
-Returns the authenticated user's trips.
+### GET /api/trips (paginated — REF-21)
+Returns a page of the authenticated user's trips as a card-sized projection — no `stops` array, just `stopCount` — so list reads never need the collection fetch join used by `GET /api/trips/{id}`. This is the canonical paging contract for all future list endpoints: accept Spring `Pageable` (`?page=&size=&sort=`), return this same paged shape.
+
+**Query params:** `page` (0-indexed, default 0), `size` (default 20), `sort` (default `createdAt,desc`, e.g. `?sort=title,asc`).
+
 **Success (200):**
 ```json
-[
-  {
-    "id": 1,
-    "title": "string",
-    "description": "string",
-    "tags": ["string"],
-    "visibility": "PRIVATE | PUBLIC",
-    "status": "string",
-    "createdAt": "ISO-8601 datetime",
-    "updatedAt": "ISO-8601 datetime",
-    "stops": [ /* StopResponse[], see below */ ],
-    "routeGeometry": "string"
+{
+  "content": [
+    {
+      "id": 1,
+      "title": "string",
+      "visibility": "PRIVATE | PUBLIC",
+      "status": "string",
+      "createdAt": "ISO-8601 datetime",
+      "updatedAt": "ISO-8601 datetime",
+      "stopCount": 3,
+      "coverPhotoUrl": null
+    }
+  ],
+  "page": {
+    "size": 20,
+    "number": 0,
+    "totalElements": 1,
+    "totalPages": 1
   }
-]
+}
+```
+`coverPhotoUrl` is always `null` until the Cloudinary photo feature (SCRUM-66) lands. Use `GET /api/trips/{id}` for the full itinerary including `stops`.
 ```
 
 ### POST /api/trips

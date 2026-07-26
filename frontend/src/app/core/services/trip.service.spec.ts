@@ -25,19 +25,23 @@ describe('TripService', () => {
   });
 
   it('should list trips and update signal', (done) => {
-    const mockTrips = [
-      { id: 1, title: 'Trip 1', description: null, tags: [], visibility: 'PUBLIC' as const, status: 'DRAFT' as const, ownerId: 1, stops: [], createdAt: '2026-07-22T00:00:00Z', updatedAt: '2026-07-22T00:00:00Z', routeGeometry: null },
+    const mockSummaries = [
+      { id: 1, title: 'Trip 1', visibility: 'PUBLIC' as const, status: 'DRAFT' as const, createdAt: '2026-07-22T00:00:00Z', updatedAt: '2026-07-22T00:00:00Z', stopCount: 0, coverPhotoUrl: null },
     ];
+    const mockPage = {
+      content: mockSummaries,
+      page: { size: 20, number: 0, totalElements: 1, totalPages: 1 },
+    };
 
-    service.listTrips().subscribe((trips) => {
-      expect(trips).toEqual(mockTrips);
-      expect(service.trips()).toEqual(mockTrips);
+    service.listTrips().subscribe((page) => {
+      expect(page).toEqual(mockPage);
+      expect(service.trips()).toEqual(mockSummaries);
       done();
     });
 
-    const req = httpMock.expectOne('http://localhost:8080/api/trips');
+    const req = httpMock.expectOne('http://localhost:8080/api/trips?page=0&size=20');
     expect(req.request.method).toBe('GET');
-    req.flush(mockTrips);
+    req.flush(mockPage);
   });
 
   // ✓ Test error handling with fieldErrors present
@@ -52,7 +56,7 @@ describe('TripService', () => {
       }
     );
 
-    const req = httpMock.expectOne('http://localhost:8080/api/trips');
+    const req = httpMock.expectOne('http://localhost:8080/api/trips?page=0&size=20');
     const mockErrorResponse = {
       status: 400,
       message: 'Validation failed',
@@ -73,7 +77,7 @@ describe('TripService', () => {
       }
     );
 
-    const req = httpMock.expectOne('http://localhost:8080/api/trips');
+    const req = httpMock.expectOne('http://localhost:8080/api/trips?page=0&size=20');
     const mockErrorResponse = {
       status: 500,
       message: 'Internal server error',
@@ -91,7 +95,7 @@ describe('TripService', () => {
       }
     );
 
-    const req = httpMock.expectOne('http://localhost:8080/api/trips');
+    const req = httpMock.expectOne('http://localhost:8080/api/trips?page=0&size=20');
     req.error(new ProgressEvent('error'), { status: 0, statusText: 'Unknown Error' });
   });
 
@@ -105,7 +109,7 @@ describe('TripService', () => {
       }
     );
 
-    const req = httpMock.expectOne('http://localhost:8080/api/trips');
+    const req = httpMock.expectOne('http://localhost:8080/api/trips?page=0&size=20');
     req.flush({ message: 'Forbidden' }, { status: 403, statusText: 'Forbidden' });
   });
 
@@ -141,7 +145,7 @@ describe('TripService', () => {
     service.trips.set([]);
     service.createTrip({ title: 'New Trip', description: undefined, tags: undefined, visibility: 'PUBLIC', stops: [] }).subscribe((trip) => {
       expect(trip).toEqual(newTrip);
-      expect(service.trips()).toContain(newTrip);
+      expect(service.trips()).toContain(jasmine.objectContaining({ id: 2, title: 'New Trip', stopCount: 0 }));
       done();
     });
 

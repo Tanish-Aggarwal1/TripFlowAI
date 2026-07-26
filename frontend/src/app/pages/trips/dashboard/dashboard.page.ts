@@ -10,7 +10,7 @@ import {
 import { addIcons } from 'ionicons';
 import { add, lockClosed, globeOutline, trash, create } from 'ionicons/icons';
 import { TripService } from '../../../core/services/trip.service';
-import { TripResponse } from '../../../core/models/trip.model';
+import { TripSummaryResponse } from '../../../core/models/trip.model';
 
 @Component({
   selector: 'app-dashboard',
@@ -30,7 +30,7 @@ export class DashboardPage implements ViewWillEnter {
     private router = inject(Router);
     private alertCtrl = inject(AlertController);
 
-  trips: TripResponse[] = [];
+  trips: TripSummaryResponse[] = [];
   loading = true;
   error: string | null = null;
 
@@ -46,8 +46,8 @@ export class DashboardPage implements ViewWillEnter {
     this.loading = true;
     this.error = null;
     this.tripService.listTrips().subscribe({
-      next: (trips) => {
-        this.trips = trips;
+      next: (page) => {
+        this.trips = page.content;
         this.loading = false;
       },
       error: (err) => {
@@ -57,11 +57,11 @@ export class DashboardPage implements ViewWillEnter {
     });
   }
 
-  openTrip(trip: TripResponse): void {
+  openTrip(trip: TripSummaryResponse): void {
     this.router.navigate(['/trips', trip.id]);
   }
 
-  editTrip(trip: TripResponse, event: Event): void {
+  editTrip(trip: TripSummaryResponse, event: Event): void {
     event.stopPropagation();
     this.router.navigate(['/trips', trip.id, 'edit']);
   }
@@ -70,7 +70,7 @@ export class DashboardPage implements ViewWillEnter {
     this.router.navigate(['/trips/new']);
   }
 
-  async confirmDelete(trip: TripResponse, event: Event): Promise<void> {
+  async confirmDelete(trip: TripSummaryResponse, event: Event): Promise<void> {
     event.stopPropagation();
     const alert = await this.alertCtrl.create({
       header: 'Delete Trip',

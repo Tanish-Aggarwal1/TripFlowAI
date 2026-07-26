@@ -1,9 +1,11 @@
 import { inject, Injectable, signal } from '@angular/core';
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { Observable, tap, catchError, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
   TripResponse,
+  TripSummaryResponse,
+  PagedResponse,
   CreateTripRequest,
   UpdateTripRequest,
   ApiError,
@@ -15,13 +17,14 @@ export class TripService {
   private http = inject(HttpClient);
 
   // Reactive list — dashboard subscribes to this
-  trips = signal<TripResponse[]>([]);
+  trips = signal<TripSummaryResponse[]>([]);
 
   // ── READ ────────────────────────────────────────────────────────────────────
 
-  listTrips(): Observable<TripResponse[]> {
-    return this.http.get<TripResponse[]>(this.baseUrl).pipe(
-      tap((trips) => this.trips.set(trips)),
+  listTrips(page = 0, size = 20): Observable<PagedResponse<TripSummaryResponse>> {
+    const params = new HttpParams().set('page', page).set('size', size);
+    return this.http.get<PagedResponse<TripSummaryResponse>>(this.baseUrl, { params }).pipe(
+      tap((result) => this.trips.set(result.content)),
       catchError((err: HttpErrorResponse) => this.handleError(err)),
     );
   }
@@ -36,18 +39,19 @@ export class TripService {
 
   createTrip(request: CreateTripRequest): Observable<TripResponse> {
     return this.http.post<TripResponse>(this.baseUrl, request).pipe(
-      tap((created) => this.trips.update((list) => [created, ...list])),
+      tap((created) => this.trips.update((list) => [this.toSummary(created), ...list])),
       catchError((err: HttpErrorResponse) => this.handleError(err)),
     );
   }
 
   updateTrip(id: number, request: UpdateTripRequest): Observable<TripResponse> {
     return this.http.put<TripResponse>(`${this.baseUrl}/${id}`, request).pipe(
-      tap((updated) =>
+      tap((updated) => {
+        const summary = this.toSummary(updated);
         this.trips.update((list) =>
-          list.map((t) => (t.id === updated.id ? updated : t)),
-        ),
-      ),
+          list.map((t) => (t.id === summary.id ? summary : t)),
+        );
+      }),
       catchError((err: HttpErrorResponse) => this.handleError(err)),
     );
   }
@@ -61,14 +65,30 @@ export class TripService {
 
   optimizeTrip(id: number): Observable<TripResponse> {
   return this.http.post<TripResponse>(`${this.baseUrl}/${id}/optimize`, {}).pipe(
-    tap((updated) =>
+    tap((updated) => {
+      const summary = this.toSummary(updated);
       this.trips.update((list) =>
-        list.map((t) => (t.id === updated.id ? updated : t))
-      )
-    ),
+        list.map((t) => (t.id === summary.id ? summary : t))
+      );
+    }),
     catchError((err: HttpErrorResponse) => this.handleError(err))
   );
 }
+
+  // ── MAPPING ──────────────────────────────────────────────────────────────────
+
+  private toSummary(trip: TripResponse): TripSummaryResponse {
+    return {
+      id: trip.id,
+      title: trip.title,
+      visibility: trip.visibility,
+      status: trip.status,
+      createdAt: trip.createdAt,
+      updatedAt: trip.updatedAt,
+      stopCount: trip.stops.length,
+      coverPhotoUrl: null,
+    };
+  }
 
   // ── ERROR HANDLING ───────────────────────────────────────────────────────────
 

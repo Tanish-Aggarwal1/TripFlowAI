@@ -125,7 +125,25 @@ class TripControllerIT {
 		createTrip(user, sampleTripRequest("User's Trip", TripVisibility.PRIVATE));
 
 		mockMvc.perform(get("/api/trips").with(csrf()).with(asUser(user))).andExpect(status().isOk())
-				.andExpect(jsonPath("$[0].title").value("User's Trip"));
+				.andExpect(jsonPath("$.content[0].title").value("User's Trip"))
+				.andExpect(jsonPath("$.content[0].stopCount").value(1))
+				.andExpect(jsonPath("$.content[0].stops").doesNotExist())
+				.andExpect(jsonPath("$.page.totalElements").value(1));
+	}
+
+	@Test
+	void listTrips_pageSizeParam_boundsResultsAndReportsTotalPages() throws Exception {
+		User user = createTestUser("pageowner");
+		createTrip(user, sampleTripRequest("Trip One", TripVisibility.PRIVATE));
+		createTrip(user, sampleTripRequest("Trip Two", TripVisibility.PRIVATE));
+		createTrip(user, sampleTripRequest("Trip Three", TripVisibility.PRIVATE));
+
+		mockMvc.perform(get("/api/trips?page=0&size=2").with(csrf()).with(asUser(user)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.content.length()").value(2))
+				.andExpect(jsonPath("$.page.size").value(2))
+				.andExpect(jsonPath("$.page.totalElements").value(3))
+				.andExpect(jsonPath("$.page.totalPages").value(2));
 	}
 
 	@Test

@@ -3,6 +3,8 @@ package com.tripflow.backend.service;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,6 +17,7 @@ import com.tripflow.backend.dto.CreateStopRequest;
 import com.tripflow.backend.dto.CreateTripRequest;
 import com.tripflow.backend.dto.StopResponse;
 import com.tripflow.backend.dto.TripResponse;
+import com.tripflow.backend.dto.TripSummaryResponse;
 import com.tripflow.backend.dto.UpdateStopRequest;
 import com.tripflow.backend.dto.UpdateTripRequest;
 import com.tripflow.backend.exception.ForbiddenException;
@@ -42,10 +45,8 @@ public class TripService {
     // ---------- Trips ----------
 
     @Transactional(readOnly = true)
-    public List<TripResponse> listTrips(Long ownerId) {
-        return tripRepository.findByUserIdOrderByCreatedAtDesc(ownerId).stream()
-                .map(tripMapper::toResponse)
-                .toList();
+    public Page<TripSummaryResponse> listTrips(Long ownerId, Pageable pageable) {
+        return tripRepository.findSummariesByUserId(ownerId, pageable);
     }
 
     @Transactional
