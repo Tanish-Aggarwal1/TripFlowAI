@@ -33,7 +33,7 @@ Set these in the Render/Railway dashboard under the service's Environment settin
 | `MAPBOX_TOKEN` | Mapbox public token (frontend CI injection only — not used by the backend) | `pk.eyJ1...` |
 | `CORS_ALLOWED_ORIGINS` | Comma-separated list of allowed frontend origins | `https://tripflowai.app` |
 
-**Frontend tokens:** `MAPBOX_TOKEN` is injected at CI build time via `frontend-ci.yml` (see `docs/frontend-standards.md` §Environment Files). It is a GitHub Actions secret, not a backend environment variable — the backend never uses it.
+**Frontend tokens:** `MAPBOX_TOKEN` and `API_BASE_URL` are injected at CI build time via `frontend-ci.yml` (see `docs/frontend-standards.md` §Environment Files). Both are GitHub Actions secrets, not backend environment variables — the backend never uses them. `API_BASE_URL` should be set to the real deployed backend URL (e.g. the Render/Railway URL from this same table) once SCRUM-73 provisions it; until then `environment.prod.ts` ships with an `__API_BASE_URL__` placeholder.
 
 ### Generating `JWT_SECRET` locally (PowerShell)
 

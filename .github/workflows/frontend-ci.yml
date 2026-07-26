@@ -44,7 +44,20 @@ jobs:
         run: |
           sed -i "s|__MAPBOX_TOKEN__|${{ secrets.MAPBOX_TOKEN }}|g" src/environments/environment.ts
           sed -i "s|__MAPBOX_TOKEN__|${{ secrets.MAPBOX_TOKEN }}|g" src/environments/environment.prod.ts
-        
+
+      - name: Inject prod API base URL
+        # Not a hard requirement (unlike Mapbox) — SCRUM-73 hasn't provisioned a real
+        # backend URL yet, so API_BASE_URL isn't set as a repo secret. Once it is,
+        # this substitutes it automatically; until then the placeholder is left as-is,
+        # which is harmless here since this workflow only builds for verification and
+        # never ships the artifact.
+        run: |
+          if [ -n "${{ secrets.API_BASE_URL }}" ]; then
+            sed -i "s|__API_BASE_URL__|${{ secrets.API_BASE_URL }}|g" src/environments/environment.prod.ts
+          else
+            echo "::warning::API_BASE_URL secret not set — leaving __API_BASE_URL__ placeholder in environment.prod.ts (fine for CI verification builds; set this secret before an actual production build/deploy)."
+          fi
+
       - run: npm ci
       - run: npm run lint
       - run: npm run test:ci
