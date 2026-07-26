@@ -47,4 +47,19 @@ public class TripMapperTest {
 
         assertThat(trip.getTitle()).isEqualTo("Weekend Trip");
     }
+
+    @Test
+    void toEntity_nullTags_defaultsToEmptyListNotNull() {
+        CreateTripRequest request = new CreateTripRequest(
+                "Weekend Trip",
+                null,
+                null,
+                TripVisibility.PRIVATE,
+                List.of(new CreateStopRequest("Cottage", 45.0, -79.9, null, null, null))
+        );
+
+        Trip trip = tripMapper.toEntity(request, new User());
+
+        assertThat(trip.getTags()).isNotNull().isEmpty();
+    }
 }

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -16,6 +17,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -62,7 +64,7 @@ public class TripServiceTest {
         User owner = new User();
         owner.setId(1L);
         owner.setUsername("tanish");
-        when(userRepository.findById(1L)).thenReturn(Optional.of(owner));
+        when(userRepository.getReferenceById(1L)).thenReturn(owner);
         when(placeRepository.findByNameAndLatitudeAndLongitude(any(), any(), any()))
                 .thenReturn(Optional.empty());
         when(placeRepository.save(any())).thenAnswer(inv -> {
@@ -86,6 +88,25 @@ public class TripServiceTest {
         assertThat(response.title()).isEqualTo("Weekend Trip");
         assertThat(response.stops()).hasSize(1);
         assertThat(response.stops().get(0).stopOrder()).isEqualTo(0);
+    }
+
+    @Test
+    void createTrip_doesNotQueryUserRepositoryByFindById() {
+        User owner = new User();
+        owner.setId(1L);
+        when(userRepository.getReferenceById(1L)).thenReturn(owner);
+        when(placeRepository.findByNameAndLatitudeAndLongitude(any(), any(), any()))
+                .thenReturn(Optional.empty());
+        when(placeRepository.save(any())).thenAnswer(inv -> inv.getArgument(0, Place.class));
+        when(tripRepository.save(any())).thenAnswer(inv -> inv.getArgument(0, Trip.class));
+
+        CreateStopRequest stopReq = new CreateStopRequest("Cottage", 45.0, -79.9, null, null, null);
+        CreateTripRequest request = new CreateTripRequest(
+                "Weekend Trip", null, null, TripVisibility.PRIVATE, List.of(stopReq));
+
+        tripService.createTrip(1L, request);
+
+        verify(userRepository, never()).findById(any());
     }
 
     @Test
@@ -185,6 +206,28 @@ public class TripServiceTest {
         assertThat(response.visibility()).isEqualTo(TripVisibility.PUBLIC);
         assertThat(response.stops()).hasSize(1);
         assertThat(response.stops().get(0).name()).isEqualTo("Niagara Falls");
+    }
+
+    @Test
+    void updateTrip_nullTags_defaultsToEmptyListNotNull() {
+        User owner = new User();
+        owner.setId(1L);
+
+        Trip trip = new Trip();
+        trip.setId(50L);
+        trip.setUser(owner);
+        trip.setTags(new ArrayList<>(List.of("old-tag")));
+        trip.setStops(new ArrayList<>());
+
+        when(tripRepository.findWithStopsById(50L)).thenReturn(Optional.of(trip));
+        when(tripRepository.save(any())).thenAnswer(inv -> inv.getArgument(0, Trip.class));
+
+        UpdateTripRequest request = new UpdateTripRequest(
+                "Title", null, null, TripVisibility.PRIVATE, List.of());
+
+        TripResponse response = tripService.updateTrip(50L, 1L, request);
+
+        assertThat(response.tags()).isNotNull().isEmpty();
     }
 
     @Test
@@ -401,5 +444,60 @@ public class TripServiceTest {
 
         assertThatThrownBy(() -> tripService.deleteStop(50L, 1L, 2L))
                 .isInstanceOf(ForbiddenException.class);
+    }
+
+    // ---------- resolvePlace race retry ----------
+
+    @Test
+    void addStop_placeSaveRacesUniqueIndex_reusesWinningRow() {
+        User owner = new User();
+        owner.setId(1L);
+
+        Trip trip = new Trip();
+        trip.setId(50L);
+        trip.setUser(owner);
+        trip.setStops(new ArrayList<>());
+
+        Place winningRow = new Place();
+        winningRow.setId(30L);
+        winningRow.setName("Shared Cafe");
+        winningRow.setExternalPlaceId("ext-123");
+
+        when(tripRepository.findWithStopsById(50L)).thenReturn(Optional.of(trip));
+        when(placeRepository.findByExternalPlaceId("ext-123"))
+                .thenReturn(Optional.empty(), Optional.of(winningRow));
+        when(placeRepository.save(any())).thenThrow(new DataIntegrityViolationException("duplicate key"));
+        when(tripRepository.save(any())).thenAnswer(inv -> inv.getArgument(0, Trip.class));
+
+        CreateStopRequest request = new CreateStopRequest(
+                "Shared Cafe", 44.0, -79.0, null, "ext-123", null);
+
+        StopResponse response = tripService.addStop(50L, 1L, request);
+
+        assertThat(response.name()).isEqualTo("Shared Cafe");
+        verify(placeRepository).save(any());
+        verify(placeRepository, times(2)).findByExternalPlaceId("ext-123");
+    }
+
+    @Test
+    void addStop_placeSaveFailsForUnrelatedReason_propagatesWhenNoExistingRowFound() {
+        User owner = new User();
+        owner.setId(1L);
+
+        Trip trip = new Trip();
+        trip.setId(50L);
+        trip.setUser(owner);
+        trip.setStops(new ArrayList<>());
+
+        when(tripRepository.findWithStopsById(50L)).thenReturn(Optional.of(trip));
+        when(placeRepository.findByNameAndLatitudeAndLongitude(any(), any(), any()))
+                .thenReturn(Optional.empty());
+        when(placeRepository.save(any())).thenThrow(new DataIntegrityViolationException("duplicate key"));
+
+        CreateStopRequest request = new CreateStopRequest(
+                "New Place", 44.0, -79.0, null, null, null);
+
+        assertThatThrownBy(() -> tripService.addStop(50L, 1L, request))
+                .isInstanceOf(DataIntegrityViolationException.class);
     }
 }
