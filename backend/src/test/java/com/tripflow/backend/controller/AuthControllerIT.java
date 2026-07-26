@@ -234,8 +234,9 @@ public class AuthControllerIT {
 			mockMvc.perform(get("/api/trips")
 					.header("Authorization", "Bearer " + token))
 					.andExpect(status().isOk())
-					.andExpect(jsonPath("$").isArray())
-					.andExpect(jsonPath("$").isEmpty());
+					.andExpect(jsonPath("$.content").isArray())
+					.andExpect(jsonPath("$.content").isEmpty())
+					.andExpect(jsonPath("$.page.totalElements").value(0));
 		}
 
 		@Test
