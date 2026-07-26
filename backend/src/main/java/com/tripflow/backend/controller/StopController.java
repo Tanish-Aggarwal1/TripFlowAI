@@ -20,9 +20,12 @@ import com.tripflow.backend.dto.UpdateStopRequest;
 import com.tripflow.backend.security.UserPrincipal;
 import com.tripflow.backend.service.TripService;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 
+@Tag(name = "Stops", description = "Nested stop CRUD under a trip — owner only, no public read")
 @RestController
 @RequestMapping("/api/trips/{tripId}/stops")
 @AllArgsConstructor
@@ -30,12 +33,14 @@ public class StopController {
 
     private final TripService tripService;
 
+    @Operation(summary = "List a trip's stops")
     @GetMapping
     public ResponseEntity<List<StopResponse>> listStops(
             @PathVariable Long tripId, @AuthenticationPrincipal UserPrincipal principal) {
         return ResponseEntity.ok(tripService.listStops(tripId, principal.userId()));
     }
 
+    @Operation(summary = "Add a stop", description = "Appends a stop at the next stopOrder.")
     @PostMapping
     public ResponseEntity<StopResponse> addStop(
             @PathVariable Long tripId,
@@ -44,12 +49,14 @@ public class StopController {
         return new ResponseEntity<>(tripService.addStop(tripId, principal.userId(), request), HttpStatus.CREATED);
     }
 
+    @Operation(summary = "Get a stop")
     @GetMapping("/{stopId}")
     public ResponseEntity<StopResponse> getStop(
             @PathVariable Long tripId, @PathVariable Long stopId, @AuthenticationPrincipal UserPrincipal principal) {
         return ResponseEntity.ok(tripService.getStop(tripId, stopId, principal.userId()));
     }
 
+    @Operation(summary = "Update a stop", description = "status is optional — omit to leave unchanged.")
     @PutMapping("/{stopId}")
     public ResponseEntity<StopResponse> updateStop(
             @PathVariable Long tripId, @PathVariable Long stopId,
@@ -58,6 +65,7 @@ public class StopController {
         return ResponseEntity.ok(tripService.updateStop(tripId, stopId, principal.userId(), request));
     }
 
+    @Operation(summary = "Delete a stop", description = "Remaining stops are automatically renumbered.")
     @DeleteMapping("/{stopId}")
     public ResponseEntity<Void> deleteStop(
             @PathVariable Long tripId, @PathVariable Long stopId, @AuthenticationPrincipal UserPrincipal principal) {

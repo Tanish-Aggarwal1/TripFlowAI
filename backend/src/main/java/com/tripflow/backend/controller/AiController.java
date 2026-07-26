@@ -15,6 +15,8 @@ import com.tripflow.backend.mapper.AiItineraryMapper;
 import com.tripflow.backend.security.UserPrincipal;
 import com.tripflow.backend.service.AiItineraryService;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
@@ -26,6 +28,7 @@ import lombok.RequiredArgsConstructor;
  * <p>Does not persist anything — the frontend accepts individual suggested
  * stops via the existing POST /api/trips/{tripId}/stops endpoint.
  */
+@Tag(name = "AI Itinerary", description = "Gemini-assisted stop suggestions — does not persist anything")
 @RestController
 @RequestMapping("/api/trips")
 @RequiredArgsConstructor
@@ -34,6 +37,7 @@ public class AiController {
 	private final AiItineraryService aiItineraryService;
     private final AiItineraryMapper aiItineraryMapper;
 
+    @Operation(summary = "Suggest an itinerary", description = "Sends the trip's existing stops plus interests/budget/pace preferences to Gemini and returns suggested stops with reasoning. Nothing is persisted.")
     @PostMapping("/{id}/ai-suggest")
     public ResponseEntity<SuggestedItineraryResponse> suggestItinerary(
             @PathVariable Long id,
