@@ -1,7 +1,10 @@
 package com.tripflow.backend.controller;
 
-import java.util.List;
-
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.data.web.PagedModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -16,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.tripflow.backend.dto.CreateTripRequest;
 import com.tripflow.backend.dto.TripResponse;
+import com.tripflow.backend.dto.TripSummaryResponse;
 import com.tripflow.backend.dto.UpdateTripRequest;
 import com.tripflow.backend.security.UserPrincipal;
 import com.tripflow.backend.service.RouteOptimizationService;
@@ -34,8 +38,11 @@ public class TripController {
 
     
     @GetMapping
-    public ResponseEntity<List<TripResponse>> listTrips(@AuthenticationPrincipal UserPrincipal principal) {
-        return ResponseEntity.ok(tripService.listTrips(principal.userId()));
+    public ResponseEntity<PagedModel<TripSummaryResponse>> listTrips(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        Page<TripSummaryResponse> page = tripService.listTrips(principal.userId(), pageable);
+        return ResponseEntity.ok(new PagedModel<>(page));
     }
 
     @PostMapping

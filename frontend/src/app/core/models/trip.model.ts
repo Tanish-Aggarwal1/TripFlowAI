@@ -58,8 +58,32 @@ export interface TripResponse {
   stops: StopResponse[];
   createdAt: string;  // ISO-8601 UTC Instant e.g. "2026-07-13T14:20:00Z"
   updatedAt: string;
-  routeGeometry: string | null; //// JSON-encoded GeoJSON LineString; JSON.parse before use. Null pre-optimization. 
+  routeGeometry: string | null; //// JSON-encoded GeoJSON LineString; JSON.parse before use. Null pre-optimization.
 
+}
+
+// Card-sized projection returned by the paginated GET /api/trips list endpoint (REF-21) —
+// no `stops` array, just a count, so list views never pull full itinerary data.
+export interface TripSummaryResponse {
+  id: number;
+  title: string;
+  visibility: TripVisibility;
+  status: TripStatus;
+  createdAt: string;
+  updatedAt: string;
+  stopCount: number;
+  coverPhotoUrl: string | null;
+}
+
+// Matches Spring Data's PagedModel shape: { content, page: { size, number, totalElements, totalPages } }
+export interface PagedResponse<T> {
+  content: T[];
+  page: {
+    size: number;
+    number: number;
+    totalElements: number;
+    totalPages: number;
+  };
 }
 
 // ── API error shape (matches ApiError as of REF-10) ──────────────────────────

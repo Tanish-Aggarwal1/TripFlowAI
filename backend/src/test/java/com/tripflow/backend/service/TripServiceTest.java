@@ -16,6 +16,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import com.tripflow.backend.domain.Place;
 import com.tripflow.backend.domain.Stop;
@@ -27,6 +31,7 @@ import com.tripflow.backend.dto.CreateStopRequest;
 import com.tripflow.backend.dto.CreateTripRequest;
 import com.tripflow.backend.dto.StopResponse;
 import com.tripflow.backend.dto.TripResponse;
+import com.tripflow.backend.dto.TripSummaryResponse;
 import com.tripflow.backend.dto.UpdateStopRequest;
 import com.tripflow.backend.dto.UpdateTripRequest;
 import com.tripflow.backend.exception.ForbiddenException;
@@ -130,28 +135,19 @@ public class TripServiceTest {
     // ---------- listTrips ----------
 
     @Test
-    void listTrips_returnsOwnersTripsInOrder() {
-        User owner = new User();
-        owner.setId(1L);
+    void listTrips_returnsPagedSummariesFromRepository() {
+        Pageable pageable = PageRequest.of(0, 20);
+        TripSummaryResponse summary = new TripSummaryResponse(
+                11L, "Trip B", TripVisibility.PRIVATE, null, null, null, 2L, null);
+        Page<TripSummaryResponse> page = new PageImpl<>(List.of(summary), pageable, 1);
 
-        Trip t1 = new Trip();
-        t1.setId(10L);
-        t1.setUser(owner);
-        t1.setTitle("Trip A");
-        t1.setStops(List.of());
+        when(tripRepository.findSummariesByUserId(1L, pageable)).thenReturn(page);
 
-        Trip t2 = new Trip();
-        t2.setId(11L);
-        t2.setUser(owner);
-        t2.setTitle("Trip B");
-        t2.setStops(List.of());
+        Page<TripSummaryResponse> result = tripService.listTrips(1L, pageable);
 
-        when(tripRepository.findByUserIdOrderByCreatedAtDesc(1L)).thenReturn(List.of(t2, t1));
-
-        List<TripResponse> result = tripService.listTrips(1L);
-
-        assertThat(result).hasSize(2);
-        assertThat(result.get(0).title()).isEqualTo("Trip B");
+        assertThat(result.getContent()).hasSize(1);
+        assertThat(result.getContent().get(0).title()).isEqualTo("Trip B");
+        assertThat(result.getContent().get(0).stopCount()).isEqualTo(2L);
     }
 
     // ---------- updateTrip ----------

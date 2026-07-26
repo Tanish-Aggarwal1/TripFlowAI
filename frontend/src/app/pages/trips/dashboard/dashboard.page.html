@@ -31,7 +31,7 @@
       (click)="openTrip(trip)">
       <ion-label>
         <h2>{{ trip.title }}</h2>
-        <p>{{ trip.stops.length }} stop{{ trip.stops.length !== 1 ? 's' : '' }}</p>
+        <p>{{ trip.stopCount }} stop{{ trip.stopCount !== 1 ? 's' : '' }}</p>
       </ion-label>
 
       <ion-badge slot="end" [color]="statusColor(trip.status)">

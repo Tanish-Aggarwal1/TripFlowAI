@@ -145,3 +145,4 @@ See `docs/ci.md` for the full pipeline. Summary: PR + push to `main` triggers `b
 |---|---|
 | 2026-07-19 | Initial SDP.md created, consolidating conventions established across Sprint 3 |
 | 2026-07-23 | Updated package tree (gemini client landed, ai package added), coverage-floor provenance closed, risk register synced through Sprint 4 pre-work, frontend-standards.md created |
+| 2026-07-26 | REF-21: established the team-wide pagination/sorting convention — repositories accept `Pageable` and return `Page<>`/projection DTOs, controllers accept `?page=&size=&sort=`, responses use Spring Data's `PagedModel` shape (`content` + `page`). `GET /api/trips` is the first endpoint on this convention; see `docs/api-contracts.md` for the full contract. |
