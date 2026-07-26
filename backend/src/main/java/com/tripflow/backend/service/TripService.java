@@ -1,8 +1,10 @@
 package com.tripflow.backend.service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -51,8 +53,10 @@ public class TripService {
 
     @Transactional
     public TripResponse createTrip(Long ownerId, CreateTripRequest request) {
-        User owner = userRepository.findById(ownerId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + ownerId));
+        // ownerId always comes from an authenticated JWT principal tied to a real user row,
+        // so a lazy reference (no owner SELECT) is safe here — unlike loadOwnedTrip, which
+        // reads a caller-supplied id that may not exist.
+        User owner = userRepository.getReferenceById(ownerId);
 
         Trip trip = tripMapper.toEntity(request, owner);
 
@@ -88,7 +92,7 @@ public class TripService {
 
         trip.setTitle(request.title());
         trip.setDescription(request.description());
-        trip.setTags(request.tags());
+        trip.setTags(request.tags() != null ? request.tags() : new ArrayList<>());
         trip.setVisibility(request.visibility());
         // status is server-owned lifecycle state — intentionally not touched here
 
@@ -200,13 +204,7 @@ public class TripService {
     }
 
     private Place resolvePlace(String name, Double latitude, Double longitude, String address, String externalPlaceId) {
-        Optional<Place> existing = Optional.empty();
-        if (externalPlaceId != null && !externalPlaceId.isBlank()) {
-            existing = placeRepository.findByExternalPlaceId(externalPlaceId);
-        }
-        if (existing.isEmpty()) {
-            existing = placeRepository.findByNameAndLatitudeAndLongitude(name, latitude, longitude);
-        }
+        Optional<Place> existing = findExistingPlace(name, latitude, longitude, externalPlaceId);
         if (existing.isPresent()) {
             return existing.get();
         }
@@ -216,6 +214,25 @@ public class TripService {
         place.setLongitude(longitude);
         place.setAddress(address);
         place.setExternalPlaceId(externalPlaceId);
-        return placeRepository.save(place);
+        try {
+            return placeRepository.save(place);
+        } catch (DataIntegrityViolationException ex) {
+            // Another request won the race against the partial unique index on
+            // external_place_id (V3__create_places.sql) between our lookup and this save.
+            // Re-read and reuse its row instead of surfacing a 500 to the client.
+            log.debug("Place save raced on externalPlaceId={}, re-reading existing row", externalPlaceId);
+            return findExistingPlace(name, latitude, longitude, externalPlaceId)
+                    .orElseThrow(() -> ex);
+        }
+    }
+
+    private Optional<Place> findExistingPlace(String name, Double latitude, Double longitude, String externalPlaceId) {
+        if (externalPlaceId != null && !externalPlaceId.isBlank()) {
+            Optional<Place> byExternalId = placeRepository.findByExternalPlaceId(externalPlaceId);
+            if (byExternalId.isPresent()) {
+                return byExternalId;
+            }
+        }
+        return placeRepository.findByNameAndLatitudeAndLongitude(name, latitude, longitude);
     }
 }
