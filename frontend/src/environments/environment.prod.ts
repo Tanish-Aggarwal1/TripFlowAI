@@ -1,5 +1,5 @@
 export const environment = {
   production: true,
-  apiBaseUrl: 'https://your-render-app.onrender.com/api',
+  apiBaseUrl: '__API_BASE_URL__',
   mapboxToken: '__MAPBOX_TOKEN__'
 };
