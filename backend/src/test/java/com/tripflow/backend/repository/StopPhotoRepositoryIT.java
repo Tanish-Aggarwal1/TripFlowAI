@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
+import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 import org.springframework.boot.testcontainers.context.ImportTestcontainers;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
@@ -18,13 +19,6 @@ import com.tripflow.backend.domain.Trip;
 import com.tripflow.backend.domain.User;
 import com.tripflow.backend.testsupport.PostgresTestcontainersConfiguration;
 
-/**
- * Also serves as the primary check for the SCRUM-66b acceptance criterion
- * "ddl-auto=validate passes after this migration lands" — this test class
- * boots a real Hibernate SessionFactory against a Testcontainers Postgres
- * with V5 applied. If the entity and migration disagree, context startup
- * fails before any {@code @Test} method runs.
- */
 @DataJpaTest
 @Import(JpaConfig.class)
 @ImportTestcontainers(PostgresTestcontainersConfiguration.class)
@@ -37,8 +31,9 @@ class StopPhotoRepositoryIT {
     @Autowired private TripRepository tripRepository;
     @Autowired private UserRepository userRepository;
     @Autowired private PlaceRepository placeRepository;
+    @Autowired private TestEntityManager entityManager;
 
-    private Stop createStop(String suffix) {
+    private Long createStopId(String suffix) {
         User user = new User();
         user.setUsername("photo-owner-" + suffix);
         user.setEmail("photo-owner-" + suffix + "@tripflow.com");
@@ -60,12 +55,24 @@ class StopPhotoRepositoryIT {
         stop.setTrip(savedTrip);
         stop.setPlace(savedPlace);
         stop.setStopOrder(0);
-        return stopRepository.save(stop);
+        Stop savedStop = stopRepository.save(stop);
+
+        // Flush + clear so every caller gets a clean, reloaded, unambiguously
+        // persistent Stop reference — matches the pattern already used in
+        // StopPersistenceIT / TripRepositoryIT for exactly this reason.
+        entityManager.flush();
+        entityManager.clear();
+
+        return savedStop.getId();
+    }
+
+    private Stop reloadStop(Long stopId) {
+        return stopRepository.findById(stopId).orElseThrow();
     }
 
     @Test
     void saveAndFindById_persistsAllFields() {
-        Stop stop = createStop("save");
+        Stop stop = reloadStop(createStopId("save"));
 
         StopPhoto photo = new StopPhoto();
         photo.setStop(stop);
@@ -74,8 +81,9 @@ class StopPhotoRepositoryIT {
         photo.setCaption("Sunset at the lookout");
 
         StopPhoto saved = stopPhotoRepository.save(photo);
+        entityManager.flush();
+        entityManager.clear();
 
-        assertThat(saved.getId()).isNotNull();
         StopPhoto found = stopPhotoRepository.findById(saved.getId()).orElseThrow();
         assertThat(found.getUrl()).isEqualTo(photo.getUrl());
         assertThat(found.getCloudinaryPublicId()).isEqualTo("trip/sample");
@@ -85,8 +93,10 @@ class StopPhotoRepositoryIT {
 
     @Test
     void findByStopId_returnsOnlyPhotosForThatStop() {
-        Stop stopA = createStop("a");
-        Stop stopB = createStop("b");
+        Long stopAId = createStopId("a");
+        Long stopBId = createStopId("b");
+        Stop stopA = reloadStop(stopAId);
+        Stop stopB = reloadStop(stopBId);
 
         StopPhoto photo1 = new StopPhoto();
         photo1.setStop(stopA);
@@ -103,30 +113,43 @@ class StopPhotoRepositoryIT {
         photo3.setUrl("https://res.cloudinary.com/demo/image/upload/b1.jpg");
         stopPhotoRepository.save(photo3);
 
-        assertThat(stopPhotoRepository.findByStopId(stopA.getId())).hasSize(2);
-        assertThat(stopPhotoRepository.findByStopId(stopB.getId())).hasSize(1);
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThat(stopPhotoRepository.findByStopId(stopAId)).hasSize(2);
+        assertThat(stopPhotoRepository.findByStopId(stopBId)).hasSize(1);
     }
 
     @Test
     void findByStopId_noPhotos_returnsEmptyList() {
-        Stop stop = createStop("empty");
+        Long stopId = createStopId("empty");
 
-        assertThat(stopPhotoRepository.findByStopId(stop.getId())).isEmpty();
+        assertThat(stopPhotoRepository.findByStopId(stopId)).isEmpty();
     }
 
     @Test
     void deletingStop_cascadesToItsPhotos() {
-        Stop stop = createStop("cascade");
+        Long stopId = createStopId("cascade");
+        Stop stop = reloadStop(stopId);
 
         StopPhoto photo = new StopPhoto();
         photo.setStop(stop);
         photo.setUrl("https://res.cloudinary.com/demo/image/upload/cascade.jpg");
         StopPhoto savedPhoto = stopPhotoRepository.save(photo);
+        entityManager.flush();
+        entityManager.clear();
 
-        stopRepository.delete(stop);
-        stopRepository.flush();
+        Long savedPhotoId = savedPhoto.getId();
 
-        assertThat(stopPhotoRepository.findById(savedPhoto.getId())).isEmpty();
-        assertThat(stopPhotoRepository.findByStopId(stop.getId())).isEmpty();
+        // Reload the stop fresh after the clear so the delete operates on a
+        // clean, unambiguous managed instance with no pending sibling actions
+        // in the same persistence-context flush.
+        Stop stopToDelete = stopRepository.findById(stopId).orElseThrow();
+        stopRepository.delete(stopToDelete);
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThat(stopPhotoRepository.findById(savedPhotoId)).isEmpty();
+        assertThat(stopPhotoRepository.findByStopId(stopId)).isEmpty();
     }
 }
