@@ -55,13 +55,7 @@ public class GlobalExceptionHandler {
 		log.warn("422 Unprocessable Entity on {}: {}", req.getRequestURI(), ex.getMessage());
 		return error(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage(), req, null);
 	}
-	
-	@ExceptionHandler(Exception.class)
-	public ResponseEntity<ApiError> handleGeneric(Exception ex, HttpServletRequest req) {
-		log.error("500 Internal Server Error on {}: {}", req.getRequestURI(), ex.getMessage(), ex);
-	    return error(HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected error", req, null);
-	}
-	
+
 	@ExceptionHandler(OrsClientException.class)
 	public ResponseEntity<ApiError> handleOrsFailure(OrsClientException ex, HttpServletRequest req) {
 	    log.error("502 Bad Gateway on {}: {}", req.getRequestURI(), ex.getMessage(), ex);
@@ -85,6 +79,12 @@ public class GlobalExceptionHandler {
 	public ResponseEntity<ApiError> handleGeminiParsing(GeminiParsingException ex, HttpServletRequest req) {
 	    log.error("502 Bad Gateway on {}: {}", req.getRequestURI(), ex.getMessage(), ex);
 	    return error(HttpStatus.BAD_GATEWAY, "AI itinerary service returned an unreadable response", req, null);
+	}
+
+	@ExceptionHandler(Exception.class)
+	public ResponseEntity<ApiError> handleGeneric(Exception ex, HttpServletRequest req) {
+		log.error("500 Internal Server Error on {}: {}", req.getRequestURI(), ex.getMessage(), ex);
+	    return error(HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected error", req, null);
 	}
 
     private ResponseEntity<ApiError> error(HttpStatus status, String message, HttpServletRequest req,
