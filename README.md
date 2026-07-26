@@ -52,6 +52,8 @@ Detailed sequence diagrams:
 ## Documentation
 - [Software Development Plan (SDP)](docs/SDP/SDP.md)
 - [Deployment runbook](docs/deployment.md)
+- [API contracts](docs/api-contracts.md)
+- Live API docs (Swagger UI): `http://localhost:8080/swagger-ui.html` when running the backend locally (raw OpenAPI document at `/api-docs`). Disabled in prod (`springdoc.swagger-ui.enabled=false`).
 
 ## Tech Stack
 
