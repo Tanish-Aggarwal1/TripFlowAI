@@ -42,6 +42,20 @@ public class GlobalExceptionHandlerIntegrationTest {
 	}
 	
 	@Test
+	void malformedJson_returns400ApiErrorWithoutLeakingRawPayload() throws Exception {
+		ResultActions result = mockMvc.perform(post("/test/validation")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{not valid json"))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.status").value(400))
+				.andExpect(jsonPath("$.error").value("Bad Request"))
+				.andExpect(jsonPath("$.message").value("Malformed request body"))
+				.andExpect(jsonPath("$.path").value("/test/validation"));
+
+		assertApiErrorKeys(result.andReturn());
+	}
+
+	@Test
 	void validationError_returns400ApiErrorWithFieldErrors() throws Exception {
 		ResultActions result = mockMvc.perform(post("/test/validation")
 				.contentType(MediaType.APPLICATION_JSON)

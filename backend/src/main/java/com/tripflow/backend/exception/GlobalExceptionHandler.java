@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -79,6 +80,14 @@ public class GlobalExceptionHandler {
 	public ResponseEntity<ApiError> handleGeminiParsing(GeminiParsingException ex, HttpServletRequest req) {
 	    log.error("502 Bad Gateway on {}: {}", req.getRequestURI(), ex.getMessage(), ex);
 	    return error(HttpStatus.BAD_GATEWAY, "AI itinerary service returned an unreadable response", req, null);
+	}
+
+	@ExceptionHandler(HttpMessageNotReadableException.class)
+	public ResponseEntity<ApiError> handleMalformedJson(HttpMessageNotReadableException ex, HttpServletRequest req) {
+		// Don't echo ex.getMessage() to the client — it can contain fragments of the
+		// submitted payload. Log it server-side only.
+		log.warn("400 Bad Request on {}: malformed request body: {}", req.getRequestURI(), ex.getMessage());
+		return error(HttpStatus.BAD_REQUEST, "Malformed request body", req, null);
 	}
 
 	@ExceptionHandler(Exception.class)
