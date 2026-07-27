@@ -11,6 +11,7 @@ import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.test.web.servlet.MockMvc;
@@ -130,6 +131,22 @@ public class GlobalExceptionHandlerIntegrationTest {
 				.andExpect(jsonPath("$.path").value("/test/type-mismatch/not-a-number"));
 
 		assertApiErrorKeys(result.andReturn());
+	}
+
+	@Test
+	void dataIntegrityViolation_returns409ApiErrorWithoutLeakingSchemaDetails() throws Exception {
+		ResultActions result = mockMvc.perform(get("/test/data-integrity-violation"))
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.status").value(409))
+				.andExpect(jsonPath("$.error").value("Conflict"))
+				.andExpect(jsonPath("$.message").value("The request conflicts with existing data"))
+				.andExpect(jsonPath("$.path").value("/test/data-integrity-violation"));
+
+		MvcResult mvcResult = result.andReturn();
+		String body = mvcResult.getResponse().getContentAsString();
+		assertThat(body).doesNotContain("users_email_key", "some_table", "SQLState", "constraint");
+
+		assertApiErrorKeys(mvcResult);
 	}
 
 	@Test
@@ -259,6 +276,13 @@ public class GlobalExceptionHandlerIntegrationTest {
 
 		@GetMapping("/test/type-mismatch/{id}")
 		public void typeMismatch(@PathVariable Long id) {
+		}
+
+		@GetMapping("/test/data-integrity-violation")
+		public void dataIntegrityViolation() {
+			throw new DataIntegrityViolationException(
+					"ERROR: duplicate key value violates unique constraint \"users_email_key\" "
+							+ "on some_table; SQLState: 23505");
 		}
 
 		@GetMapping("/test/conflict")

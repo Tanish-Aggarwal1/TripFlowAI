@@ -2,6 +2,7 @@ package com.tripflow.backend.exception;
 
 import java.util.List;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -96,6 +97,15 @@ public class GlobalExceptionHandler {
 		String message = "Invalid value for parameter '" + ex.getName() + "'";
 		log.warn("400 Bad Request on {}: {}", req.getRequestURI(), message);
 		return error(HttpStatus.BAD_REQUEST, message, req, null);
+	}
+
+	@ExceptionHandler(DataIntegrityViolationException.class)
+	public ResponseEntity<ApiError> handleDataIntegrityViolation(DataIntegrityViolationException ex,
+			HttpServletRequest req) {
+		// Generic message only — constraint/table names and SQL fragments are schema
+		// information disclosure. Full detail stays server-side at WARN.
+		log.warn("409 Conflict on {}: {}", req.getRequestURI(), ex.getMostSpecificCause().getMessage());
+		return error(HttpStatus.CONFLICT, "The request conflicts with existing data", req, null);
 	}
 
 	@ExceptionHandler(Exception.class)
