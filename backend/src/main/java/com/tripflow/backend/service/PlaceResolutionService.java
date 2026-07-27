@@ -17,11 +17,21 @@ import lombok.extern.slf4j.Slf4j;
  * (when present) or by name+coordinates. Extracted out of {@link TripService} (SCRUM-215)
  * so place resolution exists in exactly one class, shared by both {@link TripService} (via
  * {@link StopService#buildStops}) and {@link StopService} directly.
+ *
+ * <p>Coordinates are rounded to {@value #COORDINATE_SCALE} decimal places (~1m of precision
+ * at the equator) before every lookup and before persisting a new {@link Place} (SCRUM-216):
+ * comparing raw {@code Double}s for dedup means two requests for the same physical place
+ * (e.g. {@code 45.0} vs {@code 45.000000001}, a routine float round-trip through a client)
+ * silently fail to match and the table quietly accumulates near-duplicates.
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class PlaceResolutionService {
+
+    /** Decimal places coordinates are rounded to before comparison/persistence. */
+    static final int COORDINATE_SCALE = 5;
+    private static final double COORDINATE_SCALE_FACTOR = 100_000.0; // 10^COORDINATE_SCALE
 
     private final PlaceRepository placeRepository;
 
@@ -31,14 +41,17 @@ public class PlaceResolutionService {
     }
 
     public Place resolvePlace(String name, Double latitude, Double longitude, String address, String externalPlaceId) {
-        Optional<Place> existing = findExistingPlace(name, latitude, longitude, externalPlaceId);
+        double roundedLatitude = round(latitude);
+        double roundedLongitude = round(longitude);
+
+        Optional<Place> existing = findExistingPlace(name, roundedLatitude, roundedLongitude, externalPlaceId);
         if (existing.isPresent()) {
             return existing.get();
         }
         Place place = new Place();
         place.setName(name);
-        place.setLatitude(latitude);
-        place.setLongitude(longitude);
+        place.setLatitude(roundedLatitude);
+        place.setLongitude(roundedLongitude);
         place.setAddress(address);
         place.setExternalPlaceId(externalPlaceId);
         try {
@@ -48,7 +61,7 @@ public class PlaceResolutionService {
             // external_place_id (V3__create_places.sql) between our lookup and this save.
             // Re-read and reuse its row instead of surfacing a 500 to the client.
             log.debug("Place save raced on externalPlaceId={}, re-reading existing row", externalPlaceId);
-            return findExistingPlace(name, latitude, longitude, externalPlaceId)
+            return findExistingPlace(name, roundedLatitude, roundedLongitude, externalPlaceId)
                     .orElseThrow(() -> ex);
         }
     }
@@ -64,5 +77,9 @@ public class PlaceResolutionService {
         // near-coordinates) — findFirst...OrderById returns one deterministic row instead
         // of throwing when more than one matches.
         return placeRepository.findFirstByNameAndLatitudeAndLongitudeOrderById(name, latitude, longitude);
+    }
+
+    private static double round(double value) {
+        return Math.round(value * COORDINATE_SCALE_FACTOR) / COORDINATE_SCALE_FACTOR;
     }
 }

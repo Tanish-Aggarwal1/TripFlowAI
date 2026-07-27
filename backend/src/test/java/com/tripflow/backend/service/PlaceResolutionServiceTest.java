@@ -117,4 +117,43 @@ class PlaceResolutionServiceTest {
         assertThatThrownBy(() -> placeResolutionService.resolvePlace("New Place", 44.0, -79.0, null, null))
                 .isInstanceOf(DataIntegrityViolationException.class);
     }
+
+    // ---------- coordinate rounding (SCRUM-216) ----------
+
+    @Test
+    void resolvePlace_roundsCoordinatesTo5DecimalPlacesBeforeLookup() {
+        when(placeRepository.findFirstByNameAndLatitudeAndLongitudeOrderById("Cafe", 45.00001, -79.00001))
+                .thenReturn(Optional.empty());
+        when(placeRepository.save(any())).thenAnswer(inv -> inv.getArgument(0, Place.class));
+
+        // 6th decimal place onward must be rounded away before the lookup runs.
+        placeResolutionService.resolvePlace("Cafe", 45.000009, -79.000011, null, null);
+
+        verify(placeRepository).findFirstByNameAndLatitudeAndLongitudeOrderById("Cafe", 45.00001, -79.00001);
+    }
+
+    @Test
+    void resolvePlace_roundsCoordinatesBeforePersistingNewPlace() {
+        when(placeRepository.findFirstByNameAndLatitudeAndLongitudeOrderById(any(), any(), any()))
+                .thenReturn(Optional.empty());
+        when(placeRepository.save(any())).thenAnswer(inv -> inv.getArgument(0, Place.class));
+
+        Place result = placeResolutionService.resolvePlace("Cafe", 45.000009, -79.000011, null, null);
+
+        assertThat(result.getLatitude()).isEqualTo(45.00001);
+        assertThat(result.getLongitude()).isEqualTo(-79.00001);
+    }
+
+    @Test
+    void resolvePlace_nearIdenticalCoordinatesWithinPrecision_dedupToSameRow() {
+        Place existing = new Place();
+        existing.setId(40L);
+        // Both 45.0 and 45.000000001 round to the same 45.0 at 5 decimal places.
+        when(placeRepository.findFirstByNameAndLatitudeAndLongitudeOrderById("Cafe", 45.0, -79.0))
+                .thenReturn(Optional.of(existing));
+
+        Place result = placeResolutionService.resolvePlace("Cafe", 45.000000001, -79.0, null, null);
+
+        assertThat(result).isSameAs(existing);
+    }
 }
