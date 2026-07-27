@@ -1,9 +1,8 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { DragDropModule, CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import {
-  IonList, IonItem, IonLabel, IonButton, IonIcon,
+  IonItem, IonLabel, IonButton, IonIcon,
   IonInput, IonReorderGroup, IonReorder, ItemReorderEventDetail
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
@@ -15,7 +14,7 @@ import { CreateStopRequest } from '../../../../core/models/trip.model';
   templateUrl: 'stop-list.component.html',
   styleUrls: ['stop-list.component.scss'],
   imports: [
-    CommonModule, FormsModule, DragDropModule,
+    CommonModule, FormsModule,
      IonItem, IonLabel, IonButton, IonIcon,
     IonInput, IonReorderGroup, IonReorder,
   ],

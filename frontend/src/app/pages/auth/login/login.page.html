@@ -8,21 +8,27 @@
         <ion-label position="floating">Email</ion-label>
         <ion-input formControlName="email" type="email"></ion-input>
       </ion-item>
-      <ion-text color="danger" *ngIf="fieldError('email')">
-        <p>{{ fieldError('email') }}</p>
-      </ion-text>
+      @if (fieldError('email')) {
+        <ion-text color="danger">
+          <p>{{ fieldError('email') }}</p>
+        </ion-text>
+      }
 
       <ion-item>
         <ion-label position="floating">Password</ion-label>
         <ion-input formControlName="password" type="password"></ion-input>
       </ion-item>
-      <ion-text color="danger" *ngIf="fieldError('password')">
-        <p>{{ fieldError('password') }}</p>
-      </ion-text>
+      @if (fieldError('password')) {
+        <ion-text color="danger">
+          <p>{{ fieldError('password') }}</p>
+        </ion-text>
+      }
 
-      <ion-text color="danger" *ngIf="generalError">
-        <p>{{ generalError }}</p>
-      </ion-text>
+      @if (generalError) {
+        <ion-text color="danger">
+          <p>{{ generalError }}</p>
+        </ion-text>
+      }
 
       <ion-button expand="block" type="submit" [disabled]="isSubmitting">
         {{ isSubmitting ? 'Logging in...' : 'Log In' }}
