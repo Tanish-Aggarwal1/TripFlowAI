@@ -86,6 +86,28 @@ export interface PagedResponse<T> {
   };
 }
 
+// ── AI itinerary suggestions (SCRUM-64/149) ───────────────────────────────────
+
+export interface ItineraryPreferencesRequest {
+  interests?: string[];
+  budget?: string;
+  pace?: string;
+}
+
+export interface SuggestedStopResponse {
+  order: number;
+  name: string;
+  latitude: number;
+  longitude: number;
+  reason: string | null;
+}
+
+export interface SuggestedItineraryResponse {
+  tripId: number;
+  summary: string;
+  stops: SuggestedStopResponse[];
+}
+
 // ── API error shape (matches ApiError as of REF-10) ──────────────────────────
 
 export interface ApiError {

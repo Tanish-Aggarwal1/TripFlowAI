@@ -8,6 +8,8 @@ import {
   PagedResponse,
   CreateTripRequest,
   UpdateTripRequest,
+  ItineraryPreferencesRequest,
+  SuggestedItineraryResponse,
   ApiError,
 } from '../models/trip.model';
 
@@ -74,6 +76,15 @@ export class TripService {
     catchError((err: HttpErrorResponse) => this.handleError(err))
   );
 }
+
+  suggestItinerary(
+    tripId: number,
+    preferences: ItineraryPreferencesRequest,
+  ): Observable<SuggestedItineraryResponse> {
+    return this.http
+      .post<SuggestedItineraryResponse>(`${this.baseUrl}/${tripId}/ai-suggest`, preferences)
+      .pipe(catchError((err: HttpErrorResponse) => this.handleError(err)));
+  }
 
   // ── MAPPING ──────────────────────────────────────────────────────────────────
 
