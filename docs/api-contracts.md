@@ -305,3 +305,17 @@ Notes:
 - `timestamp` is `Instant`, always UTC with trailing `Z` (not `LocalDateTime` — confirmed in REF-10).
 - `fieldErrors` is an **array** of `{field, message}` objects, not a map — only present on 400 validation errors, `null`/omitted otherwise.
 - `error` is the HTTP reason phrase (e.g. `"Not Found"`, `"Forbidden"`), separate from `message`.
+
+### Additional status codes (SCRUM-213 / AUDIT-04)
+
+`GlobalExceptionHandler` also covers these client-error conditions, previously falling through to a 500:
+
+| Condition | Status | `message` |
+| --- | --- | --- |
+| Malformed JSON request body | 400 | `"Malformed request body"` — the raw parse error is never echoed back, only logged server-side |
+| Non-numeric value for a numeric path variable (e.g. `GET /api/trips/abc`) | 400 | `"Invalid value for parameter '<name>'"` |
+| Database constraint violation not already mapped to a specific 409 (e.g. `DuplicateEmailException`) | 409 | `"The request conflicts with existing data"` — no constraint name, table name, or SQL fragment is ever included in the response body |
+| Unsupported HTTP method on an existing route | 405 | the framework's standard method-not-allowed message |
+| No matching route | 404 | `"No matching route for this request"` |
+
+All of the above log at `WARN`, never `ERROR` — they are ordinary client-error conditions, not application bugs.

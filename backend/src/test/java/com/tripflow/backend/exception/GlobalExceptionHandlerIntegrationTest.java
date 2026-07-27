@@ -11,6 +11,8 @@ import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.test.web.servlet.MockMvc;
@@ -18,9 +20,11 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -41,6 +45,20 @@ public class GlobalExceptionHandlerIntegrationTest {
 				.build();
 	}
 	
+	@Test
+	void malformedJson_returns400ApiErrorWithoutLeakingRawPayload() throws Exception {
+		ResultActions result = mockMvc.perform(post("/test/validation")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{not valid json"))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.status").value(400))
+				.andExpect(jsonPath("$.error").value("Bad Request"))
+				.andExpect(jsonPath("$.message").value("Malformed request body"))
+				.andExpect(jsonPath("$.path").value("/test/validation"));
+
+		assertApiErrorKeys(result.andReturn());
+	}
+
 	@Test
 	void validationError_returns400ApiErrorWithFieldErrors() throws Exception {
 		ResultActions result = mockMvc.perform(post("/test/validation")
@@ -101,6 +119,57 @@ public class GlobalExceptionHandlerIntegrationTest {
 				.andExpect(jsonPath("$.error").value("Conflict"))
 				.andExpect(jsonPath("$.message").value("Email already registered: taken@example.com"))
 				.andExpect(jsonPath("$.path").value("/test/conflict"));
+
+		assertApiErrorKeys(result.andReturn());
+	}
+
+	@Test
+	void nonNumericPathVariable_returns400ApiError() throws Exception {
+		ResultActions result = mockMvc.perform(get("/test/type-mismatch/not-a-number"))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.status").value(400))
+				.andExpect(jsonPath("$.error").value("Bad Request"))
+				.andExpect(jsonPath("$.message").value("Invalid value for parameter 'id'"))
+				.andExpect(jsonPath("$.path").value("/test/type-mismatch/not-a-number"));
+
+		assertApiErrorKeys(result.andReturn());
+	}
+
+	@Test
+	void dataIntegrityViolation_returns409ApiErrorWithoutLeakingSchemaDetails() throws Exception {
+		ResultActions result = mockMvc.perform(get("/test/data-integrity-violation"))
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.status").value(409))
+				.andExpect(jsonPath("$.error").value("Conflict"))
+				.andExpect(jsonPath("$.message").value("The request conflicts with existing data"))
+				.andExpect(jsonPath("$.path").value("/test/data-integrity-violation"));
+
+		MvcResult mvcResult = result.andReturn();
+		String body = mvcResult.getResponse().getContentAsString();
+		assertThat(body).doesNotContain("users_email_key", "some_table", "SQLState", "constraint");
+
+		assertApiErrorKeys(mvcResult);
+	}
+
+	@Test
+	void unsupportedHttpMethod_returns405ApiError() throws Exception {
+		ResultActions result = mockMvc.perform(post("/test/not-found"))
+				.andExpect(status().isMethodNotAllowed())
+				.andExpect(jsonPath("$.status").value(405))
+				.andExpect(jsonPath("$.error").value("Method Not Allowed"))
+				.andExpect(jsonPath("$.path").value("/test/not-found"));
+
+		assertApiErrorKeys(result.andReturn());
+	}
+
+	@Test
+	void noMatchingRoute_returns404ApiError() throws Exception {
+		ResultActions result = mockMvc.perform(get("/test/no-resource"))
+				.andExpect(status().isNotFound())
+				.andExpect(jsonPath("$.status").value(404))
+				.andExpect(jsonPath("$.error").value("Not Found"))
+				.andExpect(jsonPath("$.message").value("No matching route for this request"))
+				.andExpect(jsonPath("$.path").value("/test/no-resource"));
 
 		assertApiErrorKeys(result.andReturn());
 	}
@@ -228,6 +297,22 @@ public class GlobalExceptionHandlerIntegrationTest {
 		@GetMapping("/test/not-found")
 		public void notFound() {
 			throw new ResourceNotFoundException("Trip not found");
+		}
+
+		@GetMapping("/test/type-mismatch/{id}")
+		public void typeMismatch(@PathVariable Long id) {
+		}
+
+		@GetMapping("/test/data-integrity-violation")
+		public void dataIntegrityViolation() {
+			throw new DataIntegrityViolationException(
+					"ERROR: duplicate key value violates unique constraint \"users_email_key\" "
+							+ "on some_table; SQLState: 23505");
+		}
+
+		@GetMapping("/test/no-resource")
+		public void noResource() throws NoResourceFoundException {
+			throw new NoResourceFoundException(HttpMethod.GET, "/test/no-resource", "/test/no-resource");
 		}
 
 		@GetMapping("/test/conflict")
