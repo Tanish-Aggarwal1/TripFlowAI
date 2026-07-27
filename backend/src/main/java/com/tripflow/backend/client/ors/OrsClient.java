@@ -1,5 +1,7 @@
 package com.tripflow.backend.client.ors;
-import org.springframework.stereotype.Component; 
+import java.util.function.Supplier;
+
+import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
@@ -17,7 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 @RequiredArgsConstructor
 public class OrsClient {
-	
+
 	private static final String DEFAULT_PROFILE = "driving-car";
 
     private final RestClient orsRestClient;
@@ -27,7 +29,7 @@ public class OrsClient {
     }
 
     public OrsDirectionsResponse getDirections(OrsDirectionsRequest request, String profile) {
-        try {
+        return execute(() -> {
             OrsDirectionsResponse response = orsRestClient.post()
                     .uri("/v2/directions/{profile}/geojson", profile)
                     .body(request)
@@ -39,14 +41,11 @@ public class OrsClient {
             }
             log.debug("ORS directions ok profile={} waypoints={}", profile, request.coordinates().size());
             return response;
-        } catch (RestClientException ex) {
-            log.warn("ORS directions call failed profile={}: {}", profile, ex.getMessage());
-            throw new OrsClientException("OpenRouteService directions request failed", ex);
-        }
+        }, "OpenRouteService directions request failed");
     }
 
     public OrsOptimizationResponse optimize(OrsOptimizationRequest request) {
-        try {
+        return execute(() -> {
             OrsOptimizationResponse response = orsRestClient.post()
                     .uri("/optimization")
                     .body(request)
@@ -63,12 +62,27 @@ public class OrsClient {
             }
             log.debug("ORS optimization ok jobs={}", request.jobs().size());
             return response;
+        }, "OpenRouteService optimization request failed");
+    }
+
+    /**
+     * Shared call + exception translation for every ORS endpoint (SCRUM-221): both
+     * {@code getDirections} and {@code optimize} share the same ORS account and the same
+     * 500 requests/day free-tier quota, so a 429 means the same thing regardless of which
+     * endpoint hits it — always translate to {@link OrsRateLimitException} (429), never let
+     * one endpoint fall through to the generic {@link OrsClientException} (502) the other
+     * doesn't. Centralizing this means a third ORS call added later inherits the same
+     * handling automatically instead of needing its own copy.
+     */
+    private <T> T execute(Supplier<T> call, String failureMessage) {
+        try {
+            return call.get();
         } catch (HttpClientErrorException.TooManyRequests ex) {
-            log.warn("ORS optimization rate-limited (429): {}", ex.getMessage());
-            throw new OrsRateLimitException("OpenRouteService optimization quota exceeded", ex);
+            log.warn("ORS call rate-limited (429): {}", ex.getMessage());
+            throw new OrsRateLimitException("OpenRouteService quota exceeded", ex);
         } catch (RestClientException ex) {
-            log.warn("ORS optimization call failed: {}", ex.getMessage());
-            throw new OrsClientException("OpenRouteService optimization request failed", ex);
+            log.warn("ORS call failed: {}", ex.getMessage());
+            throw new OrsClientException(failureMessage, ex);
         }
     }
 
