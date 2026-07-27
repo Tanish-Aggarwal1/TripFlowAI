@@ -36,9 +36,5 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/trips/trip-edit/trip-edit.page').then(m => m.TripEditPage),
     canActivate: [authGuard]
   },
-  {
-    path: 'trip-view',
-    loadComponent: () => import('./pages/trips/trip-view/trip-view.page').then( m => m.TripViewPage)
-  },
 
 ];

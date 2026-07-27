@@ -1,6 +1,5 @@
 import { Component, inject } from '@angular/core';
 import { Router } from '@angular/router';
-import { CommonModule } from '@angular/common';
 import {
   IonHeader, IonToolbar, IonTitle, IonContent, IonButton,
   IonList, IonItem, IonLabel, IonBadge, IonIcon,
@@ -17,7 +16,6 @@ import { TripSummaryResponse } from '../../../core/models/trip.model';
   templateUrl: 'dashboard.page.html',
   styleUrls: ['dashboard.page.scss'],
   imports: [
-    CommonModule,
     IonHeader, IonToolbar, IonTitle, IonContent, IonButton,
     IonList, IonItem, IonLabel, IonBadge, IonIcon,
     IonFab, IonFabButton, IonSpinner,

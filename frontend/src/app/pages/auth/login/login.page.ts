@@ -1,5 +1,4 @@
 import { Component, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { IonicModule } from '@ionic/angular';
@@ -9,7 +8,7 @@ import { FieldError } from '../../../core/models/auth.model';
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, IonicModule, RouterLink],
+  imports: [ReactiveFormsModule, IonicModule, RouterLink],
   templateUrl: './login.page.html',
   styleUrls: ['./login.page.scss'],
 })
