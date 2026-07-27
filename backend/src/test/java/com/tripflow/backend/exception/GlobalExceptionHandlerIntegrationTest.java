@@ -18,6 +18,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
@@ -115,6 +116,18 @@ public class GlobalExceptionHandlerIntegrationTest {
 				.andExpect(jsonPath("$.error").value("Conflict"))
 				.andExpect(jsonPath("$.message").value("Email already registered: taken@example.com"))
 				.andExpect(jsonPath("$.path").value("/test/conflict"));
+
+		assertApiErrorKeys(result.andReturn());
+	}
+
+	@Test
+	void nonNumericPathVariable_returns400ApiError() throws Exception {
+		ResultActions result = mockMvc.perform(get("/test/type-mismatch/not-a-number"))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.status").value(400))
+				.andExpect(jsonPath("$.error").value("Bad Request"))
+				.andExpect(jsonPath("$.message").value("Invalid value for parameter 'id'"))
+				.andExpect(jsonPath("$.path").value("/test/type-mismatch/not-a-number"));
 
 		assertApiErrorKeys(result.andReturn());
 	}
@@ -242,6 +255,10 @@ public class GlobalExceptionHandlerIntegrationTest {
 		@GetMapping("/test/not-found")
 		public void notFound() {
 			throw new ResourceNotFoundException("Trip not found");
+		}
+
+		@GetMapping("/test/type-mismatch/{id}")
+		public void typeMismatch(@PathVariable Long id) {
 		}
 
 		@GetMapping("/test/conflict")

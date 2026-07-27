@@ -9,6 +9,7 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
@@ -88,6 +89,13 @@ public class GlobalExceptionHandler {
 		// submitted payload. Log it server-side only.
 		log.warn("400 Bad Request on {}: malformed request body: {}", req.getRequestURI(), ex.getMessage());
 		return error(HttpStatus.BAD_REQUEST, "Malformed request body", req, null);
+	}
+
+	@ExceptionHandler(MethodArgumentTypeMismatchException.class)
+	public ResponseEntity<ApiError> handleTypeMismatch(MethodArgumentTypeMismatchException ex, HttpServletRequest req) {
+		String message = "Invalid value for parameter '" + ex.getName() + "'";
+		log.warn("400 Bad Request on {}: {}", req.getRequestURI(), message);
+		return error(HttpStatus.BAD_REQUEST, message, req, null);
 	}
 
 	@ExceptionHandler(Exception.class)
