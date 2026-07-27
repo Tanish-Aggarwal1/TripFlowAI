@@ -3,8 +3,8 @@ package com.tripflow.backend.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -17,7 +17,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -27,28 +26,28 @@ import com.tripflow.backend.domain.Place;
 import com.tripflow.backend.domain.Stop;
 import com.tripflow.backend.domain.Trip;
 import com.tripflow.backend.domain.User;
-import com.tripflow.backend.domain.enums.StopStatus;
 import com.tripflow.backend.domain.enums.TripVisibility;
 import com.tripflow.backend.dto.CreateStopRequest;
 import com.tripflow.backend.dto.CreateTripRequest;
-import com.tripflow.backend.dto.StopResponse;
 import com.tripflow.backend.dto.TripResponse;
 import com.tripflow.backend.dto.TripSummaryResponse;
-import com.tripflow.backend.dto.UpdateStopRequest;
 import com.tripflow.backend.dto.UpdateTripRequest;
 import com.tripflow.backend.exception.ForbiddenException;
 import com.tripflow.backend.exception.ResourceNotFoundException;
 import com.tripflow.backend.mapper.StopMapper;
 import com.tripflow.backend.mapper.TripMapper;
-import com.tripflow.backend.repository.PlaceRepository;
 import com.tripflow.backend.repository.TripRepository;
 import com.tripflow.backend.repository.UserRepository;
 
+/**
+ * Trip CRUD only — stop CRUD moved to {@link StopServiceTest}, place resolution to
+ * {@link PlaceResolutionServiceTest} (SCRUM-215/239).
+ */
 @ExtendWith(MockitoExtension.class)
 public class TripServiceTest {
 	@Mock private TripRepository tripRepository;
     @Mock private UserRepository userRepository;
-    @Mock private PlaceRepository placeRepository;
+    @Mock private StopService stopService;
 
     private TripService tripService;
 
@@ -60,8 +59,25 @@ public class TripServiceTest {
         // so every existing `when(tripRepository.findWithStopsById(...))` stub below still
         // drives the ownership check unchanged.
         TripOwnershipService tripOwnershipService = new TripOwnershipService(tripRepository);
-        tripService = new TripService(
-                tripRepository, userRepository, placeRepository, tripMapper, stopMapper, tripOwnershipService);
+        tripService = new TripService(tripRepository, userRepository, tripMapper, tripOwnershipService, stopService);
+    }
+
+    /** Builds the Stop list {@code stopService.buildStops(...)} would return for the given requests. */
+    private List<Stop> stubbedStops(List<CreateStopRequest> requests, Trip trip) {
+        List<Stop> stops = new ArrayList<>();
+        int order = 0;
+        for (CreateStopRequest req : requests) {
+            Place place = new Place();
+            place.setName(req.name());
+            place.setLatitude(req.latitude());
+            place.setLongitude(req.longitude());
+            Stop stop = new Stop();
+            stop.setPlace(place);
+            stop.setStopOrder(order++);
+            stop.setTrip(trip);
+            stops.add(stop);
+        }
+        return stops;
     }
 
     @Test
@@ -70,13 +86,8 @@ public class TripServiceTest {
         owner.setId(1L);
         owner.setUsername("tanish");
         when(userRepository.getReferenceById(1L)).thenReturn(owner);
-        when(placeRepository.findByNameAndLatitudeAndLongitude(any(), any(), any()))
-                .thenReturn(Optional.empty());
-        when(placeRepository.save(any())).thenAnswer(inv -> {
-            Place place = inv.getArgument(0, Place.class);
-            place.setId(10L);
-            return place;
-        });
+        when(stopService.buildStops(anyList(), any(Trip.class)))
+                .thenAnswer(inv -> stubbedStops(inv.getArgument(0), inv.getArgument(1)));
         when(tripRepository.save(any())).thenAnswer(inv -> {
             Trip t = inv.getArgument(0, Trip.class);
             t.setId(100L);
@@ -100,9 +111,8 @@ public class TripServiceTest {
         User owner = new User();
         owner.setId(1L);
         when(userRepository.getReferenceById(1L)).thenReturn(owner);
-        when(placeRepository.findByNameAndLatitudeAndLongitude(any(), any(), any()))
-                .thenReturn(Optional.empty());
-        when(placeRepository.save(any())).thenAnswer(inv -> inv.getArgument(0, Place.class));
+        when(stopService.buildStops(anyList(), any(Trip.class)))
+                .thenAnswer(inv -> stubbedStops(inv.getArgument(0), inv.getArgument(1)));
         when(tripRepository.save(any())).thenAnswer(inv -> inv.getArgument(0, Trip.class));
 
         CreateStopRequest stopReq = new CreateStopRequest("Cottage", 45.0, -79.9, null, null, null);
@@ -191,13 +201,8 @@ public class TripServiceTest {
         trip.setStops(new ArrayList<>());
 
         when(tripRepository.findWithStopsById(50L)).thenReturn(Optional.of(trip));
-        when(placeRepository.findByNameAndLatitudeAndLongitude(any(), any(), any()))
-                .thenReturn(Optional.empty());
-        when(placeRepository.save(any())).thenAnswer(inv -> {
-            Place p = inv.getArgument(0, Place.class);
-            p.setId(20L);
-            return p;
-        });
+        when(stopService.buildStops(anyList(), any(Trip.class)))
+                .thenAnswer(inv -> stubbedStops(inv.getArgument(0), inv.getArgument(1)));
         when(tripRepository.save(any())).thenAnswer(inv -> inv.getArgument(0, Trip.class));
 
         CreateStopRequest newStop = new CreateStopRequest(
@@ -225,6 +230,7 @@ public class TripServiceTest {
         trip.setStops(new ArrayList<>());
 
         when(tripRepository.findWithStopsById(50L)).thenReturn(Optional.of(trip));
+        when(stopService.buildStops(anyList(), any(Trip.class))).thenReturn(new ArrayList<>());
         when(tripRepository.save(any())).thenAnswer(inv -> inv.getArgument(0, Trip.class));
 
         UpdateTripRequest request = new UpdateTripRequest(
@@ -300,209 +306,5 @@ public class TripServiceTest {
                 .isInstanceOf(ForbiddenException.class);
 
         verify(tripRepository, never()).delete(any());
-    }
-
-    // ---------- stop CRUD ----------
-
-    @Test
-    void addStop_appendsWithNextOrder() {
-        User owner = new User();
-        owner.setId(1L);
-
-        Stop existing = new Stop();
-        existing.setId(1L);
-        existing.setStopOrder(0);
-
-        Trip trip = new Trip();
-        trip.setId(50L);
-        trip.setUser(owner);
-        trip.setStops(new ArrayList<>(List.of(existing)));
-
-        when(tripRepository.findWithStopsById(50L)).thenReturn(Optional.of(trip));
-        when(placeRepository.findByNameAndLatitudeAndLongitude(any(), any(), any()))
-                .thenReturn(Optional.empty());
-        when(placeRepository.save(any())).thenAnswer(inv -> {
-            Place p = inv.getArgument(0, Place.class);
-            p.setId(21L);
-            return p;
-        });
-        when(tripRepository.save(any())).thenAnswer(inv -> inv.getArgument(0, Trip.class));
-
-        CreateStopRequest request = new CreateStopRequest(
-                "Gas Station", 44.5, -79.6, null, null, null);
-
-        StopResponse response = tripService.addStop(50L, 1L, request);
-
-        assertThat(response.stopOrder()).isEqualTo(1);
-        assertThat(trip.getStops()).hasSize(2);
-    }
-
-    @Test
-    void updateStop_changesPlaceNotesAndStatus() {
-        User owner = new User();
-        owner.setId(1L);
-
-        Place oldPlace = new Place();
-        oldPlace.setId(20L);
-        oldPlace.setName("Old Place");
-
-        Stop stop = new Stop();
-        stop.setId(5L);
-        stop.setPlace(oldPlace);
-        stop.setStopOrder(0);
-        stop.setStatus(StopStatus.PLANNED);
-
-        Trip trip = new Trip();
-        trip.setId(50L);
-        trip.setUser(owner);
-        trip.setStops(new ArrayList<>(List.of(stop)));
-        stop.setTrip(trip);
-
-        when(tripRepository.findWithStopsById(50L)).thenReturn(Optional.of(trip));
-        when(placeRepository.findByNameAndLatitudeAndLongitude(any(), any(), any()))
-                .thenReturn(Optional.empty());
-        when(placeRepository.save(any())).thenAnswer(inv -> {
-            Place p = inv.getArgument(0, Place.class);
-            p.setId(22L);
-            return p;
-        });
-        when(tripRepository.save(any())).thenAnswer(inv -> inv.getArgument(0, Trip.class));
-
-        UpdateStopRequest request = new UpdateStopRequest(
-                "New Place", 1.0, 2.0, null, null, "Visit at sunset", StopStatus.VISITED);
-
-        StopResponse response = tripService.updateStop(50L, 5L, 1L, request);
-
-        assertThat(response.name()).isEqualTo("New Place");
-        assertThat(response.notes()).isEqualTo("Visit at sunset");
-        assertThat(response.status()).isEqualTo(StopStatus.VISITED);
-    }
-
-    @Test
-    void updateStop_missingStop_throwsNotFound() {
-        User owner = new User();
-        owner.setId(1L);
-
-        Trip trip = new Trip();
-        trip.setId(50L);
-        trip.setUser(owner);
-        trip.setStops(new ArrayList<>());
-
-        when(tripRepository.findWithStopsById(50L)).thenReturn(Optional.of(trip));
-
-        UpdateStopRequest request = new UpdateStopRequest(
-                "X", 1.0, 2.0, null, null, null, null);
-
-        assertThatThrownBy(() -> tripService.updateStop(50L, 999L, 1L, request))
-                .isInstanceOf(ResourceNotFoundException.class);
-    }
-
-    @Test
-    void deleteStop_removesAndRenumbersRemaining() {
-        User owner = new User();
-        owner.setId(1L);
-
-        Stop stop0 = new Stop();
-        stop0.setId(1L);
-        stop0.setStopOrder(0);
-
-        Stop stop1 = new Stop();
-        stop1.setId(2L);
-        stop1.setStopOrder(1);
-
-        Stop stop2 = new Stop();
-        stop2.setId(3L);
-        stop2.setStopOrder(2);
-
-        Trip trip = new Trip();
-        trip.setId(50L);
-        trip.setUser(owner);
-        trip.setStops(new ArrayList<>(List.of(stop0, stop1, stop2)));
-
-        when(tripRepository.findWithStopsById(50L)).thenReturn(Optional.of(trip));
-        when(tripRepository.save(any())).thenAnswer(inv -> inv.getArgument(0, Trip.class));
-
-        tripService.deleteStop(50L, 2L, 1L); // remove the middle stop
-
-        assertThat(trip.getStops()).hasSize(2);
-        assertThat(trip.getStops().get(0).getId()).isEqualTo(1L);
-        assertThat(trip.getStops().get(0).getStopOrder()).isEqualTo(0);
-        assertThat(trip.getStops().get(1).getId()).isEqualTo(3L);
-        assertThat(trip.getStops().get(1).getStopOrder()).isEqualTo(1); // renumbered from 2 → 1
-    }
-
-    @Test
-    void deleteStop_nonOwner_throwsForbidden() {
-        User owner = new User();
-        owner.setId(1L);
-
-        Stop stop = new Stop();
-        stop.setId(1L);
-        stop.setStopOrder(0);
-
-        Trip trip = new Trip();
-        trip.setId(50L);
-        trip.setUser(owner);
-        trip.setStops(new ArrayList<>(List.of(stop)));
-
-        when(tripRepository.findWithStopsById(50L)).thenReturn(Optional.of(trip));
-
-        assertThatThrownBy(() -> tripService.deleteStop(50L, 1L, 2L))
-                .isInstanceOf(ForbiddenException.class);
-    }
-
-    // ---------- resolvePlace race retry ----------
-
-    @Test
-    void addStop_placeSaveRacesUniqueIndex_reusesWinningRow() {
-        User owner = new User();
-        owner.setId(1L);
-
-        Trip trip = new Trip();
-        trip.setId(50L);
-        trip.setUser(owner);
-        trip.setStops(new ArrayList<>());
-
-        Place winningRow = new Place();
-        winningRow.setId(30L);
-        winningRow.setName("Shared Cafe");
-        winningRow.setExternalPlaceId("ext-123");
-
-        when(tripRepository.findWithStopsById(50L)).thenReturn(Optional.of(trip));
-        when(placeRepository.findByExternalPlaceId("ext-123"))
-                .thenReturn(Optional.empty(), Optional.of(winningRow));
-        when(placeRepository.save(any())).thenThrow(new DataIntegrityViolationException("duplicate key"));
-        when(tripRepository.save(any())).thenAnswer(inv -> inv.getArgument(0, Trip.class));
-
-        CreateStopRequest request = new CreateStopRequest(
-                "Shared Cafe", 44.0, -79.0, null, "ext-123", null);
-
-        StopResponse response = tripService.addStop(50L, 1L, request);
-
-        assertThat(response.name()).isEqualTo("Shared Cafe");
-        verify(placeRepository).save(any());
-        verify(placeRepository, times(2)).findByExternalPlaceId("ext-123");
-    }
-
-    @Test
-    void addStop_placeSaveFailsForUnrelatedReason_propagatesWhenNoExistingRowFound() {
-        User owner = new User();
-        owner.setId(1L);
-
-        Trip trip = new Trip();
-        trip.setId(50L);
-        trip.setUser(owner);
-        trip.setStops(new ArrayList<>());
-
-        when(tripRepository.findWithStopsById(50L)).thenReturn(Optional.of(trip));
-        when(placeRepository.findByNameAndLatitudeAndLongitude(any(), any(), any()))
-                .thenReturn(Optional.empty());
-        when(placeRepository.save(any())).thenThrow(new DataIntegrityViolationException("duplicate key"));
-
-        CreateStopRequest request = new CreateStopRequest(
-                "New Place", 44.0, -79.0, null, null, null);
-
-        assertThatThrownBy(() -> tripService.addStop(50L, 1L, request))
-                .isInstanceOf(DataIntegrityViolationException.class);
     }
 }
