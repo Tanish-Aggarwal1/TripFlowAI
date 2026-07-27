@@ -61,6 +61,7 @@ public class RouteOptimizationService {
 	private final OrsClient orsClient;
 	private final TripMapper tripMapper;
 	private final ObjectMapper objectMapper;
+	private final TripOwnershipService tripOwnershipService;
 
 	/**
 	 * Optimize a trip's stop order and persist the result.
@@ -75,7 +76,7 @@ public class RouteOptimizationService {
 	 */
 	@Transactional
 	public TripResponse optimize(Long tripId, Long requesterId) {
-		Trip trip = loadOwnedTrip(tripId, requesterId);
+		Trip trip = tripOwnershipService.loadOwnedTrip(tripId, requesterId);
 		List<Stop> stops = trip.getStops();
 
 		if (stops.size() < 2) {
@@ -190,16 +191,4 @@ public class RouteOptimizationService {
 		}
 	}
 
-	// ── shared helpers ───────────────────────────────────────────────────────
-
-	private Trip loadOwnedTrip(Long tripId, Long requesterId) {
-		Trip trip = tripRepository.findWithStopsById(tripId)
-				.orElseThrow(() -> new ResourceNotFoundException("Trip not found: " + tripId));
-		if (!trip.getUser().getId().equals(requesterId)) {
-			log.debug("Optimize ownership check failed tripId={} ownerId={} requesterId={}",
-					tripId, trip.getUser().getId(), requesterId);
-			throw new ForbiddenException("You do not have access to this trip");
-		}
-		return trip;
-	}
 }
