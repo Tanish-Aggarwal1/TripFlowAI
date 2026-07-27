@@ -60,6 +60,9 @@ public class PlaceResolutionService {
                 return byExternalId;
             }
         }
-        return placeRepository.findByNameAndLatitudeAndLongitude(name, latitude, longitude);
+        // Non-unique by design (legitimate distinct places can share a name and
+        // near-coordinates) — findFirst...OrderById returns one deterministic row instead
+        // of throwing when more than one matches.
+        return placeRepository.findFirstByNameAndLatitudeAndLongitudeOrderById(name, latitude, longitude);
     }
 }

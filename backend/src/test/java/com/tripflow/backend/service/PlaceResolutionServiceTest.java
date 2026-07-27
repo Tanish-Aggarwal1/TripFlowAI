@@ -52,7 +52,7 @@ class PlaceResolutionServiceTest {
     void resolvePlace_existingByNameAndCoordinates_reusesRow() {
         Place existing = new Place();
         existing.setId(11L);
-        when(placeRepository.findByNameAndLatitudeAndLongitude("Cafe", 1.0, 2.0))
+        when(placeRepository.findFirstByNameAndLatitudeAndLongitudeOrderById("Cafe", 1.0, 2.0))
                 .thenReturn(Optional.of(existing));
 
         Place result = placeResolutionService.resolvePlace("Cafe", 1.0, 2.0, null, null);
@@ -63,7 +63,7 @@ class PlaceResolutionServiceTest {
 
     @Test
     void resolvePlace_noExistingRow_savesNewPlace() {
-        when(placeRepository.findByNameAndLatitudeAndLongitude("Cafe", 1.0, 2.0))
+        when(placeRepository.findFirstByNameAndLatitudeAndLongitudeOrderById("Cafe", 1.0, 2.0))
                 .thenReturn(Optional.empty());
         when(placeRepository.save(any())).thenAnswer(inv -> {
             Place p = inv.getArgument(0, Place.class);
@@ -80,7 +80,7 @@ class PlaceResolutionServiceTest {
 
     @Test
     void resolvePlace_convenienceOverload_delegatesUsingRequestFields() {
-        when(placeRepository.findByNameAndLatitudeAndLongitude("Cottage", 45.0, -79.9))
+        when(placeRepository.findFirstByNameAndLatitudeAndLongitudeOrderById("Cottage", 45.0, -79.9))
                 .thenReturn(Optional.empty());
         when(placeRepository.save(any())).thenAnswer(inv -> inv.getArgument(0, Place.class));
 
@@ -110,7 +110,7 @@ class PlaceResolutionServiceTest {
 
     @Test
     void resolvePlace_saveFailsForUnrelatedReason_propagatesWhenNoExistingRowFound() {
-        when(placeRepository.findByNameAndLatitudeAndLongitude(any(), any(), any()))
+        when(placeRepository.findFirstByNameAndLatitudeAndLongitudeOrderById(any(), any(), any()))
                 .thenReturn(Optional.empty());
         when(placeRepository.save(any())).thenThrow(new DataIntegrityViolationException("duplicate key"));
 

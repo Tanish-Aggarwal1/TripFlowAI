@@ -2,6 +2,8 @@ package com.tripflow.backend.repository;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.Optional;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
@@ -36,5 +38,34 @@ class PlaceRepositoryIT {
 
 		assertThat(saved.getId()).isNotNull();
 		assertThat(placeRepository.findById(saved.getId())).isPresent();
+	}
+
+	// ---------- SCRUM-216: multi-row dedup lookup ----------
+
+	@Test
+	void findFirstByNameAndLatitudeAndLongitudeOrderById_multipleMatches_returnsOneDeterministically() {
+		// idx_places_name_lat_lng is non-unique by design — two places with the same
+		// name+coordinates but different external_place_id both satisfy the partial
+		// unique index on external_place_id and can coexist.
+		Place first = new Place();
+		first.setName("Shared Name");
+		first.setLatitude(10.0);
+		first.setLongitude(20.0);
+		first.setExternalPlaceId("ext-a");
+		Place firstSaved = placeRepository.save(first);
+
+		Place second = new Place();
+		second.setName("Shared Name");
+		second.setLatitude(10.0);
+		second.setLongitude(20.0);
+		second.setExternalPlaceId("ext-b");
+		placeRepository.save(second);
+
+		// Must not throw IncorrectResultSizeDataAccessException despite two matching rows.
+		Optional<Place> result = placeRepository.findFirstByNameAndLatitudeAndLongitudeOrderById(
+				"Shared Name", 10.0, 20.0);
+
+		assertThat(result).isPresent();
+		assertThat(result.get().getId()).isEqualTo(firstSaved.getId());
 	}
 }
