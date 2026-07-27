@@ -2,8 +2,9 @@ import { inject, Injectable, signal } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable, tap, catchError, throwError } from 'rxjs';
-import { AuthResponse, FieldError, LoginRequest, RegisterRequest } from '../models/auth.model';
+import { AuthResponse, LoginRequest, RegisterRequest } from '../models/auth.model';
 import { environment } from '../../../environments/environment';
+import { mapApiError } from '../http/api-error.mapper';
 
 const TOKEN_KEY = 'tripflow_token';
 const USER_KEY = 'tripflow_user';
@@ -53,26 +54,18 @@ export class AuthService {
   }
 
   // Maps backend responses to the generic, non-revealing messages required by UC-01 / UC-02
+  private handleAuthError(err: HttpErrorResponse) {
+    const error = mapApiError(err, {
+      messagesByStatus: {
+        401: 'Invalid credentials.',
+        409: (body) => body?.message ?? 'Email already registered.',
+        400: (body) => (body?.fieldErrors?.length ? 'Please fix the errors below.' : undefined),
+      },
+      networkErrorMessage: 'Network error. Please check your connection and try again.',
+    });
 
-private handleAuthError(err: HttpErrorResponse) {
-  const body = err.error as { message?: string; fieldErrors?: FieldError[] };
-  let message = 'Something went wrong, please try again.';
-  let fieldErrors: FieldError[] | undefined;
-
-  if (err.status === 401) {
-    message = 'Invalid credentials.';
-  } else if (err.status === 409) {
-    message = body?.message ?? 'Email already registered.';
-  } else if (err.status === 400 && body?.fieldErrors?.length) {
-    message = 'Please fix the errors below.';
-    fieldErrors = body.fieldErrors;
-  } else if (err.status === 0) {
-    message = 'Network error. Please check your connection and try again.';
+    return throwError(() => error);
   }
-
-  const error = Object.assign(new Error(message), { fieldErrors });
-  return throwError(() => error);
-}
 
   private hasValidToken(): boolean {
     const token = localStorage.getItem(TOKEN_KEY);
