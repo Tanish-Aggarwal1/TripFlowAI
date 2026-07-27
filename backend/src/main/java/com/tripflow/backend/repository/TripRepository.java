@@ -4,7 +4,6 @@ import java.util.Optional;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -17,9 +16,21 @@ public interface TripRepository extends JpaRepository<Trip, Long> {
     /**
      * Single-trip read with stops and places fetched in one query.
      * Use for all read paths that map to TripResponse.
+     *
+     * <p>Explicit {@code JOIN FETCH} rather than {@code @EntityGraph} (SCRUM-226): with
+     * {@code spring.jpa.open-in-view=false}, callers that read the returned {@code Trip}
+     * after this method's transaction has already committed (e.g. {@code RouteOptimizationService},
+     * {@code AiItineraryService} — see SCRUM-210) need {@code stops.place} to be genuinely
+     * initialized, not just entity-graph-hinted; {@code DISTINCT} avoids duplicate {@code Trip}
+     * rows from the {@code stops} join.
      */
-    @EntityGraph(attributePaths = {"stops", "stops.place"})
-    Optional<Trip> findWithStopsById(Long id);
+    @Query("""
+            SELECT DISTINCT t FROM Trip t
+            LEFT JOIN FETCH t.stops s
+            LEFT JOIN FETCH s.place
+            WHERE t.id = :id
+            """)
+    Optional<Trip> findWithStopsById(@Param("id") Long id);
 
     /**
      * Card-projection list read for GET /api/trips. Deliberately NOT a fetch-joined

@@ -3,7 +3,6 @@ package com.tripflow.backend.service;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import com.tripflow.backend.ai.GeminiResponseParser;
 import com.tripflow.backend.ai.ItineraryPromptInput;
@@ -24,6 +23,12 @@ import lombok.extern.slf4j.Slf4j;
  * not pushed to the controller layer — every service in this codebase is
  * self-contained on that point.
  *
+ * <p>Deliberately NOT {@code @Transactional} (SCRUM-210): {@link TripOwnershipService#loadOwnedTrip}
+ * is transactional on its own bean and returns before this method calls {@link GeminiClient},
+ * so no database connection is held for the ~30s Gemini read-timeout window. Wrapping this
+ * method itself in {@code @Transactional} would reintroduce the bug — self-invocation aside,
+ * it would hold the connection open across the entire Gemini call again.
+ *
  * <p>Error handling: {@link com.tripflow.backend.exception.GeminiClientException}
  * (from {@link GeminiClient}) and {@link com.tripflow.backend.exception.GeminiParsingException}
  * (from {@link GeminiResponseParser}) both propagate to
@@ -40,7 +45,6 @@ public class AiItineraryService {
     private final ItineraryPromptTemplate promptTemplate;
     private final GeminiResponseParser responseParser;
 
-    @Transactional(readOnly = true)
     public SuggestedItinerary suggestItinerary(Long tripId, Long requesterId, ItineraryPreferencesRequest preferences) {
         Trip trip = tripOwnershipService.loadOwnedTrip(tripId, requesterId);
 
