@@ -3,6 +3,8 @@ package com.tripflow.backend.repository;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
 
 import com.tripflow.backend.domain.Place;
 
@@ -18,4 +20,13 @@ public interface PlaceRepository extends JpaRepository<Place, Long> {
 	 * when more than one row matches (SCRUM-216).
 	 */
 	Optional<Place> findFirstByNameAndLatitudeAndLongitudeOrderById(String name, Double latitude, Double longitude);
+
+	/**
+	 * Deletes every Place with no referencing stop. Backs {@code OrphanPlaceCleanupJob}
+	 * (SCRUM-216) — no code path ever deleted a Place on its own, so rows accumulate
+	 * unboundedly once their last referencing stop/trip is removed.
+	 */
+	@Modifying(clearAutomatically = true, flushAutomatically = true)
+	@Query("DELETE FROM Place p WHERE NOT EXISTS (SELECT 1 FROM Stop s WHERE s.place = p)")
+	int deleteOrphans();
 }

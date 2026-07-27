@@ -14,6 +14,9 @@ import org.springframework.test.context.ActiveProfiles;
 
 import com.tripflow.backend.config.JpaConfig;
 import com.tripflow.backend.domain.Place;
+import com.tripflow.backend.domain.Stop;
+import com.tripflow.backend.domain.Trip;
+import com.tripflow.backend.domain.User;
 import com.tripflow.backend.testsupport.PostgresTestcontainersConfiguration;
 
 @DataJpaTest
@@ -25,6 +28,12 @@ class PlaceRepositoryIT {
 
 	@Autowired
 	private PlaceRepository placeRepository;
+
+	@Autowired
+	private TripRepository tripRepository;
+
+	@Autowired
+	private UserRepository userRepository;
 
 	@Test
 	void saveAndFindById() {
@@ -67,5 +76,46 @@ class PlaceRepositoryIT {
 
 		assertThat(result).isPresent();
 		assertThat(result.get().getId()).isEqualTo(firstSaved.getId());
+	}
+
+	// ---------- SCRUM-216: orphan cleanup ----------
+
+	@Test
+	void deleteOrphans_removesOnlyPlacesWithNoReferencingStop() {
+		Place referenced = new Place();
+		referenced.setName("Referenced");
+		referenced.setLatitude(1.0);
+		referenced.setLongitude(1.0);
+		Place referencedSaved = placeRepository.save(referenced);
+
+		Place orphan = new Place();
+		orphan.setName("Orphan");
+		orphan.setLatitude(2.0);
+		orphan.setLongitude(2.0);
+		Place orphanSaved = placeRepository.save(orphan);
+
+		User user = new User();
+		user.setUsername("orphantest");
+		user.setEmail("orphantest@tripflow.com");
+		user.setPasswordHash("hashed");
+		User savedUser = userRepository.save(user);
+
+		Trip trip = new Trip();
+		trip.setUser(savedUser);
+		trip.setTitle("Trip with a referenced place");
+
+		Stop stop = new Stop();
+		stop.setPlace(referencedSaved);
+		stop.setStopOrder(0);
+		stop.setTrip(trip);
+		trip.getStops().add(stop);
+
+		tripRepository.save(trip);
+
+		int deleted = placeRepository.deleteOrphans();
+
+		assertThat(deleted).isEqualTo(1);
+		assertThat(placeRepository.findById(referencedSaved.getId())).isPresent();
+		assertThat(placeRepository.findById(orphanSaved.getId())).isEmpty();
 	}
 }
