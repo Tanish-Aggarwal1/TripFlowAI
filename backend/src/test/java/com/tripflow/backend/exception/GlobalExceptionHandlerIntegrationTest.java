@@ -12,6 +12,7 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.test.web.servlet.MockMvc;
@@ -23,6 +24,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -147,6 +149,29 @@ public class GlobalExceptionHandlerIntegrationTest {
 		assertThat(body).doesNotContain("users_email_key", "some_table", "SQLState", "constraint");
 
 		assertApiErrorKeys(mvcResult);
+	}
+
+	@Test
+	void unsupportedHttpMethod_returns405ApiError() throws Exception {
+		ResultActions result = mockMvc.perform(post("/test/not-found"))
+				.andExpect(status().isMethodNotAllowed())
+				.andExpect(jsonPath("$.status").value(405))
+				.andExpect(jsonPath("$.error").value("Method Not Allowed"))
+				.andExpect(jsonPath("$.path").value("/test/not-found"));
+
+		assertApiErrorKeys(result.andReturn());
+	}
+
+	@Test
+	void noMatchingRoute_returns404ApiError() throws Exception {
+		ResultActions result = mockMvc.perform(get("/test/no-resource"))
+				.andExpect(status().isNotFound())
+				.andExpect(jsonPath("$.status").value(404))
+				.andExpect(jsonPath("$.error").value("Not Found"))
+				.andExpect(jsonPath("$.message").value("No matching route for this request"))
+				.andExpect(jsonPath("$.path").value("/test/no-resource"));
+
+		assertApiErrorKeys(result.andReturn());
 	}
 
 	@Test
@@ -283,6 +308,11 @@ public class GlobalExceptionHandlerIntegrationTest {
 			throw new DataIntegrityViolationException(
 					"ERROR: duplicate key value violates unique constraint \"users_email_key\" "
 							+ "on some_table; SQLState: 23505");
+		}
+
+		@GetMapping("/test/no-resource")
+		public void noResource() throws NoResourceFoundException {
+			throw new NoResourceFoundException(HttpMethod.GET, "/test/no-resource", "/test/no-resource");
 		}
 
 		@GetMapping("/test/conflict")

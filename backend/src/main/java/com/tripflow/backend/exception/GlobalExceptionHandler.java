@@ -7,10 +7,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
@@ -106,6 +108,19 @@ public class GlobalExceptionHandler {
 		// information disclosure. Full detail stays server-side at WARN.
 		log.warn("409 Conflict on {}: {}", req.getRequestURI(), ex.getMostSpecificCause().getMessage());
 		return error(HttpStatus.CONFLICT, "The request conflicts with existing data", req, null);
+	}
+
+	@ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+	public ResponseEntity<ApiError> handleMethodNotSupported(HttpRequestMethodNotSupportedException ex,
+			HttpServletRequest req) {
+		log.warn("405 Method Not Allowed on {}: {}", req.getRequestURI(), ex.getMessage());
+		return error(HttpStatus.METHOD_NOT_ALLOWED, ex.getMessage(), req, null);
+	}
+
+	@ExceptionHandler(NoResourceFoundException.class)
+	public ResponseEntity<ApiError> handleNoResourceFound(NoResourceFoundException ex, HttpServletRequest req) {
+		log.warn("404 Not Found on {}: no matching route", req.getRequestURI());
+		return error(HttpStatus.NOT_FOUND, "No matching route for this request", req, null);
 	}
 
 	@ExceptionHandler(Exception.class)
