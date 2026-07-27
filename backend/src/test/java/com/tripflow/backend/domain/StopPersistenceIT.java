@@ -1,7 +1,9 @@
 package com.tripflow.backend.domain;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import org.hibernate.exception.ConstraintViolationException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
@@ -110,6 +112,43 @@ class StopPersistenceIT {
 		assertThat(afterRemoval.getStops()).isEmpty();
 
 		assertThat(placeRepository.findById(place.getId())).isPresent();
+	}
+
+	// ---------- SCRUM-218: (trip_id, stop_order) uniqueness ----------
+
+	@Test
+	void duplicateStopOrderWithinSameTrip_violatesUniqueConstraint() {
+		Trip trip = createTripWithOwner("dup-order");
+		Place place = createPlace("Rest Stop", 44.0, -79.0);
+
+		Stop stop0 = new Stop();
+		stop0.setPlace(place);
+		stop0.setStopOrder(0);
+		trip.getStops().add(stop0);
+		stop0.setTrip(trip);
+
+		Trip saved = tripRepository.save(trip);
+		entityManager.flush();
+
+		Stop duplicateOrderStop = new Stop();
+		duplicateOrderStop.setPlace(place);
+		duplicateOrderStop.setStopOrder(0); // same trip, same order as stop0
+		duplicateOrderStop.setTrip(saved);
+		entityManager.persist(duplicateOrderStop);
+
+		// uq_stops_trip_id_stop_order is DEFERRABLE INITIALLY DEFERRED (V6) so the three
+		// app-code renumbering paths can transiently collide within one transaction without
+		// tripping the constraint mid-flush. Switching it to IMMEDIATE re-validates every
+		// pending deferred constraint right here — Postgres raises the violation as part of
+		// that statement itself, proving the constraint genuinely rejects a duplicate. (The
+		// default @DataJpaTest rollback never reaches a real COMMIT, so there'd be no other
+		// way to observe a deferred check firing.) This bypasses Spring Data's repository
+		// proxy, so the raw Hibernate exception surfaces here, not Spring's translated
+		// DataIntegrityViolationException.
+		assertThatThrownBy(() -> entityManager.getEntityManager()
+				.createNativeQuery("SET CONSTRAINTS uq_stops_trip_id_stop_order IMMEDIATE")
+				.executeUpdate())
+				.isInstanceOf(ConstraintViolationException.class);
 	}
 
 	@Test
