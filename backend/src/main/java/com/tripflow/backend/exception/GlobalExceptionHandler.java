@@ -37,7 +37,7 @@ public class GlobalExceptionHandler {
 		return error(HttpStatus.BAD_REQUEST, "Validation failed", req, fieldErrors);
 	}
 
-	@ExceptionHandler({ DuplicateEmailException.class, DuplicateUsernameException.class })
+	@ExceptionHandler({ DuplicateEmailException.class, DuplicateUsernameException.class, ConflictException.class })
 	public ResponseEntity<ApiError> handleDuplicate(RuntimeException ex, HttpServletRequest req) {
 		log.warn("409 Conflict on {}: {}", req.getRequestURI(), ex.getMessage());
 		return error(HttpStatus.CONFLICT, ex.getMessage(), req, null);
