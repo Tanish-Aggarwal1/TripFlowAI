@@ -153,4 +153,49 @@ describe('TripService', () => {
     expect(req.request.method).toBe('POST');
     req.flush(newTrip);
   });
+
+  it('should suggest an itinerary', (done) => {
+    const mockResponse = {
+      tripId: 50,
+      summary: 'A 3-day cultural and culinary tour of Toronto.',
+      stops: [
+        {
+          order: 1,
+          name: 'St. Lawrence Market',
+          latitude: 43.6487,
+          longitude: -79.3715,
+          reason: 'Fits your interest in food and history.',
+        },
+      ],
+    };
+
+    service
+      .suggestItinerary(50, { interests: ['history', 'food'], budget: 'moderate', pace: 'relaxed' })
+      .subscribe((result) => {
+        expect(result).toEqual(mockResponse);
+        done();
+      });
+
+    const req = httpMock.expectOne('http://localhost:8080/api/trips/50/ai-suggest');
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ interests: ['history', 'food'], budget: 'moderate', pace: 'relaxed' });
+    req.flush(mockResponse);
+  });
+
+  it('should handle 502 error from suggestItinerary', (done) => {
+    service.suggestItinerary(50, {}).subscribe(
+      () => fail('should have failed'),
+      (error: any) => {
+        expect(error.message).toBe('AI itinerary service is temporarily unavailable');
+        expect(error.status).toBe(502);
+        done();
+      }
+    );
+
+    const req = httpMock.expectOne('http://localhost:8080/api/trips/50/ai-suggest');
+    req.flush(
+      { message: 'AI itinerary service is temporarily unavailable' },
+      { status: 502, statusText: 'Bad Gateway' }
+    );
+  });
 });
