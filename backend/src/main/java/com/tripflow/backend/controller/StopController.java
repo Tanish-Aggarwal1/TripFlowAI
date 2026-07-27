@@ -18,7 +18,7 @@ import com.tripflow.backend.dto.CreateStopRequest;
 import com.tripflow.backend.dto.StopResponse;
 import com.tripflow.backend.dto.UpdateStopRequest;
 import com.tripflow.backend.security.UserPrincipal;
-import com.tripflow.backend.service.TripService;
+import com.tripflow.backend.service.StopService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -31,13 +31,13 @@ import lombok.AllArgsConstructor;
 @AllArgsConstructor
 public class StopController {
 
-    private final TripService tripService;
+    private final StopService stopService;
 
     @Operation(summary = "List a trip's stops")
     @GetMapping
     public ResponseEntity<List<StopResponse>> listStops(
             @PathVariable Long tripId, @AuthenticationPrincipal UserPrincipal principal) {
-        return ResponseEntity.ok(tripService.listStops(tripId, principal.userId()));
+        return ResponseEntity.ok(stopService.listStops(tripId, principal.userId()));
     }
 
     @Operation(summary = "Add a stop", description = "Appends a stop at the next stopOrder.")
@@ -46,14 +46,14 @@ public class StopController {
             @PathVariable Long tripId,
             @RequestBody @Valid CreateStopRequest request,
             @AuthenticationPrincipal UserPrincipal principal) {
-        return new ResponseEntity<>(tripService.addStop(tripId, principal.userId(), request), HttpStatus.CREATED);
+        return new ResponseEntity<>(stopService.addStop(tripId, principal.userId(), request), HttpStatus.CREATED);
     }
 
     @Operation(summary = "Get a stop")
     @GetMapping("/{stopId}")
     public ResponseEntity<StopResponse> getStop(
             @PathVariable Long tripId, @PathVariable Long stopId, @AuthenticationPrincipal UserPrincipal principal) {
-        return ResponseEntity.ok(tripService.getStop(tripId, stopId, principal.userId()));
+        return ResponseEntity.ok(stopService.getStop(tripId, stopId, principal.userId()));
     }
 
     @Operation(summary = "Update a stop", description = "status is optional — omit to leave unchanged.")
@@ -62,14 +62,14 @@ public class StopController {
             @PathVariable Long tripId, @PathVariable Long stopId,
             @RequestBody @Valid UpdateStopRequest request,
             @AuthenticationPrincipal UserPrincipal principal) {
-        return ResponseEntity.ok(tripService.updateStop(tripId, stopId, principal.userId(), request));
+        return ResponseEntity.ok(stopService.updateStop(tripId, stopId, principal.userId(), request));
     }
 
     @Operation(summary = "Delete a stop", description = "Remaining stops are automatically renumbered.")
     @DeleteMapping("/{stopId}")
     public ResponseEntity<Void> deleteStop(
             @PathVariable Long tripId, @PathVariable Long stopId, @AuthenticationPrincipal UserPrincipal principal) {
-        tripService.deleteStop(tripId, stopId, principal.userId());
+        stopService.deleteStop(tripId, stopId, principal.userId());
         return ResponseEntity.noContent().build();
     }
 }
