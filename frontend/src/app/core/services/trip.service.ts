@@ -2,6 +2,7 @@ import { inject, Injectable, signal } from '@angular/core';
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { Observable, tap, catchError, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { mapApiError } from '../http/api-error.mapper';
 import {
   TripResponse,
   TripSummaryResponse,
@@ -10,7 +11,6 @@ import {
   UpdateTripRequest,
   ItineraryPreferencesRequest,
   SuggestedItineraryResponse,
-  ApiError,
 } from '../models/trip.model';
 
 @Injectable({ providedIn: 'root' })
@@ -104,24 +104,12 @@ export class TripService {
   // ── ERROR HANDLING ───────────────────────────────────────────────────────────
 
   private handleError(err: HttpErrorResponse): Observable<never> {
-    const body = err.error as Partial<ApiError>;
-    let message = 'Something went wrong, please try again.';
-
-    if (err.status === 0) {
-      message = 'Network error. Please check your connection.';
-    } else if (err.status === 403) {
-      message = 'You do not have permission to do that.';
-    } else if (err.status === 404) {
-      message = 'Trip not found.';
-    } else if (err.status === 400 && body?.message) {
-      message = body.message;
-    } else if (body?.message) {
-      message = body.message;
-    }
-
-    const error = Object.assign(new Error(message), {
-      fieldErrors: body?.fieldErrors ?? null,
-      status: err.status,
+    const error = mapApiError(err, {
+      messagesByStatus: {
+        403: 'You do not have permission to do that.',
+        404: 'Trip not found.',
+      },
+      fallbackToBackendMessage: true,
     });
 
     return throwError(() => error);
