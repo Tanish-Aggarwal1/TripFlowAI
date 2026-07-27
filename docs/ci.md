@@ -45,7 +45,7 @@ Before this fix, `report` only ever read `jacoco.exec`, so any line covered excl
 ## What Blocks a Merge
 - Any failing test
 - Build/compile failure
-- Coverage below the floor set in `min-coverage-overall`/`min-coverage-changed-files` (SCRUM-136) — currently 80% / 80%, set 2026-07-19 based on the ~81.53% overall figure reported before this session's SCRUM-100/102/135-137 work landed, rounded down for a safe buffer. Not yet re-verified against a CI run including the new files from this session (`UserPrincipal`, `JsonAuthenticationEntryPoint`, `JsonAccessDeniedHandler`, `SecurityErrorWriter`) — revisit once a real number is available.
+- Coverage below the floor set in `min-coverage-overall`/`min-coverage-changed-files` (SCRUM-136, re-verified SCRUM-206) — **92% / 80%, measured 2026-07-26**. `min-coverage-overall` had been a placeholder 80/80 since SCRUM-136 (comment literally said "TEMP placeholder... no real coverage number to lock yet"). Pulled the actual overall coverage from the JaCoCo PR comment on several consecutive green `backend-ci` runs (PRs #118, #120, #121): consistently **96%** overall. Set `min-coverage-overall` to 92 (a few points below the measured number, never above, per SCRUM-136's original guidance) and kept `min-coverage-changed-files` at 80 (within SCRUM-136's suggested 70-80 range). Re-measure and adjust if the suite's overall coverage shifts meaningfully.
 
 ## How to Read a Failure
 1. Open the failed check on the PR

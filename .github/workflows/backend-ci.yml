@@ -45,10 +45,10 @@ jobs:
           paths: ${{ github.workspace }}/backend/target/site/jacoco/jacoco.xml
           token: ${{ secrets.GITHUB_TOKEN }}
           title: Backend coverage
-          # TEMP placeholder — Actions was queued/down when this was written, so there's
-          # no real coverage number to lock yet. Once a run succeeds, check the JaCoCo
-          # PR comment's overall %, set min-coverage-overall a few points below it (never
-          # above), and min-coverage-changed-files something reasonable like 70-80.
-          min-coverage-overall: 80
+          # Baseline measured 2026-07-26 from several consecutive green backend-ci runs
+          # (PRs #118, #120, #121): overall coverage consistently ~96%. Set a few points
+          # below the measured number per SCRUM-136's original guidance — see docs/ci.md
+          # for the full measurement and how to re-verify/adjust this later.
+          min-coverage-overall: 92
           min-coverage-changed-files: 80
           update-comment: true
