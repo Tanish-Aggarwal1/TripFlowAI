@@ -43,6 +43,7 @@ public class TripService {
     private final PlaceRepository placeRepository;
     private final TripMapper tripMapper;
     private final StopMapper stopMapper;
+    private final TripOwnershipService tripOwnershipService;
 
     // ---------- Trips ----------
 
@@ -88,7 +89,7 @@ public class TripService {
 
     @Transactional
     public TripResponse updateTrip(Long tripId, Long requesterId, UpdateTripRequest request) {
-        Trip trip = loadOwnedTrip(tripId, requesterId);
+        Trip trip = tripOwnershipService.loadOwnedTrip(tripId, requesterId);
 
         trip.setTitle(request.title());
         trip.setDescription(request.description());
@@ -112,7 +113,7 @@ public class TripService {
 
     @Transactional
     public void deleteTrip(Long tripId, Long requesterId) {
-        Trip trip = loadOwnedTrip(tripId, requesterId);
+        Trip trip = tripOwnershipService.loadOwnedTrip(tripId, requesterId);
         tripRepository.delete(trip); // cascade + FK ON DELETE CASCADE remove stops; Places survive
         log.info("Trip deleted id={} ownerId={}", tripId, requesterId);
     }
@@ -122,19 +123,19 @@ public class TripService {
 
     @Transactional(readOnly = true)
     public List<StopResponse> listStops(Long tripId, Long requesterId) {
-        Trip trip = loadOwnedTrip(tripId, requesterId);
+        Trip trip = tripOwnershipService.loadOwnedTrip(tripId, requesterId);
         return trip.getStops().stream().map(stopMapper::toResponse).toList();
     }
 
     @Transactional(readOnly = true)
     public StopResponse getStop(Long tripId, Long stopId, Long requesterId) {
-        Trip trip = loadOwnedTrip(tripId, requesterId);
+        Trip trip = tripOwnershipService.loadOwnedTrip(tripId, requesterId);
         return stopMapper.toResponse(findStop(trip, stopId));
     }
 
     @Transactional
     public StopResponse addStop(Long tripId, Long requesterId, CreateStopRequest request) {
-        Trip trip = loadOwnedTrip(tripId, requesterId);
+        Trip trip = tripOwnershipService.loadOwnedTrip(tripId, requesterId);
         int nextOrder = trip.getStops().stream().mapToInt(Stop::getStopOrder).max().orElse(-1) + 1;
         Stop stop = stopMapper.toEntity(request, resolvePlace(request), nextOrder);
         stop.setTrip(trip);
@@ -146,7 +147,7 @@ public class TripService {
 
     @Transactional
     public StopResponse updateStop(Long tripId, Long stopId, Long requesterId, UpdateStopRequest request) {
-        Trip trip = loadOwnedTrip(tripId, requesterId);
+        Trip trip = tripOwnershipService.loadOwnedTrip(tripId, requesterId);
         Stop stop = findStop(trip, stopId);
 
         stop.setPlace(resolvePlace(request.name(), request.latitude(), request.longitude(),
@@ -163,7 +164,7 @@ public class TripService {
 
     @Transactional
     public void deleteStop(Long tripId, Long stopId, Long requesterId) {
-        Trip trip = loadOwnedTrip(tripId, requesterId);
+        Trip trip = tripOwnershipService.loadOwnedTrip(tripId, requesterId);
         Stop stop = findStop(trip, stopId);
         trip.getStops().remove(stop); // orphanRemoval deletes the row; Place survives
         renumber(trip.getStops());
@@ -172,17 +173,6 @@ public class TripService {
     }
 
     // ---------- helpers ----------
-
-    private Trip loadOwnedTrip(Long tripId, Long requesterId) {
-        Trip trip = tripRepository.findWithStopsById(tripId)
-                .orElseThrow(() -> new ResourceNotFoundException("Trip not found: " + tripId));
-        if (!trip.getUser().getId().equals(requesterId)) {
-        	log.debug("Trip ownership check failed tripId={} ownerId={} requesterId={}",
-                    tripId, trip.getUser().getId(), requesterId);
-            throw new ForbiddenException("You do not have access to this trip");
-        }
-        return trip;
-    }
 
     private Stop findStop(Trip trip, Long stopId) {
         return trip.getStops().stream()

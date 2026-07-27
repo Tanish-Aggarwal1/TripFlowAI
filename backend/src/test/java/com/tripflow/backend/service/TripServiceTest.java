@@ -56,7 +56,12 @@ public class TripServiceTest {
     void setUp() {
         StopMapper stopMapper = new StopMapper();
         TripMapper tripMapper = new TripMapper(stopMapper);
-        tripService = new TripService(tripRepository, userRepository, placeRepository, tripMapper, stopMapper);
+        // Real TripOwnershipService (not mocked) — it's a thin delegate to tripRepository,
+        // so every existing `when(tripRepository.findWithStopsById(...))` stub below still
+        // drives the ownership check unchanged.
+        TripOwnershipService tripOwnershipService = new TripOwnershipService(tripRepository);
+        tripService = new TripService(
+                tripRepository, userRepository, placeRepository, tripMapper, stopMapper, tripOwnershipService);
     }
 
     @Test

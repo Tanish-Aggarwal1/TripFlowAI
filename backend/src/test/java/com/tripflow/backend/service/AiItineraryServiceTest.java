@@ -43,7 +43,11 @@ public class AiItineraryServiceTest {
 
 	@BeforeEach
 	void setUp() {
-		service = new AiItineraryService(tripRepository, geminiClient, promptTemplate, responseParser);
+		// Real TripOwnershipService (not mocked) — it's a thin delegate to tripRepository,
+		// so every existing `when(tripRepository.findWithStopsById(...))` stub below still
+		// drives the ownership check unchanged.
+		TripOwnershipService tripOwnershipService = new TripOwnershipService(tripRepository);
+		service = new AiItineraryService(tripOwnershipService, geminiClient, promptTemplate, responseParser);
 	}
 
 	private Trip ownedTrip(Long ownerId) {

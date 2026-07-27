@@ -62,8 +62,12 @@ class RouteOptimizationServiceTest {
     void setUp() {
         // Real mapper (no mock) so we can assert the full TripResponse shape
         tripMapper = new TripMapper(new StopMapper());
+        // Real TripOwnershipService (not mocked) — it's a thin delegate to tripRepository,
+        // so every existing `given(tripRepository.findWithStopsById(...))` stub below
+        // still drives the ownership check unchanged.
+        TripOwnershipService tripOwnershipService = new TripOwnershipService(tripRepository);
         service = new RouteOptimizationService(
-                tripRepository, orsClient, tripMapper, objectMapper);
+                tripRepository, orsClient, tripMapper, objectMapper, tripOwnershipService);
     }
 
     // ── test data builders ───────────────────────────────────────────────────
