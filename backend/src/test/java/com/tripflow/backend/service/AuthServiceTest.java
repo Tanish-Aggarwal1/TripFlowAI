@@ -16,12 +16,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import com.tripflow.backend.domain.User;
 import com.tripflow.backend.dto.AuthResponse;
 import com.tripflow.backend.dto.LoginRequest;
 import com.tripflow.backend.dto.RegisterRequest;
+import com.tripflow.backend.exception.ConflictException;
 import com.tripflow.backend.exception.DuplicateEmailException;
 import com.tripflow.backend.exception.DuplicateUsernameException;
 import com.tripflow.backend.exception.InvalidCredentialsException;
@@ -126,6 +128,47 @@ class AuthServiceTest {
 				.isInstanceOf(DuplicateUsernameException.class);
 
 		verify(userRepository, never()).save(any());
+	}
+
+	// ---------- post-check race: save() itself hits the unique constraint ----------
+
+	@Test
+	void register_saveRacesOnEmailConstraint_throwsDuplicateEmailException() {
+		RegisterRequest request = new RegisterRequest(USERNAME, EMAIL, PASSWORD);
+		when(userRepository.existsByEmail(EMAIL)).thenReturn(false);
+		when(userRepository.existsByUsername(USERNAME)).thenReturn(false);
+		when(passwordEncoder.encode(PASSWORD)).thenReturn(HASHED);
+		when(userRepository.save(any(User.class))).thenThrow(new DataIntegrityViolationException(
+				"ERROR: duplicate key value violates unique constraint \"users_email_key\""));
+
+		assertThatThrownBy(() -> authService.register(request))
+				.isInstanceOf(DuplicateEmailException.class);
+	}
+
+	@Test
+	void register_saveRacesOnUsernameConstraint_throwsDuplicateUsernameException() {
+		RegisterRequest request = new RegisterRequest(USERNAME, EMAIL, PASSWORD);
+		when(userRepository.existsByEmail(EMAIL)).thenReturn(false);
+		when(userRepository.existsByUsername(USERNAME)).thenReturn(false);
+		when(passwordEncoder.encode(PASSWORD)).thenReturn(HASHED);
+		when(userRepository.save(any(User.class))).thenThrow(new DataIntegrityViolationException(
+				"ERROR: duplicate key value violates unique constraint \"users_username_key\""));
+
+		assertThatThrownBy(() -> authService.register(request))
+				.isInstanceOf(DuplicateUsernameException.class);
+	}
+
+	@Test
+	void register_saveRacesOnUnrecognizedConstraint_throwsConflictException() {
+		RegisterRequest request = new RegisterRequest(USERNAME, EMAIL, PASSWORD);
+		when(userRepository.existsByEmail(EMAIL)).thenReturn(false);
+		when(userRepository.existsByUsername(USERNAME)).thenReturn(false);
+		when(passwordEncoder.encode(PASSWORD)).thenReturn(HASHED);
+		when(userRepository.save(any(User.class)))
+				.thenThrow(new DataIntegrityViolationException("ERROR: some other constraint violated"));
+
+		assertThatThrownBy(() -> authService.register(request))
+				.isInstanceOf(ConflictException.class);
 	}
 
 	@Test

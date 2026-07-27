@@ -171,6 +171,18 @@ public class GlobalExceptionHandlerIntegrationTest {
 	}
 
 	@Test
+	void genericConflict_returns409ApiError() throws Exception {
+		ResultActions result = mockMvc.perform(get("/test/conflict-generic"))
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.status").value(409))
+				.andExpect(jsonPath("$.error").value("Conflict"))
+				.andExpect(jsonPath("$.message").value("Registration conflicted with an existing account"))
+				.andExpect(jsonPath("$.path").value("/test/conflict-generic"));
+
+		assertApiErrorKeys(result.andReturn());
+	}
+
+	@Test
 	void springSecurityBadCredentials_returns401ApiError() throws Exception {
 		ResultActions result = mockMvc.perform(get("/test/unauthorized-spring"))
 				.andExpect(status().isUnauthorized())
@@ -246,6 +258,11 @@ public class GlobalExceptionHandlerIntegrationTest {
 		@GetMapping("/test/conflict-username")
 		public void conflictUsername() {
 			throw new DuplicateUsernameException("takenuser");
+		}
+
+		@GetMapping("/test/conflict-generic")
+		public void conflictGeneric() {
+			throw new ConflictException("Registration conflicted with an existing account");
 		}
 
 		@GetMapping("/test/unauthorized-spring")
