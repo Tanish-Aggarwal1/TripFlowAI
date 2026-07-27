@@ -6,7 +6,6 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -49,6 +48,14 @@ import lombok.extern.slf4j.Slf4j;
  * {@link com.tripflow.backend.exception.GlobalExceptionHandler#handleOrsFailure},
  * which returns a 502 with the canonical {@code ApiError} JSON. This service does
  * <strong>not</strong> add its own try/catch around ORS calls.
+ *
+ * <p>Deliberately NOT {@code @Transactional} (SCRUM-210): {@code optimize()} now runs as
+ * load → call → persist, each phase a separate transaction on a different bean, so no
+ * database connection is held across the two ORS HTTP calls. {@link TripOwnershipService#loadOwnedTrip}
+ * is transactional on its own bean and commits before the ORS calls start; {@link TripRepository#save}
+ * is itself transactional (Spring Data's generated repository methods are) and opens its own
+ * short transaction only for the final persist. Annotating this method would reintroduce the
+ * bug by holding one connection across both external calls.
  */
 @Slf4j
 @Service
@@ -74,7 +81,6 @@ public class RouteOptimizationService {
 	 * @throws IllegalStateException     if the trip has fewer than 2 stops
 	 * @throws OrsClientException        if VROOM fails, times out, or returns an incomplete/invalid result
 	 */
-	@Transactional
 	public TripResponse optimize(Long tripId, Long requesterId) {
 		Trip trip = tripOwnershipService.loadOwnedTrip(tripId, requesterId);
 		List<Stop> stops = trip.getStops();
