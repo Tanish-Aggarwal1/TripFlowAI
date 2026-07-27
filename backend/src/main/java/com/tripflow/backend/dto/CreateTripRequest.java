@@ -13,7 +13,7 @@ import jakarta.validation.constraints.Size;
 public record CreateTripRequest(
         @NotBlank @Size(max = 150) String title,
         String description,
-        List<String> tags,
+        @Size(max = 20) List<@Size(max = 50) String> tags,
         @NotNull TripVisibility visibility,
         @NotEmpty List<@Valid CreateStopRequest> stops
 ) {}

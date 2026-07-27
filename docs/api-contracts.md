@@ -100,6 +100,20 @@ Returns a page of the authenticated user's trips as a card-sized projection — 
 **Errors:**
 - 400 — validation failure
 
+**Field limits (SCRUM-212 / AUDIT-03)** — enforced by Bean Validation, mirroring the DB column widths and coordinate domain exactly. A violation returns 400 with a `fieldErrors` entry naming the field, never a 500 from a downstream DB constraint:
+
+| Field | Limit |
+| --- | --- |
+| `title` | max 150 chars |
+| `tags` | max 20 elements, each max 50 chars |
+| `stops[].name` | max 200 chars |
+| `stops[].address` | max 300 chars |
+| `stops[].externalPlaceId` | max 150 chars |
+| `stops[].latitude` | -90.0 to 90.0 |
+| `stops[].longitude` | -180.0 to 180.0 |
+
+Same limits apply to `PUT /api/trips/{id}` and the nested stop endpoints (`POST`/`PUT /api/trips/{tripId}/stops[/{stopId}]`), which share `CreateStopRequest`/`UpdateStopRequest`.
+
 ### GET /api/trips/{id}
 Owner sees any trip; non-owner only sees `PUBLIC` trips.
 **Success (200):** single trip object.
