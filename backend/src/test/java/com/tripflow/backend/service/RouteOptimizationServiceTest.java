@@ -9,7 +9,9 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
+import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -42,6 +44,8 @@ import com.tripflow.backend.exception.ResourceNotFoundException;
 import com.tripflow.backend.mapper.StopMapper;
 import com.tripflow.backend.mapper.TripMapper;
 import com.tripflow.backend.repository.TripRepository;
+import com.tripflow.backend.schedule.ItineraryScheduler;
+import com.tripflow.backend.schedule.RouteScheduleProperties;
 
 @ExtendWith(MockitoExtension.class)
 class RouteOptimizationServiceTest {
@@ -66,8 +70,10 @@ class RouteOptimizationServiceTest {
         // so every existing `given(tripRepository.findWithStopsById(...))` stub below
         // still drives the ownership check unchanged.
         TripOwnershipService tripOwnershipService = new TripOwnershipService(tripRepository);
+        ItineraryScheduler itineraryScheduler = new ItineraryScheduler(
+                new RouteScheduleProperties(LocalTime.of(9, 0), LocalTime.of(21, 0), Duration.ofHours(1)));
         service = new RouteOptimizationService(
-                tripRepository, orsClient, tripMapper, objectMapper, tripOwnershipService);
+                tripRepository, orsClient, tripMapper, objectMapper, tripOwnershipService, itineraryScheduler);
     }
 
     // ── test data builders ───────────────────────────────────────────────────
@@ -144,6 +150,21 @@ class RouteOptimizationServiceTest {
                                 List.of(-75.70, 45.42))),
                         new OrsDirectionsResponse.Properties(
                                 new OrsDirectionsResponse.Summary(450000.0, 14400.0)))));
+    }
+
+    /** Same route, but with a per-leg segments breakdown (SCRUM-244a scheduling input). */
+    private OrsDirectionsResponse directionsResponseWithSegments(double... legDurationsSeconds) {
+        List<OrsDirectionsResponse.Segment> segments = java.util.Arrays.stream(legDurationsSeconds)
+                .mapToObj(d -> new OrsDirectionsResponse.Segment(1000.0, d))
+                .toList();
+        return new OrsDirectionsResponse(List.of(
+                new OrsDirectionsResponse.Feature(
+                        new OrsDirectionsResponse.Geometry("LineString", List.of(
+                                List.of(-79.38, 43.65),
+                                List.of(-73.57, 45.50),
+                                List.of(-75.70, 45.42))),
+                        new OrsDirectionsResponse.Properties(
+                                new OrsDirectionsResponse.Summary(450000.0, 14400.0), segments))));
     }
 
     // ── Reflection helpers for setting entity IDs in tests ────────────────
@@ -263,6 +284,65 @@ class RouteOptimizationServiceTest {
             assertThat(coords.get(0)).containsExactly(-79.38, 43.65); // Toronto
             assertThat(coords.get(1)).containsExactly(-73.57, 45.50); // Montreal
             assertThat(coords.get(2)).containsExactly(-75.70, 45.42); // Ottawa
+        }
+    }
+
+    @Nested
+    class Scheduling {
+
+        @Test
+        void optimize_assignsDayNumberAndPlannedTimeToEveryStop() {
+            Trip trip = tripWith3Stops();
+            given(tripRepository.findWithStopsById(TRIP_ID)).willReturn(Optional.of(trip));
+            given(orsClient.optimize(any())).willReturn(optimizationResponse_reordered());
+            // Two short legs (30 min each) — everything comfortably fits in one day.
+            given(orsClient.getDirections(any())).willReturn(directionsResponseWithSegments(1800.0, 1800.0));
+            given(tripRepository.save(any(Trip.class))).willAnswer(inv -> inv.getArgument(0));
+
+            TripResponse result = service.optimize(TRIP_ID, OWNER_ID);
+
+            assertThat(result.stops()).allSatisfy(stop -> {
+                assertThat(stop.dayNumber()).isEqualTo(1);
+                assertThat(stop.plannedTime()).isNotNull();
+            });
+            // First stop starts at the configured day-start time.
+            assertThat(result.stops().get(0).plannedTime()).isEqualTo(LocalTime.of(9, 0));
+            // Second stop: 1h visit + 30min travel after the first.
+            assertThat(result.stops().get(1).plannedTime()).isEqualTo(LocalTime.of(10, 30));
+        }
+
+        @Test
+        void optimize_rollsOverToNextDayWhenWindowExceeded() {
+            Trip trip = tripWith3Stops();
+            given(tripRepository.findWithStopsById(TRIP_ID)).willReturn(Optional.of(trip));
+            given(orsClient.optimize(any())).willReturn(optimizationResponse_reordered());
+            // Two legs just over 11h each — with a 09:00-21:00 (12h) window and 1h visits,
+            // 1h visit + 11h1s travel alone exceeds the window, forcing every subsequent
+            // stop onto a fresh day.
+            given(orsClient.getDirections(any()))
+                    .willReturn(directionsResponseWithSegments(39_601.0, 39_601.0));
+            given(tripRepository.save(any(Trip.class))).willAnswer(inv -> inv.getArgument(0));
+
+            TripResponse result = service.optimize(TRIP_ID, OWNER_ID);
+
+            assertThat(result.stops().get(0).dayNumber()).isEqualTo(1);
+            assertThat(result.stops().get(1).dayNumber()).isEqualTo(2);
+            assertThat(result.stops().get(2).dayNumber()).isEqualTo(3);
+        }
+
+        @Test
+        void optimize_missingSegments_stillSchedulesUsingVisitDurationOnly() {
+            Trip trip = tripWith3Stops();
+            given(tripRepository.findWithStopsById(TRIP_ID)).willReturn(Optional.of(trip));
+            given(orsClient.optimize(any())).willReturn(optimizationResponse_reordered());
+            // directionsResponse() (no segments) — extractLegDurations() must fall back
+            // to zero travel time per leg rather than throwing.
+            given(orsClient.getDirections(any())).willReturn(directionsResponse());
+            given(tripRepository.save(any(Trip.class))).willAnswer(inv -> inv.getArgument(0));
+
+            TripResponse result = service.optimize(TRIP_ID, OWNER_ID);
+
+            assertThat(result.stops()).allSatisfy(stop -> assertThat(stop.dayNumber()).isEqualTo(1));
         }
     }
 

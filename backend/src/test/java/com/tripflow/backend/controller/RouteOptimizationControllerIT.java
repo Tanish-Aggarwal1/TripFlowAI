@@ -197,7 +197,13 @@ public class RouteOptimizationControllerIT {
 			  "features": [
 			    {
 			      "geometry": { "type": "LineString", "coordinates": [[-79.38,43.65],[-73.57,45.50],[-75.70,45.42]] },
-			      "properties": { "summary": { "distance": 650000.0, "duration": 21600.0 } }
+			      "properties": {
+			        "summary": { "distance": 650000.0, "duration": 21600.0 },
+			        "segments": [
+			          { "distance": 325000.0, "duration": 1800.0 },
+			          { "distance": 325000.0, "duration": 1800.0 }
+			        ]
+			      }
 			    }
 			  ]
 			}
@@ -233,7 +239,15 @@ public class RouteOptimizationControllerIT {
 				.andExpect(jsonPath("$.stops[1].name").value("Montreal"))
 				.andExpect(jsonPath("$.stops[1].stopOrder").value(1))
 				.andExpect(jsonPath("$.stops[2].name").value("Ottawa"))
-				.andExpect(jsonPath("$.stops[2].stopOrder").value(2));
+				.andExpect(jsonPath("$.stops[2].stopOrder").value(2))
+				// SCRUM-244a: scheduled from the segments above (default 09:00 day-start,
+				// 1h visit duration, 30min legs).
+				.andExpect(jsonPath("$.stops[0].dayNumber").value(1))
+				.andExpect(jsonPath("$.stops[0].plannedTime").value("09:00:00"))
+				.andExpect(jsonPath("$.stops[1].dayNumber").value(1))
+				.andExpect(jsonPath("$.stops[1].plannedTime").value("10:30:00"))
+				.andExpect(jsonPath("$.stops[2].dayNumber").value(1))
+				.andExpect(jsonPath("$.stops[2].plannedTime").value("12:00:00"));
 
 		orsMockServer.verify();
 	}

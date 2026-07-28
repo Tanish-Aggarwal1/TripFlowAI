@@ -25,6 +25,7 @@ import com.tripflow.backend.exception.OrsClientException;
 import com.tripflow.backend.exception.ResourceNotFoundException;
 import com.tripflow.backend.mapper.TripMapper;
 import com.tripflow.backend.repository.TripRepository;
+import com.tripflow.backend.schedule.ItineraryScheduler;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -40,7 +41,9 @@ import lombok.extern.slf4j.Slf4j;
  *   <li>Parse the response and reorder each {@link Stop#setStopOrder}</li>
  *   <li>Call {@link OrsClient#getDirections} with the optimized order to get the
  *       driveable route GeoJSON geometry</li>
- *   <li>Persist the new stop order + route geometry on the trip</li>
+ *   <li>Assign each stop a dayNumber/plannedTime via {@link ItineraryScheduler},
+ *       reusing the per-leg travel durations from the directions call (SCRUM-244a)</li>
+ *   <li>Persist the new stop order + route geometry + schedule on the trip</li>
  * </ol>
  *
  * <p>Error handling: {@link com.tripflow.backend.exception.OrsClientException} is
@@ -69,6 +72,7 @@ public class RouteOptimizationService {
 	private final TripMapper tripMapper;
 	private final ObjectMapper objectMapper;
 	private final TripOwnershipService tripOwnershipService;
+	private final ItineraryScheduler itineraryScheduler;
 
 	/**
 	 * Optimize a trip's stop order and persist the result.
@@ -106,6 +110,10 @@ public class RouteOptimizationService {
 
 		// --- 5. Persist route geometry on the trip ---
 		persistRouteGeometry(trip, directionsResponse);
+
+		// --- 6. Assign each stop a day/time (SCRUM-244a), reusing the travel
+		//        durations from the directions call above ---
+		itineraryScheduler.schedule(stops, extractLegDurations(directionsResponse));
 
 		Trip saved = tripRepository.save(trip);
 		log.info("Route optimized tripId={} newOrder={}",
@@ -181,6 +189,22 @@ public class RouteOptimizationService {
 				.toList();
 
 		return orsClient.getDirections(OrsDirectionsRequest.of(coordinates));
+	}
+
+	// ── scheduling ────────────────────────────────────────────────────────────
+
+	/**
+	 * segments (one per leg between consecutive stops) may be absent on a response
+	 * that didn't include them — ItineraryScheduler treats a missing/short list as
+	 * zero travel time for the corresponding leg(s) rather than failing.
+	 */
+	List<Double> extractLegDurations(OrsDirectionsResponse directionsResponse) {
+		List<OrsDirectionsResponse.Segment> segments =
+				directionsResponse.features().get(0).properties().segments();
+		if (segments == null) {
+			return List.of();
+		}
+		return segments.stream().map(OrsDirectionsResponse.Segment::duration).toList();
 	}
 
 	void persistRouteGeometry(Trip trip, OrsDirectionsResponse directionsResponse) {

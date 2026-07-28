@@ -1,6 +1,7 @@
 package com.tripflow.backend.dto;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 
 import com.tripflow.backend.domain.enums.TripStatus;
@@ -17,5 +18,6 @@ public record TripResponse(
         List<StopResponse> stops,
         Instant createdAt,
         Instant updatedAt,
-        String routeGeometry
+        String routeGeometry,
+        LocalDate startDate
 ) {}

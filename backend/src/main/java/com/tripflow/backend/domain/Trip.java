@@ -1,5 +1,6 @@
 package com.tripflow.backend.domain;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -39,7 +40,13 @@ public class Trip extends BaseEntity {
 
     @Column(columnDefinition = "TEXT")
     private String description;
-    
+
+    // SCRUM-244a: optional trip-level date anchor. Not required for stops to have a
+    // dayNumber/plannedTime — those are trip-relative (day 1, day 2, ...) regardless
+    // of whether startDate is set.
+    @Column(name = "start_date")
+    private LocalDate startDate;
+
     @JdbcTypeCode(SqlTypes.ARRAY)
     @Column(columnDefinition = "TEXT[]")
     private List<String> tags = new ArrayList<>();
