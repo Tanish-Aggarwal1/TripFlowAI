@@ -34,6 +34,7 @@
 		<springdoc.version>3.0.3</springdoc.version>
 		<archunit.version>1.4.1</archunit.version>
 		<bucket4j.version>8.10.1</bucket4j.version>
+		<biweekly.version>0.6.8</biweekly.version>
 	</properties>
 
 	<dependencyManagement>
@@ -194,6 +195,22 @@
 			<groupId>com.bucket4j</groupId>
 			<artifactId>bucket4j-core</artifactId>
 			<version>${bucket4j.version}</version>
+		</dependency>
+
+		<!-- iCalendar (RFC 5545) generation for the .ics export endpoint (SCRUM-176).
+		     jackson-databind is an optional biweekly dependency (only used for its JSON
+		     (jCal) support, which this project doesn't use) so it's excluded to avoid a
+		     second Jackson 2 databind version alongside the one already pinned by Boot's BOM. -->
+		<dependency>
+			<groupId>net.sf.biweekly</groupId>
+			<artifactId>biweekly</artifactId>
+			<version>${biweekly.version}</version>
+			<exclusions>
+				<exclusion>
+					<groupId>com.fasterxml.jackson.core</groupId>
+					<artifactId>jackson-databind</artifactId>
+				</exclusion>
+			</exclusions>
 		</dependency>
 
 		<!-- Health Actuator -->

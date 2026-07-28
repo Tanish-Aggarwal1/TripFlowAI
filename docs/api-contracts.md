@@ -311,6 +311,33 @@ All fields are optional lists/strings. Gemini uses them as prompt context alongs
 
 ---
 
+## Trip Export (SCRUM-175/176)
+
+### GET /api/trips/{id}/calendar.ics
+Generates a standard `.ics` (RFC 5545 iCalendar) file from a trip's ordered stops — one `VEVENT` per stop.
+
+**Auth:** Bearer token required. Same visibility rule as `GET /api/trips/{id}` — owner sees any trip, non-owners only see `PUBLIC` trips.
+
+**Request:** No body.
+
+**Success (200):**
+- `Content-Type: text/calendar`
+- `Content-Disposition: attachment; filename="{sanitized-trip-title}.ics"` — the title is stripped to letters/digits/spaces/dashes and capped at 100 chars so it can't inject header syntax or path-unsafe characters.
+- Body: a valid `VCALENDAR` with one `VEVENT` per stop:
+  - `SUMMARY` — stop name
+  - `LOCATION` — stop address (omitted if the stop has no address)
+  - `GEO` — stop latitude/longitude
+  - `DTSTART`/`DTEND` — from the stop's `dayNumber`/`plannedTime` (SCRUM-244a) when the trip has been scheduled, using `app.schedule.default-visit-duration` (same property route optimization's scheduler uses) as the event length; falls back to an all-day event on the trip's `startDate` (or the export date, if that's also unset) when the stop has no schedule yet.
+  - All date-times are written **floating** (no `Z`, no `TZID`) — a stop's `plannedTime` is a destination-local wall-clock time with no known timezone (no lat/lng-to-timezone lookup), so converting it through the server's own timezone would silently produce the wrong hour depending on where the backend happens to be deployed.
+
+**Errors:**
+- 403 — private trip, requester is not the owner
+- 404 — trip not found
+
+All errors return the standard `ApiError` body.
+
+---
+
 ## Rate Limiting (SCRUM-173)
 
 `POST /api/trips/{id}/ai-suggest` and `POST /api/trips/{id}/optimize` both call paid/quota-limited external APIs (Gemini, OpenRouteService), so each is capped per authenticated user via an in-memory token bucket (Bucket4j), keyed on the JWT-derived user id — not IP, since multiple users can share an IP (NAT, campus wifi).
