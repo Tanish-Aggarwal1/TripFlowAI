@@ -80,6 +80,11 @@ export class AuthService {
 
   private getStoredUsername(): string | null {
     const raw = localStorage.getItem(USER_KEY);
-    return raw ? JSON.parse(raw).username : null;
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw).username ?? null;
+    } catch {
+      return null;
+    }
   }
 }
