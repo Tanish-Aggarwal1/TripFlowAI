@@ -47,6 +47,25 @@ Before this fix, `report` only ever read `jacoco.exec`, so any line covered excl
 - Build/compile failure
 - Coverage below the floor set in `min-coverage-overall`/`min-coverage-changed-files` (SCRUM-136, re-verified SCRUM-206) — **92% / 80%, measured 2026-07-26**. `min-coverage-overall` had been a placeholder 80/80 since SCRUM-136 (comment literally said "TEMP placeholder... no real coverage number to lock yet"). Pulled the actual overall coverage from the JaCoCo PR comment on several consecutive green `backend-ci` runs (PRs #118, #120, #121): consistently **96%** overall. Set `min-coverage-overall` to 92 (a few points below the measured number, never above, per SCRUM-136's original guidance) and kept `min-coverage-changed-files` at 80 (within SCRUM-136's suggested 70-80 range). Re-measure and adjust if the suite's overall coverage shifts meaningfully.
 
+## Frontend Coverage Gate (SCRUM-214/236)
+
+Before SCRUM-214, `frontend-ci.yml` measured Karma/Istanbul coverage and posted it as a PR comment, but nothing enforced a floor — coverage could fall to zero and CI would still pass. The entire client-side auth path (`auth.service.ts`, `auth.guard.ts`, `auth.interceptor.ts`, `session-expiry.interceptor.ts`) had zero tests until this ticket.
+
+`karma.conf.js`'s `coverageReporter.check.global` now sets a floor per metric. `karma-coverage` fails the `npm run test:ci` step itself (non-zero exit) when a metric drops below its floor — `frontend-ci.yml` needs no separate gating step, unlike the backend's JaCoCo-based approach.
+
+**Measured 2026-07-28**, after the auth/dashboard/trip-edit/stop-list specs added in SCRUM-214 landed (78 tests, up from 17 before):
+
+| Metric | Measured | Floor |
+| --- | --- | --- |
+| Statements | 67.9% | 65% |
+| Branches | 57.89% | 55% |
+| Functions | 66.17% | 63% |
+| Lines | 70.37% | 68% |
+
+Same method SCRUM-206 used for the backend: measure the real number first, then set the floor a few points below it — never pick a number before measuring. Re-measure and adjust if the suite's coverage shifts meaningfully (e.g. once SCRUM-71/72 add new pages).
+
+Verified the gate actually fails the build: temporarily set the `statements` floor to 99% locally, ran `npm run test:ci`, confirmed it failed with `Coverage for statements (67.9%) does not meet global threshold (99%)` and a non-zero exit code, then reverted to the real floor.
+
 ## How to Read a Failure
 1. Open the failed check on the PR
 2. Click "Details" to view the Actions log
