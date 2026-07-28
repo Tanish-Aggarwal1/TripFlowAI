@@ -1,6 +1,7 @@
 package com.tripflow.backend.security;
 
 import java.io.IOException;
+import java.util.Optional;
 
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -8,6 +9,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -32,9 +34,10 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 			String token = header.substring(7);
 
 			try {
-				if (jwtService.isValid(token)) {
-					Long userId = jwtService.extractUserId(token);
-					String email = jwtService.extractEmail(token);
+				Optional<Claims> claims = jwtService.parseIfValid(token);
+				if (claims.isPresent()) {
+					Long userId = Long.parseLong(claims.get().getSubject());
+					String email = claims.get().get("email", String.class);
 					UserPrincipal principal = new UserPrincipal(userId, email);
 					var authToken = new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
 					SecurityContextHolder.getContext().setAuthentication(authToken);

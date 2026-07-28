@@ -1,6 +1,10 @@
 package com.tripflow.backend.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -77,6 +81,23 @@ class JwtAuthFilterTest {
 		assertThat(principal.userId()).isEqualTo(55L);
 		assertThat(principal.email()).isEqualTo("user@example.com");
 		verify(filterChain).doFilter(request, response);
+	}
+
+	@Test
+	void validBearerToken_parsesAndVerifiesTokenExactlyOnce() throws Exception {
+		JwtService spiedJwtService = spy(jwtService);
+		JwtAuthFilter spiedFilter = new JwtAuthFilter(spiedJwtService);
+		String token = spiedJwtService.generateToken(55L, "user@example.com");
+		MockHttpServletRequest request = new MockHttpServletRequest();
+		request.addHeader("Authorization", "Bearer " + token);
+		MockHttpServletResponse response = new MockHttpServletResponse();
+
+		spiedFilter.doFilterInternal(request, response, filterChain);
+
+		verify(spiedJwtService, times(1)).parseIfValid(anyString());
+		verify(spiedJwtService, never()).isValid(anyString());
+		verify(spiedJwtService, never()).extractUserId(anyString());
+		verify(spiedJwtService, never()).extractEmail(anyString());
 	}
 
 	@Test
