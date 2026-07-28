@@ -21,6 +21,8 @@ import com.tripflow.backend.dto.CreateTripRequest;
 import com.tripflow.backend.dto.TripResponse;
 import com.tripflow.backend.dto.TripSummaryResponse;
 import com.tripflow.backend.dto.UpdateTripRequest;
+import com.tripflow.backend.ratelimit.RateLimitProperties;
+import com.tripflow.backend.ratelimit.RateLimiterService;
 import com.tripflow.backend.security.UserPrincipal;
 import com.tripflow.backend.service.RouteOptimizationService;
 import com.tripflow.backend.service.TripService;
@@ -38,6 +40,8 @@ public class TripController {
 
     private final TripService tripService;
     private final RouteOptimizationService routeOptimizationService;
+    private final RateLimiterService rateLimiterService;
+    private final RateLimitProperties rateLimitProperties;
 
 
     @Operation(summary = "List the authenticated user's trips")
@@ -85,6 +89,7 @@ public class TripController {
     @PostMapping("/{id}/optimize")
     public ResponseEntity<TripResponse> optimizeTrip(
             @PathVariable Long id, @AuthenticationPrincipal UserPrincipal principal) {
+        rateLimiterService.checkLimit("optimize:" + principal.userId(), rateLimitProperties.optimize());
         return ResponseEntity.ok(routeOptimizationService.optimize(id, principal.userId()));
     }
 }

@@ -9,6 +9,7 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -233,6 +234,44 @@ public class AiControllerIT {
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.fieldErrors[*].field").value(org.hamcrest.Matchers.hasItem("budget")));
 
+		geminiMockServer.verify();
+	}
+
+	@Test
+	void suggestItinerary_exceedsRateLimit_returns429WithoutCallingGemini() throws Exception {
+		User owner = createTestUser("ratelimited");
+		Long tripId = createTrip(owner);
+
+		String geminiBody = """
+				{
+				  "candidates": [
+				    { "content": { "role": "model", "parts": [ { "text": "{\\"summary\\":\\"ok\\",\\"stops\\":[]}" } ] }, "finishReason": "STOP" }
+				  ]
+				}
+				""";
+		// app.ratelimit.ai-suggest.capacity=5 in application-test.properties.
+		for (int i = 0; i < 5; i++) {
+			geminiMockServer.expect(requestTo(ENDPOINT)).andExpect(method(HttpMethod.POST))
+					.andRespond(withSuccess(geminiBody, MediaType.APPLICATION_JSON));
+		}
+
+		for (int i = 0; i < 5; i++) {
+			mockMvc.perform(post("/api/trips/" + tripId + "/ai-suggest").with(csrf())
+							.contentType(MediaType.APPLICATION_JSON)
+							.content("{}")
+							.with(asUser(owner)))
+					.andExpect(status().isOk());
+		}
+
+		mockMvc.perform(post("/api/trips/" + tripId + "/ai-suggest").with(csrf())
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("{}")
+						.with(asUser(owner)))
+				.andExpect(status().isTooManyRequests())
+				.andExpect(jsonPath("$.status").value(429))
+				.andExpect(header().exists("Retry-After"));
+
+		// Only 5 expectations were registered — a 6th call reaching Gemini fails verify().
 		geminiMockServer.verify();
 	}
 

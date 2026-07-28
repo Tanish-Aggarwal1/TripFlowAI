@@ -3,6 +3,7 @@ package com.tripflow.backend.exception;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -28,6 +29,7 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.tripflow.backend.ratelimit.RateLimitExceededException;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -264,6 +266,19 @@ public class GlobalExceptionHandlerIntegrationTest {
 	}
 
 	@Test
+	void rateLimitExceeded_returns429ApiErrorWithRetryAfterHeader() throws Exception {
+		ResultActions result = mockMvc.perform(get("/test/rate-limit-exceeded"))
+				.andExpect(status().isTooManyRequests())
+				.andExpect(jsonPath("$.status").value(429))
+				.andExpect(jsonPath("$.error").value("Too Many Requests"))
+				.andExpect(jsonPath("$.message").value("Rate limit exceeded, try again in 42 second(s)"))
+				.andExpect(jsonPath("$.path").value("/test/rate-limit-exceeded"))
+				.andExpect(header().string("Retry-After", "42"));
+
+		assertApiErrorKeys(result.andReturn());
+	}
+
+	@Test
 	void springSecurityBadCredentials_returns401ApiError() throws Exception {
 		ResultActions result = mockMvc.perform(get("/test/unauthorized-spring"))
 				.andExpect(status().isUnauthorized())
@@ -370,6 +385,11 @@ public class GlobalExceptionHandlerIntegrationTest {
 		@GetMapping("/test/unauthorized-spring")
 		public void unauthorizedSpring() {
 			throw new BadCredentialsException("bad creds");
+		}
+
+		@GetMapping("/test/rate-limit-exceeded")
+		public void rateLimitExceeded() {
+			throw new RateLimitExceededException("Rate limit exceeded, try again in 42 second(s)", 42);
 		}
 	}
 }
