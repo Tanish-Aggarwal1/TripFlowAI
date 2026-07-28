@@ -49,7 +49,7 @@ describe('TripViewPage', () => {
   }
 
   beforeEach(async () => {
-    tripServiceSpy = jasmine.createSpyObj('TripService', ['getTrip', 'optimizeTrip']);
+    tripServiceSpy = jasmine.createSpyObj('TripService', ['getTrip', 'optimizeTrip', 'exportIcs']);
     toastCtrlSpy = jasmine.createSpyObj('ToastController', ['create']);
     toastCtrlSpy.create.and.returnValue(
       Promise.resolve({ present: () => Promise.resolve() } as any),
@@ -163,6 +163,84 @@ describe('TripViewPage', () => {
       expect(component.optimizing).toBeFalse();
       expect(toastCtrlSpy.create).toHaveBeenCalledWith(
         jasmine.objectContaining({ message: 'ORS unavailable.', color: 'danger' }),
+      );
+    });
+  });
+
+  describe('exportToCalendar', () => {
+    it('does nothing when no trip is loaded', () => {
+      component.trip = null;
+
+      component.exportToCalendar();
+
+      expect(tripServiceSpy.exportIcs).not.toHaveBeenCalled();
+    });
+
+    it('does nothing when already exporting', () => {
+      component.ngOnInit();
+      component.exporting = true;
+
+      component.exportToCalendar();
+
+      expect(tripServiceSpy.exportIcs).not.toHaveBeenCalled();
+    });
+
+    it('triggers a download named after the trip title and resets exporting on success', async () => {
+      component.trip = trip({ id: 1, title: 'Weekend Getaway' });
+      const blob = new Blob(['BEGIN:VCALENDAR'], { type: 'text/calendar' });
+      tripServiceSpy.exportIcs.and.returnValue(of(blob));
+      const createObjectURLSpy = spyOn(window.URL, 'createObjectURL').and.returnValue('blob:mock-url');
+      const revokeObjectURLSpy = spyOn(window.URL, 'revokeObjectURL');
+      const realCreateElement = document.createElement.bind(document);
+      let capturedAnchor: HTMLAnchorElement | undefined;
+      spyOn(document, 'createElement').and.callFake((tag: string) => {
+        const el = realCreateElement(tag);
+        if (tag === 'a') capturedAnchor = el as HTMLAnchorElement;
+        return el;
+      });
+      spyOn(HTMLAnchorElement.prototype, 'click');
+
+      component.exportToCalendar();
+      await Promise.resolve();
+
+      expect(tripServiceSpy.exportIcs).toHaveBeenCalledWith(1);
+      expect(component.exporting).toBeFalse();
+      expect(createObjectURLSpy).toHaveBeenCalledWith(blob);
+      expect(capturedAnchor?.download).toBe('Weekend Getaway.ics');
+      expect(HTMLAnchorElement.prototype.click).toHaveBeenCalled();
+      expect(revokeObjectURLSpy).toHaveBeenCalledWith('blob:mock-url');
+    });
+
+    it('falls back to a generic filename when the trip title sanitizes to empty', async () => {
+      component.trip = trip({ id: 1, title: '???' });
+      tripServiceSpy.exportIcs.and.returnValue(of(new Blob(['x'])));
+      spyOn(window.URL, 'createObjectURL').and.returnValue('blob:mock-url');
+      spyOn(window.URL, 'revokeObjectURL');
+      const realCreateElement = document.createElement.bind(document);
+      let capturedAnchor: HTMLAnchorElement | undefined;
+      spyOn(document, 'createElement').and.callFake((tag: string) => {
+        const el = realCreateElement(tag);
+        if (tag === 'a') capturedAnchor = el as HTMLAnchorElement;
+        return el;
+      });
+      spyOn(HTMLAnchorElement.prototype, 'click');
+
+      component.exportToCalendar();
+      await Promise.resolve();
+
+      expect(capturedAnchor?.download).toBe('trip.ics');
+    });
+
+    it('resets exporting and shows an error toast on failure', async () => {
+      component.ngOnInit();
+      tripServiceSpy.exportIcs.and.returnValue(throwError(() => new Error('Export failed.')));
+
+      component.exportToCalendar();
+      await Promise.resolve();
+
+      expect(component.exporting).toBeFalse();
+      expect(toastCtrlSpy.create).toHaveBeenCalledWith(
+        jasmine.objectContaining({ message: 'Export failed.', color: 'danger' }),
       );
     });
   });
