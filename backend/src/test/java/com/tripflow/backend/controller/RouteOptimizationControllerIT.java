@@ -10,6 +10,7 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -279,6 +280,41 @@ public class RouteOptimizationControllerIT {
 				.andExpect(jsonPath("$.status").value(429))
 				.andExpect(jsonPath("$.path").value("/api/trips/" + tripId + "/optimize"));
 
+		orsMockServer.verify();
+	}
+
+	@Test
+	void optimizeTrip_exceedsOwnRateLimit_returns429WithoutCallingOrs() throws Exception {
+		User user = createTestUser("own-ratelimit");
+		JsonNode trip = createTrip(user, threeStopTripRequest());
+		Long tripId = trip.get("id").asLong();
+
+		long torontoId = stopIdByName(trip, "Toronto");
+		long ottawaId = stopIdByName(trip, "Ottawa");
+		long montrealId = stopIdByName(trip, "Montreal");
+
+		// app.ratelimit.optimize.capacity=5 in application-test.properties.
+		for (int i = 0; i < 5; i++) {
+			orsMockServer.expect(requestTo(ORS_BASE_URL + "/optimization"))
+					.andExpect(method(HttpMethod.POST))
+					.andRespond(withSuccess(cannedOptimizationResponse(torontoId, ottawaId, montrealId),
+							MediaType.APPLICATION_JSON));
+			orsMockServer.expect(requestTo(ORS_BASE_URL + "/v2/directions/driving-car/geojson"))
+					.andExpect(method(HttpMethod.POST))
+					.andRespond(withSuccess(CANNED_DIRECTIONS_RESPONSE, MediaType.APPLICATION_JSON));
+		}
+
+		for (int i = 0; i < 5; i++) {
+			mockMvc.perform(post("/api/trips/" + tripId + "/optimize").with(csrf()).with(asUser(user)))
+					.andExpect(status().isOk());
+		}
+
+		mockMvc.perform(post("/api/trips/" + tripId + "/optimize").with(csrf()).with(asUser(user)))
+				.andExpect(status().isTooManyRequests())
+				.andExpect(jsonPath("$.status").value(429))
+				.andExpect(header().exists("Retry-After"));
+
+		// Only 5 pairs of expectations were registered — a 6th call reaching ORS fails verify().
 		orsMockServer.verify();
 	}
 

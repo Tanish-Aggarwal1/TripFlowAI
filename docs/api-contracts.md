@@ -233,12 +233,14 @@ Reorders the trip's stops for shortest travel time via OpenRouteService VROOM. R
 }
 ```
 
+**Rate limit (SCRUM-173):** Capped per authenticated user at `app.ratelimit.optimize.capacity` requests per `app.ratelimit.optimize.window` (default 20/hour) — see the Rate Limiting section below.
+
 **Errors:**
 - 403 — authenticated user is not the trip owner
 - 404 — trip not found
 - 422 — trip has fewer than 2 stops (nothing to optimize)
 - 502 — OpenRouteService is unreachable or returned a server error (`OrsClientException`)
-- 429 — ORS rate limit exceeded (`OrsRateLimitException`)
+- 429 — either OpenRouteService's own rate limit was hit (`OrsRateLimitException`, no `Retry-After` header), or the caller exceeded their own per-user limit on this endpoint (`RateLimitExceededException`, includes a `Retry-After` header — see below)
 
 All errors return the standard `ApiError` body.
 
@@ -284,13 +286,33 @@ All fields are optional lists/strings. Gemini uses them as prompt context alongs
 }
 ```
 
+**Rate limit (SCRUM-173):** Capped per authenticated user at `app.ratelimit.ai-suggest.capacity` requests per `app.ratelimit.ai-suggest.window` (default 10/hour) — see the Rate Limiting section below.
+
 **Errors:**
 - 400 — `interests`/`budget`/`pace` violate the limits above (`fieldErrors`), or the rendered prompt exceeds the total size backstop
 - 403 — authenticated user is not the trip owner
 - 404 — trip not found
+- 429 — the caller exceeded their per-user limit on this endpoint (`RateLimitExceededException`), includes a `Retry-After` header
 - 502 — Gemini API unreachable (`GeminiClientException`) or returned an unparseable response (`GeminiParsingException`)
 
 **Note:** The `502` on parsing failure is intentional — `SuggestedItinerary` uses `@JsonIgnoreProperties(ignoreUnknown = false)` so unexpected fields in Gemini's response fail loudly rather than being silently dropped. The error message distinguishes between connectivity failure ("AI itinerary service is temporarily unavailable") and parsing failure ("AI itinerary service returned an unreadable response").
+
+---
+
+## Rate Limiting (SCRUM-173)
+
+`POST /api/trips/{id}/ai-suggest` and `POST /api/trips/{id}/optimize` both call paid/quota-limited external APIs (Gemini, OpenRouteService), so each is capped per authenticated user via an in-memory token bucket (Bucket4j), keyed on the JWT-derived user id — not IP, since multiple users can share an IP (NAT, campus wifi).
+
+**Limits** (externalized in `application.properties`, tunable without a redeploy):
+
+| Property | Default | Endpoint |
+| --- | --- | --- |
+| `app.ratelimit.ai-suggest.capacity` / `.window` | 10 / `1h` | `POST /api/trips/{id}/ai-suggest` |
+| `app.ratelimit.optimize.capacity` / `.window` | 20 / `1h` | `POST /api/trips/{id}/optimize` |
+
+Exceeding the limit returns `429 Too Many Requests` with the standard `ApiError` body and a `Retry-After` header (seconds until the next token is available). The counter resets in full once the configured window elapses (Bucket4j "intervally" refill — tokens jump back to full capacity at the window boundary, not a continuous trickle).
+
+**Note:** this is a single-instance, in-memory limiter — it resets on restart and isn't shared across multiple backend instances. A multi-instance deployment would need a distributed Bucket4j backend (e.g. Redis) instead.
 
 ---
 

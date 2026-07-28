@@ -33,6 +33,7 @@
 		<jjwt.version>0.13.0</jjwt.version>
 		<springdoc.version>3.0.3</springdoc.version>
 		<archunit.version>1.4.1</archunit.version>
+		<bucket4j.version>8.10.1</bucket4j.version>
 	</properties>
 
 	<dependencyManagement>
@@ -186,6 +187,13 @@
 			<artifactId>archunit-junit5</artifactId>
 			<version>${archunit.version}</version>
 			<scope>test</scope>
+		</dependency>
+
+		<!-- In-memory per-user rate limiting (SCRUM-173) on the Gemini/ORS endpoints. -->
+		<dependency>
+			<groupId>com.bucket4j</groupId>
+			<artifactId>bucket4j-core</artifactId>
+			<version>${bucket4j.version}</version>
 		</dependency>
 
 		<!-- Health Actuator -->

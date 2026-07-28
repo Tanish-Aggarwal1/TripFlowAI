@@ -3,6 +3,7 @@ package com.tripflow.backend.exception;
 import java.util.List;
 
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -13,6 +14,8 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
+
+import com.tripflow.backend.ratelimit.RateLimitExceededException;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
@@ -127,6 +130,16 @@ public class GlobalExceptionHandler {
 	public ResponseEntity<ApiError> handlePromptTooLarge(PromptTooLargeException ex, HttpServletRequest req) {
 		log.warn("400 Bad Request on {}: {}", req.getRequestURI(), ex.getMessage());
 		return error(HttpStatus.BAD_REQUEST, "Itinerary preferences produced too large a request", req, null);
+	}
+
+	@ExceptionHandler(RateLimitExceededException.class)
+	public ResponseEntity<ApiError> handleRateLimitExceeded(RateLimitExceededException ex, HttpServletRequest req) {
+		log.warn("429 Too Many Requests on {}: {}", req.getRequestURI(), ex.getMessage());
+		ApiError body = new ApiError(HttpStatus.TOO_MANY_REQUESTS.value(), HttpStatus.TOO_MANY_REQUESTS.getReasonPhrase(),
+				ex.getMessage(), req.getRequestURI(), null);
+		return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+				.header(HttpHeaders.RETRY_AFTER, String.valueOf(ex.getRetryAfterSeconds()))
+				.body(body);
 	}
 
 	@ExceptionHandler(Exception.class)

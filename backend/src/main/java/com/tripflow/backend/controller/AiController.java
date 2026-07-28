@@ -12,6 +12,8 @@ import com.tripflow.backend.ai.SuggestedItinerary;
 import com.tripflow.backend.dto.ItineraryPreferencesRequest;
 import com.tripflow.backend.dto.SuggestedItineraryResponse;
 import com.tripflow.backend.mapper.AiItineraryMapper;
+import com.tripflow.backend.ratelimit.RateLimitProperties;
+import com.tripflow.backend.ratelimit.RateLimiterService;
 import com.tripflow.backend.security.UserPrincipal;
 import com.tripflow.backend.service.AiItineraryService;
 
@@ -36,6 +38,8 @@ public class AiController {
 
 	private final AiItineraryService aiItineraryService;
     private final AiItineraryMapper aiItineraryMapper;
+    private final RateLimiterService rateLimiterService;
+    private final RateLimitProperties rateLimitProperties;
 
     @Operation(summary = "Suggest an itinerary", description = "Sends the trip's existing stops plus interests/budget/pace preferences to Gemini and returns suggested stops with reasoning. Nothing is persisted.")
     @PostMapping("/{id}/ai-suggest")
@@ -43,6 +47,8 @@ public class AiController {
             @PathVariable Long id,
             @RequestBody @Valid ItineraryPreferencesRequest request,
             @AuthenticationPrincipal UserPrincipal principal) {
+
+        rateLimiterService.checkLimit("ai-suggest:" + principal.userId(), rateLimitProperties.aiSuggest());
 
         SuggestedItinerary suggestion = aiItineraryService.suggestItinerary(id, principal.userId(), request);
         return ResponseEntity.ok(aiItineraryMapper.toResponse(id, suggestion));
