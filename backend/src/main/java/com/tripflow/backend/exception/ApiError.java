@@ -1,7 +1,6 @@
 package com.tripflow.backend.exception;
 
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.util.List;
 
 import lombok.Getter;

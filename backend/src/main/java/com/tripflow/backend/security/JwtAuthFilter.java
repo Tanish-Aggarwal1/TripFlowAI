@@ -1,7 +1,6 @@
 package com.tripflow.backend.security;
 
 import java.io.IOException;
-import java.util.List;
 
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;

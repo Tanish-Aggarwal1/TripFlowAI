@@ -11,9 +11,10 @@
 backend/src/main/java/**/dto/**              @NeelLogic
 backend/src/main/java/**/mapper/**           @NeelLogic
 
-# Security package + SecurityConfig: Pratham is standing reviewer
+# Security package: Pratham is standing reviewer. SecurityConfig.java lives in
+# security/ (moved there in SCRUM-197), so it's already covered by the rule below —
+# no separate config/SecurityConfig.java rule needed.
 backend/src/main/java/**/security/**         @Coding-Pratham
-backend/src/main/java/**/config/SecurityConfig.java @Coding-Pratham
 
 # Auth-named files span controller/service/dto and need both the contract
 # reviewer (Neel) and the auth owner (Pratham)

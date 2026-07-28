@@ -61,6 +61,10 @@ public class TripService {
         return tripMapper.toResponse(saved);
     }
 
+    // Deliberately not TripOwnershipService.loadOwnedTrip (SCRUM-222/AUDIT-13, reviewed and
+    // left as-is): that method enforces "owner only", but a PUBLIC trip must also be
+    // readable by non-owners, so this method's own find-or-404 + visibility check can't be
+    // replaced by it without changing behavior.
     @Transactional(readOnly = true)
     public TripResponse getTrip(Long tripId, Long requesterId) {
         Trip trip = tripRepository.findWithStopsById(tripId)
