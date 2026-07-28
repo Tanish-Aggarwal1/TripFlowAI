@@ -10,6 +10,8 @@ import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StreamUtils;
 
+import com.tripflow.backend.exception.PromptTooLargeException;
+
 /**
  * Loads and renders src/main/resources/prompts/itinerary.txt.
  * Kept isolated from GeminiClient (SCRUM-64a) so prompt wording iterates
@@ -17,7 +19,16 @@ import org.springframework.util.StreamUtils;
  */
 @Component
 public class ItineraryPromptTemplate {
-	
+
+	/**
+	 * Defensive second layer behind {@code ItineraryPreferencesRequest}'s per-field
+	 * {@code @Size} caps (SCRUM-217/AUDIT-08): interests/budget/pace are individually
+	 * bounded, but a trip's stop count — and therefore total destination text — isn't
+	 * capped anywhere, so the rendered prompt's total size is checked here as a backstop
+	 * against an unbounded prompt reaching the metered Gemini API.
+	 */
+	static final int MAX_PROMPT_LENGTH = 8_000;
+
 	private final String rawTemplate;
 
     public ItineraryPromptTemplate(@Value("classpath:prompts/itinerary.txt") Resource resource) {
@@ -29,11 +40,18 @@ public class ItineraryPromptTemplate {
     }
 
     public String render(ItineraryPromptInput input) {
-        return rawTemplate
+        String rendered = rawTemplate
                 .replace("{{interests}}", joinOrNone(input.interests()))
                 .replace("{{budget}}", input.budget() == null ? "not specified" : input.budget())
                 .replace("{{pace}}", input.pace() == null ? "not specified" : input.pace())
                 .replace("{{destinations}}", joinOrNone(input.destinations()));
+
+        if (rendered.length() > MAX_PROMPT_LENGTH) {
+            throw new PromptTooLargeException(
+                    "Rendered itinerary prompt is " + rendered.length()
+                            + " characters, exceeding the " + MAX_PROMPT_LENGTH + " character limit");
+        }
+        return rendered;
     }
 
     private static String joinOrNone(List<String> values) {

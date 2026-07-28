@@ -189,6 +189,54 @@ public class AiControllerIT {
 	}
 
 	@Test
+	void suggestItinerary_tooManyInterests_returns400WithoutCallingGemini() throws Exception {
+		User owner = createTestUser("toomanyinterests");
+		Long tripId = createTrip(owner);
+
+		String tooManyInterests = "[" + "\"a\",".repeat(10) + "\"b\"]"; // 11 elements
+		mockMvc.perform(post("/api/trips/" + tripId + "/ai-suggest").with(csrf())
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("{\"interests\":" + tooManyInterests + "}")
+						.with(asUser(owner)))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.fieldErrors[*].field").value(org.hamcrest.Matchers.hasItem("interests")));
+
+		geminiMockServer.verify(); // zero expectations registered — passes only if zero calls made
+	}
+
+	@Test
+	void suggestItinerary_interestTooLong_returns400WithoutCallingGemini() throws Exception {
+		User owner = createTestUser("interesttoolong");
+		Long tripId = createTrip(owner);
+
+		String longInterest = "x".repeat(51);
+		mockMvc.perform(post("/api/trips/" + tripId + "/ai-suggest").with(csrf())
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("{\"interests\":[\"" + longInterest + "\"]}")
+						.with(asUser(owner)))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.fieldErrors[*].field").value(org.hamcrest.Matchers.hasItem("interests[0]")));
+
+		geminiMockServer.verify();
+	}
+
+	@Test
+	void suggestItinerary_budgetTooLong_returns400WithoutCallingGemini() throws Exception {
+		User owner = createTestUser("budgettoolong");
+		Long tripId = createTrip(owner);
+
+		String longBudget = "x".repeat(51);
+		mockMvc.perform(post("/api/trips/" + tripId + "/ai-suggest").with(csrf())
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("{\"budget\":\"" + longBudget + "\"}")
+						.with(asUser(owner)))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.fieldErrors[*].field").value(org.hamcrest.Matchers.hasItem("budget")));
+
+		geminiMockServer.verify();
+	}
+
+	@Test
 	void suggestItinerary_geminiReturnsNonJson_propagates502() throws Exception {
 		User owner = createTestUser("badjson");
 		Long tripId = createTrip(owner);
