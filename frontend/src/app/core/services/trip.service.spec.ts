@@ -140,6 +140,7 @@ describe('TripService', () => {
       createdAt: '2026-07-22T00:00:00Z',
       updatedAt: '2026-07-22T00:00:00Z',
       routeGeometry: null,
+      startDate: null,
     };
 
     service.trips.set([]);
