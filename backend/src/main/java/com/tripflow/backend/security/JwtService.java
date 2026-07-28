@@ -3,6 +3,7 @@ package com.tripflow.backend.security;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Date;
+import java.util.Optional;
 
 import javax.crypto.SecretKey;
 
@@ -47,11 +48,19 @@ public class JwtService {
     }
 
     public boolean isValid(String token) {
+        return parseIfValid(token).isPresent();
+    }
+
+    /**
+     * Parses and signature-verifies the token exactly once, for callers (namely
+     * JwtAuthFilter) that would otherwise re-verify the same token multiple times
+     * per request via isValid/extractUserId/extractEmail.
+     */
+    public Optional<Claims> parseIfValid(String token) {
         try {
-            parseClaims(token);
-            return true;
+            return Optional.of(parseClaims(token));
         } catch (Exception e) {
-            return false;
+            return Optional.empty();
         }
     }
 
