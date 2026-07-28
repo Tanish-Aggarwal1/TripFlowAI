@@ -252,6 +252,18 @@ public class GlobalExceptionHandlerIntegrationTest {
 	}
 
 	@Test
+	void promptTooLarge_returns400ApiErrorWithoutLeakingPromptContent() throws Exception {
+		ResultActions result = mockMvc.perform(get("/test/prompt-too-large"))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.status").value(400))
+				.andExpect(jsonPath("$.error").value("Bad Request"))
+				.andExpect(jsonPath("$.message").value("Itinerary preferences produced too large a request"))
+				.andExpect(jsonPath("$.path").value("/test/prompt-too-large"));
+
+		assertApiErrorKeys(result.andReturn());
+	}
+
+	@Test
 	void springSecurityBadCredentials_returns401ApiError() throws Exception {
 		ResultActions result = mockMvc.perform(get("/test/unauthorized-spring"))
 				.andExpect(status().isUnauthorized())
@@ -313,6 +325,11 @@ public class GlobalExceptionHandlerIntegrationTest {
 		@GetMapping("/test/no-resource")
 		public void noResource() throws NoResourceFoundException {
 			throw new NoResourceFoundException(HttpMethod.GET, "/test/no-resource", "/test/no-resource");
+		}
+
+		@GetMapping("/test/prompt-too-large")
+		public void promptTooLarge() {
+			throw new PromptTooLargeException("Rendered itinerary prompt is 12345 characters, exceeding the 8000 character limit");
 		}
 
 		@GetMapping("/test/conflict")

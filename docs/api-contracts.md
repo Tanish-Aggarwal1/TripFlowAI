@@ -261,6 +261,12 @@ Sends user preferences to Google Gemini and returns structured itinerary suggest
 ```
 All fields are optional lists/strings. Gemini uses them as prompt context alongside the trip's existing stops.
 
+**Limits (SCRUM-217):**
+- `interests` — at most 10 elements, each at most 50 characters
+- `budget` — at most 50 characters
+- `pace` — at most 50 characters
+- The rendered Gemini prompt (interests/budget/pace plus the trip's own stop names) is capped at 8,000 characters as a defensive backstop, since stop count itself isn't bounded by the per-field limits above; exceeding it is a `400` even if every individual field is within its own limit.
+
 **Success (200):**
 ```json
 {
@@ -279,6 +285,7 @@ All fields are optional lists/strings. Gemini uses them as prompt context alongs
 ```
 
 **Errors:**
+- 400 — `interests`/`budget`/`pace` violate the limits above (`fieldErrors`), or the rendered prompt exceeds the total size backstop
 - 403 — authenticated user is not the trip owner
 - 404 — trip not found
 - 502 — Gemini API unreachable (`GeminiClientException`) or returned an unparseable response (`GeminiParsingException`)

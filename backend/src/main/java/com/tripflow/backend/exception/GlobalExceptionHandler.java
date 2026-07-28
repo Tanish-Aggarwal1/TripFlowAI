@@ -123,6 +123,12 @@ public class GlobalExceptionHandler {
 		return error(HttpStatus.NOT_FOUND, "No matching route for this request", req, null);
 	}
 
+	@ExceptionHandler(PromptTooLargeException.class)
+	public ResponseEntity<ApiError> handlePromptTooLarge(PromptTooLargeException ex, HttpServletRequest req) {
+		log.warn("400 Bad Request on {}: {}", req.getRequestURI(), ex.getMessage());
+		return error(HttpStatus.BAD_REQUEST, "Itinerary preferences produced too large a request", req, null);
+	}
+
 	@ExceptionHandler(Exception.class)
 	public ResponseEntity<ApiError> handleGeneric(Exception ex, HttpServletRequest req) {
 		log.error("500 Internal Server Error on {}: {}", req.getRequestURI(), ex.getMessage(), ex);
