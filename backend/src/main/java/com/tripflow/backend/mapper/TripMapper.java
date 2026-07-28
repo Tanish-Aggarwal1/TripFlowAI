@@ -27,6 +27,7 @@ public class TripMapper {
         trip.setTags(request.tags() != null ? request.tags() : new ArrayList<>());
         trip.setVisibility(request.visibility());
         trip.setStatus(TripStatus.DRAFT);
+        trip.setStartDate(request.startDate());
         // id, routeGeometry intentionally NOT set from request — server-owned
         return trip;
     }
@@ -47,7 +48,8 @@ public class TripMapper {
                 stopResponses,
                 trip.getCreatedAt(),
                 trip.getUpdatedAt(),
-                trip.getRouteGeometry()
+                trip.getRouteGeometry(),
+                trip.getStartDate()
         );
     }
 }

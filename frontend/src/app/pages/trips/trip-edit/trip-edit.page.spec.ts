@@ -32,11 +32,15 @@ describe('TripEditPage', () => {
         stopOrder: 0,
         status: 'PLANNED',
         notes: null,
+        dayNumber: null,
+        plannedTime: null,
+        stopType: 'SIGHTSEEING',
       },
     ],
     createdAt: '2026-01-01T00:00:00Z',
     updatedAt: '2026-01-01T00:00:00Z',
     routeGeometry: null,
+    startDate: null,
   };
 
   function configure(id: string | null): void {

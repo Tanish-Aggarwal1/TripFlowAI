@@ -7,6 +7,9 @@ export type TripStatus = 'DRAFT' | 'IN_PROGRESS' | 'COMPLETED';
 
 export type StopStatus = 'PLANNED' | 'VISITED' | 'SKIPPED';
 
+// Mirror backend: com.tripflow.backend.domain.enums.StopType
+export type StopType = 'SIGHTSEEING' | 'MEAL' | 'LODGING' | 'OTHER';
+
 // ── Stop shapes ──────────────────────────────────────────────────────────────
 
 export interface CreateStopRequest {
@@ -27,6 +30,10 @@ export interface StopResponse {
   stopOrder: number;
   status: StopStatus;
   notes: string | null;
+  // SCRUM-244a: null until the trip has been (re-)optimized at least once.
+  dayNumber: number | null;
+  plannedTime: string | null; // "HH:mm:ss" LocalTime, e.g. "09:00:00"
+  stopType: StopType;
 }
 
 // ── Trip shapes ──────────────────────────────────────────────────────────────
@@ -37,6 +44,7 @@ export interface CreateTripRequest {
   tags?: string[];
   visibility: TripVisibility;
   stops: CreateStopRequest[];
+  startDate?: string; // "YYYY-MM-DD" LocalDate, optional (SCRUM-244a)
 }
 
 export interface UpdateTripRequest {
@@ -45,6 +53,7 @@ export interface UpdateTripRequest {
   tags?: string[];
   visibility: TripVisibility;
   stops: CreateStopRequest[];
+  startDate?: string;
 }
 
 export interface TripResponse {
@@ -59,7 +68,7 @@ export interface TripResponse {
   createdAt: string;  // ISO-8601 UTC Instant e.g. "2026-07-13T14:20:00Z"
   updatedAt: string;
   routeGeometry: string | null; //// JSON-encoded GeoJSON LineString; JSON.parse before use. Null pre-optimization.
-
+  startDate: string | null; // "YYYY-MM-DD" LocalDate (SCRUM-244a)
 }
 
 // Card-sized projection returned by the paginated GET /api/trips list endpoint (REF-21) —

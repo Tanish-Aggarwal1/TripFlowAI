@@ -27,7 +27,10 @@ public class StopMapper {
 	                stop.getPlace().getAddress(),
 	                stop.getStopOrder(),
 	                stop.getStatus(),
-	                stop.getNotes()
+	                stop.getNotes(),
+	                stop.getDayNumber(),
+	                stop.getPlannedTime(),
+	                stop.getStopType()
 	        );
 	    }
 

@@ -86,6 +86,7 @@ public class TripService {
         trip.setDescription(request.description());
         trip.setTags(request.tags() != null ? request.tags() : new ArrayList<>());
         trip.setVisibility(request.visibility());
+        trip.setStartDate(request.startDate());
         // status is server-owned lifecycle state — intentionally not touched here
 
         // Full itinerary replace. orphanRemoval deletes dropped stops; shared Places survive.

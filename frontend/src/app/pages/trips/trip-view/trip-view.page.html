@@ -35,15 +35,25 @@
     </div>
 
     <ion-list>
-      @for (stop of trip.stops; track stop.id) {
-        <ion-item>
-          <ion-label>
-            <h3>{{ stop.stopOrder + 1 }}. {{ stop.name }}</h3>
-            @if (stop.address) {
-              <p>{{ stop.address }}</p>
-            }
-          </ion-label>
-        </ion-item>
+      @for (group of dayGroups; track group.dayNumber ?? 'unscheduled') {
+        @if (group.dayNumber !== null) {
+          <ion-item-divider>
+            <ion-label>Day {{ group.dayNumber }}</ion-label>
+          </ion-item-divider>
+        }
+        @for (stop of group.stops; track stop.id) {
+          <ion-item>
+            <ion-label>
+              <h3>{{ stop.stopOrder + 1 }}. {{ stop.name }}</h3>
+              @if (stop.plannedTime) {
+                <p class="planned-time">{{ formatPlannedTime(stop.plannedTime) }}</p>
+              }
+              @if (stop.address) {
+                <p>{{ stop.address }}</p>
+              }
+            </ion-label>
+          </ion-item>
+        }
       }
     </ion-list>
   }

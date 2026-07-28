@@ -11,7 +11,7 @@ describe('TripMapComponent', () => {
   beforeEach(async () => {
     // ✓ Create a container element that Popup.addTo() expects
     const mockContainer = document.createElement('div');
-    
+
     // ✓ Create map mock with all required methods for Popup.addTo()
     mockMap = jasmine.createSpyObj('Map', [
       'remove',
@@ -28,7 +28,7 @@ describe('TripMapComponent', () => {
       'fitBounds',
       'getContainer', // ✓ Add this method that Popup needs
     ]);
-    
+
     // ✓ Make getContainer return a valid DOM element
     (mockMap.getContainer as jasmine.Spy).and.returnValue(mockContainer);
     mockMap.on.and.returnValue(mockMap);
@@ -56,6 +56,9 @@ describe('TripMapComponent', () => {
         stopOrder: 0,
         status: 'PLANNED',
         notes: null,
+        dayNumber: null,
+        plannedTime: null,
+        stopType: 'SIGHTSEEING',
       },
       {
         id: 2,
@@ -66,6 +69,9 @@ describe('TripMapComponent', () => {
         stopOrder: 1,
         status: 'PLANNED',
         notes: null,
+        dayNumber: null,
+        plannedTime: null,
+        stopType: 'SIGHTSEEING',
       },
       {
         id: 3,
@@ -76,6 +82,9 @@ describe('TripMapComponent', () => {
         stopOrder: 2,
         status: 'PLANNED',
         notes: null,
+        dayNumber: null,
+        plannedTime: null,
+        stopType: 'SIGHTSEEING',
       },
     ];
 
@@ -91,6 +100,7 @@ describe('TripMapComponent', () => {
       createdAt: '2026-07-22T00:00:00Z',
       updatedAt: '2026-07-22T00:00:00Z',
       routeGeometry: null,
+      startDate: null,
     };
 
     component.trip = mockTrip;
@@ -111,6 +121,9 @@ describe('TripMapComponent', () => {
         stopOrder: 0,
         status: 'PLANNED',
         notes: 'Test notes',
+        dayNumber: null,
+        plannedTime: null,
+        stopType: 'SIGHTSEEING',
       },
     ];
 
@@ -126,6 +139,7 @@ describe('TripMapComponent', () => {
       createdAt: '2026-07-22T00:00:00Z',
       updatedAt: '2026-07-22T00:00:00Z',
       routeGeometry: null,
+      startDate: null,
     };
 
     component.trip = mockTrip;
@@ -148,6 +162,9 @@ describe('TripMapComponent', () => {
       stopOrder: 0,
       status: 'PLANNED',
       notes: 'Important note',
+      dayNumber: null,
+      plannedTime: null,
+      stopType: 'SIGHTSEEING',
     };
 
     component.trip = {
@@ -162,11 +179,12 @@ describe('TripMapComponent', () => {
       createdAt: '2026-07-22T00:00:00Z',
       updatedAt: '2026-07-22T00:00:00Z',
       routeGeometry: null,
+      startDate: null,
     };
 
     // ✓ Call showPopup and let it create the real Popup with the mocked map
     component['showPopup'](mockStop, 1);
-    
+
     // ✓ Verify popup was created
     expect(component['popup']).toBeTruthy();
     expect(component['popup'] instanceof mapboxgl.Popup).toBe(true);
@@ -185,6 +203,9 @@ describe('TripMapComponent', () => {
       stopOrder: 0,
       status: 'PLANNED',
       notes: null,
+      dayNumber: null,
+      plannedTime: null,
+      stopType: 'SIGHTSEEING',
     };
 
     component.trip = {
@@ -199,11 +220,12 @@ describe('TripMapComponent', () => {
       createdAt: '2026-07-22T00:00:00Z',
       updatedAt: '2026-07-22T00:00:00Z',
       routeGeometry: null,
+      startDate: null,
     };
 
     // ✓ Call showPopup and let it create the real Popup with the mocked map
     component['showPopup'](mockStop, 1);
-    
+
     // ✓ Verify popup was created
     expect(component['popup']).toBeTruthy();
     expect(component['popup'] instanceof mapboxgl.Popup).toBe(true);

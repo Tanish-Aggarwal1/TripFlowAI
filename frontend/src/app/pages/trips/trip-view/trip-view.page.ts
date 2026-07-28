@@ -13,14 +13,24 @@ import {
   IonIcon,
   IonList,
   IonItem,
+  IonItemDivider,
   IonLabel,
   ToastController,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import { create } from 'ionicons/icons';
 import { TripService } from '../../../core/services/trip.service';
-import { TripResponse } from '../../../core/models/trip.model';
+import { StopResponse, TripResponse } from '../../../core/models/trip.model';
 import { TripMapComponent } from '../components/trip-map/trip-map.component';
+
+// SCRUM-244b: consecutive stops sharing a dayNumber, in existing stopOrder — dayNumber
+// is monotonically non-decreasing along stopOrder (ItineraryScheduler never assigns an
+// earlier day to a later stop), so grouping consecutive equal values is equivalent to
+// grouping by day. A trip with no schedule yet renders as a single dayNumber: null group.
+interface DayGroup {
+  dayNumber: number | null;
+  stops: StopResponse[];
+}
 
 @Component({
   selector: 'app-trip-view',
@@ -39,6 +49,7 @@ import { TripMapComponent } from '../components/trip-map/trip-map.component';
     IonIcon,
     IonList,
     IonItem,
+    IonItemDivider,
     IonLabel,
     TripMapComponent,
   ],
@@ -78,6 +89,33 @@ export class TripViewPage implements OnInit {
         this.loading = false;
       },
     });
+  }
+
+  get dayGroups(): DayGroup[] {
+    if (!this.trip) return [];
+
+    const groups: DayGroup[] = [];
+    for (const stop of this.trip.stops) {
+      const lastGroup = groups[groups.length - 1];
+      if (lastGroup && lastGroup.dayNumber === stop.dayNumber) {
+        lastGroup.stops.push(stop);
+      } else {
+        groups.push({ dayNumber: stop.dayNumber, stops: [stop] });
+      }
+    }
+    return groups;
+  }
+
+  // Manual parsing rather than `new Date(plannedTime)` — a bare "HH:mm:ss" string with
+  // no date component is not reliably parsed as a time-of-day across browsers and can
+  // silently yield "Invalid Date".
+  formatPlannedTime(plannedTime: string): string {
+    const [hourStr, minuteStr] = plannedTime.split(':');
+    const hour = Number(hourStr);
+    const minute = Number(minuteStr);
+    const period = hour >= 12 ? 'PM' : 'AM';
+    const displayHour = hour % 12 === 0 ? 12 : hour % 12;
+    return `${displayHour}:${minute.toString().padStart(2, '0')} ${period}`;
   }
 
   editTrip(): void {

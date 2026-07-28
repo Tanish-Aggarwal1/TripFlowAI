@@ -93,9 +93,12 @@ Returns a page of the authenticated user's trips as a card-sized projection — 
       "address": "string",
       "externalPlaceId": "string"
     }
-  ]
+  ],
+  "startDate": "2026-08-10"
 }
 ```
+`startDate` is optional (SCRUM-244a) — a `LocalDate` (`YYYY-MM-DD`). Not required for stops to get a `dayNumber`/`plannedTime`; those are trip-relative (day 1, day 2, ...) regardless of whether `startDate` is set. Purely informational until a future feature anchors it to real calendar dates.
+
 **Success (201):** single trip object, same shape as GET list item.
 **Errors:**
 - 400 — validation failure
@@ -149,10 +152,14 @@ Owner-only (no public read on this sub-resource — use GET /api/trips/{id} for 
     "address": "string",
     "stopOrder": 0,
     "status": "PLANNED | VISITED | SKIPPED",
-    "notes": "string"
+    "notes": "string",
+    "dayNumber": 1,
+    "plannedTime": "09:00:00",
+    "stopType": "SIGHTSEEING | MEAL | LODGING | OTHER"
   }
 ]
 ```
+`dayNumber`/`plannedTime` (SCRUM-244a) are `null` until the trip has been (re-)optimized at least once — `POST /api/trips/{id}/optimize` is the only thing that ever sets them, via a heuristic scheduler (see that endpoint's section below). `stopType` defaults to `SIGHTSEEING` and is not yet settable from any request — it's a foundation field for future AI-driven scheduling (meal-stop suggestions).
 
 ### POST /api/trips/{tripId}/stops
 Appends a stop at the next `stopOrder`.
@@ -224,7 +231,10 @@ Reorders the trip's stops for shortest travel time via OpenRouteService VROOM. R
       "latitude": 43.65,
       "longitude": -79.38,
       "orderIndex": 0,
-      "notes": "string"
+      "notes": "string",
+      "dayNumber": 1,
+      "plannedTime": "09:00:00",
+      "stopType": "SIGHTSEEING"
     }
   ],
   "createdAt": "2026-07-20T15:30:00Z",
@@ -232,6 +242,8 @@ Reorders the trip's stops for shortest travel time via OpenRouteService VROOM. R
   "routeGeometry": "encoded_polyline_string"
 }
 ```
+
+**Scheduling (SCRUM-244a):** In addition to reordering stops and computing route geometry, this endpoint runs a heuristic day/time scheduler over the optimized stop order — no Gemini involvement, just a greedy walk assigning each stop a `dayNumber` and `plannedTime`, using the per-leg travel durations from the same ORS directions call already made for route geometry. Each stop is assumed to take `app.schedule.default-visit-duration` (default 1h) to visit; cumulative time rolls to the next day once it would exceed the configured day window (`app.schedule.day-start-time`/`app.schedule.day-end-time`, default `09:00`–`21:00`). This is a foundation for future AI-driven scheduling — see `docs/TripFlow_fall_Break_Plan.md` FB-17/FB-18 for what's planned on top of it.
 
 **Rate limit (SCRUM-173):** Capped per authenticated user at `app.ratelimit.optimize.capacity` requests per `app.ratelimit.optimize.window` (default 20/hour) — see the Rate Limiting section below.
 
