@@ -677,6 +677,285 @@ If any of the above is inaccurate at ticket-creation time, verify via `getVisibl
 
 ---
 
+### FB-19 · Story · Trip budget & expense tracking — parent
+- **Epic:** SCRUM-6 (TRIP)
+- **Assignee:** — (parent; Tanish backend, Neel frontend)
+- **Priority:** Medium
+- **Story Points:** 5
+- **Labels:** feature, api-contract-change
+- **Components:** api, frontend, database
+- **Description:**
+  ```
+  Let a trip have an overall budget and let users log an estimated/actual cost per stop. Show a running total against the budget (over/under indicator) in the trip detail view. Ties into the AI's existing budget preference (moderate/budget/luxury) used in suggestItinerary.
+  ```
+- **Business Value:** Real travel-planning utility beyond scheduling — turns "budget" from a vague AI preference into something the user actually tracks against.
+- **Technical Notes:** New Flyway migration — `Trip.budget_amount` (nullable numeric) and `Stop.estimated_cost` (nullable numeric). Simple sum aggregation, no new service layer needed beyond existing `TripService`/`StopService`. DTO change → Neel review required.
+- **Subtasks:** FB-19a, FB-19b
+
+---
+
+### FB-19a · Subtask · Backend budget/cost fields + aggregation
+- **Parent:** FB-19
+- **Assignee:** Tanish
+- **Description:**
+  ```
+  Add Trip.budgetAmount and Stop.estimatedCost via migration + entity + DTO fields (additive). TripResponse includes a computed totalEstimatedCost (sum of stop costs) alongside budgetAmount.
+  ```
+- **Acceptance Criteria:**
+  ```
+  Given a trip with a budgetAmount and stops with estimatedCost values
+  When the trip is read via GET /api/trips/{id}
+  Then the response includes budgetAmount and a computed totalEstimatedCost
+
+  Given a trip with no budgetAmount set
+  When read
+  Then budgetAmount is null and totalEstimatedCost still sums whatever stop costs exist
+  ```
+
+---
+
+### FB-19b · Subtask · Frontend budget display
+- **Parent:** FB-19
+- **Assignee:** Neel
+- **Description:**
+  ```
+  Show budget vs. total estimated cost in the trip detail view (progress bar or over/under badge). Add a cost input on the stop create/edit form.
+  ```
+- **Acceptance Criteria:**
+  ```
+  Given a trip with a budget and stops with costs
+  When viewing the trip detail page
+  Then the running total and over/under status against the budget are visible
+  ```
+
+---
+
+### FB-20 · Story · "Leave by" travel-time banner
+- **Epic:** SCRUM-6 (TRIP)
+- **Assignee:** Neel
+- **Priority:** Low
+- **Story Points:** 2
+- **Labels:** frontend, ux
+- **Components:** frontend
+- **Description:**
+  ```
+  In the trip-day view, show a "Leave by HH:MM to reach [next stop] on time" banner ahead of each stop, computed from the travel duration ORS already returns between consecutive stops.
+  ```
+- **Business Value:** Makes the app feel useful during the trip itself, not just at planning time — small effort given the data already exists.
+- **Dependencies:** FB-17 / SCRUM-244 (stops need a `plannedTime` to compute "leave by" against)
+- **Acceptance Criteria:**
+  ```
+  Given consecutive stops with a plannedTime and a known travel duration between them
+  When viewing the trip-day view
+  Then a "leave by" time is shown ahead of the next stop
+
+  Given a stop with no plannedTime (trip not yet scheduled)
+  When viewing the trip-day view
+  Then no banner is shown for that stop, rather than a broken/placeholder time
+  ```
+
+---
+
+### FB-21 · Story · Empty states & first-run onboarding
+- **Epic:** SCRUM-11 (DOCS) — no better epic exists; consider creating a UX/POLISH epic at grooming (same caveat as FB-11)
+- **Assignee:** Neel
+- **Priority:** Low
+- **Story Points:** 2
+- **Labels:** frontend, ux, onboarding
+- **Components:** frontend
+- **Description:**
+  ```
+  Replace the blank trip list a new user sees with an empty-state illustration + "Create your first trip" call to action. Add a short, dismissible tooltip walkthrough of the create -> optimize -> AI-suggest flow on first login.
+  ```
+- **Business Value:** Classic high-ROI polish — costs little, meaningfully improves first impressions for new users and demo audiences.
+- **Acceptance Criteria:**
+  ```
+  Given a user with zero trips
+  When they land on the trip list
+  Then an empty state with a clear "create your first trip" CTA is shown instead of a blank list
+
+  Given a user's first login
+  When they reach the trip creation/optimize/suggest flow
+  Then a short dismissible walkthrough highlights each step
+  And the walkthrough does not reappear on subsequent logins
+  ```
+
+---
+
+### FB-22 · Story · Trip templates / clone a trip — parent
+- **Epic:** SCRUM-9 (SOCIAL) — "cloning" is explicitly in this epic's original scope
+- **Assignee:** — (parent; Tanish backend, Neel frontend)
+- **Priority:** Medium
+- **Story Points:** 5
+- **Labels:** feature, api-contract-change
+- **Components:** api, frontend
+- **Description:**
+  ```
+  Let a user duplicate an existing trip (their own, or a public trip they can view) into a new draft trip they own, with all stops copied. A natural starting point for "plan something like this" without rebuilding from scratch.
+  ```
+- **Business Value:** Directly supports the SOCIAL epic's original "cloning" scope item and gives real utility once public trips/discovery exist.
+- **Technical Notes:** New `POST /api/trips/{id}/clone`. Reuses existing Place/Stop creation logic — clone copies Place references (no need to re-resolve), resets ownership to the requester, resets status to `DRAFT`, strips any per-user progress/visited state (FB-06) if that's landed by then.
+- **Subtasks:** FB-22a, FB-22b
+
+---
+
+### FB-22a · Subtask · Backend clone endpoint
+- **Parent:** FB-22
+- **Assignee:** Tanish
+- **Description:**
+  ```
+  POST /api/trips/{id}/clone — visible to the requester per existing read authorization (owner, or public trip). Creates a new Trip owned by the requester with copied stops, DRAFT status, no routeGeometry (needs re-optimization).
+  ```
+- **Acceptance Criteria:**
+  ```
+  Given a public trip owned by another user
+  When the requester calls POST /api/trips/{id}/clone
+  Then a new trip is created, owned by the requester, with the same stops in the same order
+  And the new trip's status is DRAFT and routeGeometry is empty
+
+  Given a private trip owned by another user
+  When a non-owner calls POST /api/trips/{id}/clone
+  Then the response is 403 or 404, matching existing read-authorization behavior
+  ```
+
+---
+
+### FB-22b · Subtask · Frontend "clone this trip" button
+- **Parent:** FB-22
+- **Assignee:** Neel
+- **Description:**
+  ```
+  Add a "Clone this trip" action on trip detail (visible on any trip the user can view), calling the new clone endpoint and navigating to the new trip's edit view.
+  ```
+
+---
+
+### FB-23 · Story · Drag-and-drop manual stop reordering
+- **Epic:** SCRUM-6 (TRIP)
+- **Assignee:** Neel (frontend) + Tanish (backend, minor)
+- **Priority:** Medium
+- **Story Points:** 3
+- **Labels:** frontend, ux, api-contract-change
+- **Components:** frontend, api
+- **Description:**
+  ```
+  Let a user drag a stop to a different day or time slot in the trip-day view, overriding the scheduler's (SCRUM-244/FB-17) automatic placement.
+  ```
+- **Business Value:** Users shouldn't be locked into an algorithm's placement — manual override is a baseline expectation once a day/time schedule exists at all.
+- **Technical Notes:** Backend: extend `UpdateStopRequest` with optional `dayNumber`/`plannedTime` (additive) so a drag-drop reorder persists via the existing `PUT` stop endpoint — no new endpoint needed. Frontend: drag-and-drop within/between day groups, calling the update on drop.
+- **Dependencies:** SCRUM-244
+- **Acceptance Criteria:**
+  ```
+  Given a trip with scheduled stops
+  When a user drags a stop to a different day or time slot
+  Then the stop's dayNumber/plannedTime updates and persists across reloads
+
+  Given a drag-drop that would place a stop outside the configured day window
+  When dropped
+  Then the UI either clamps to the window or shows a clear validation message, not a silent no-op
+  ```
+
+---
+
+### FB-24 · Story · Packing checklist per trip — parent
+- **Epic:** SCRUM-6 (TRIP)
+- **Assignee:** — (parent; Tanish backend, Neel frontend)
+- **Priority:** Low
+- **Story Points:** 5
+- **Labels:** feature, api-contract-change
+- **Components:** api, frontend, database
+- **Description:**
+  ```
+  A simple user-editable checklist attached to a trip (add item, check off, delete). Not AI-generated initially — that's a natural follow-on once this exists (Gemini could seed suggested items by destination/season).
+  ```
+- **Business Value:** Concrete, well-scoped utility feature that's a staple of travel apps.
+- **Technical Notes:** New `packing_list_items` table (`trip_id` FK, `text`, `is_checked`, `created_at`). Simple CRUD, no reuse of Stop/Place modeling needed.
+- **Subtasks:** FB-24a, FB-24b
+
+---
+
+### FB-24a · Subtask · Backend packing list CRUD
+- **Parent:** FB-24
+- **Assignee:** Tanish
+- **Description:**
+  ```
+  New PackingListItem entity + migration + GET/POST/PATCH/DELETE under /api/trips/{id}/packing-items. Owner-only, same ownership pattern as stops.
+  ```
+- **Acceptance Criteria:**
+  ```
+  Given a trip owner
+  When they add, check off, and delete packing list items via the API
+  Then each operation persists correctly and only the owner can perform them
+  ```
+
+---
+
+### FB-24b · Subtask · Frontend packing list UI
+- **Parent:** FB-24
+- **Assignee:** Neel
+- **Description:**
+  ```
+  Add a "Packing List" tab/section on trip detail — add item input, checkbox list, swipe/delete.
+  ```
+
+---
+
+### FB-25 · Story · Push notifications for trip-day reminders (PWA)
+- **Epic:** SCRUM-10 (DEVOPS) — extends FB-09
+- **Assignee:** Neel (frontend) + Pratham or Tanish (backend trigger)
+- **Priority:** Low
+- **Story Points:** 3
+- **Labels:** feature, notifications, pwa
+- **Components:** frontend, backend
+- **Description:**
+  ```
+  Extend FB-09's reminder scheduler to also send a browser push notification (Web Push API via the existing service worker) on the morning of a trip day: "You have N stops today, first one at HH:MM." Email remains the fallback for users who haven't granted notification permission.
+  ```
+- **Business Value:** A push notification the morning of feels far more useful and timely than an email days in advance — meaningfully strengthens FB-09's payoff for the PWA use case specifically.
+- **Technical Notes:** Needs VAPID keys + a push subscription table (`user_id`, `endpoint`, `keys`) — new migration. Requires the FB-09 scheduled job to exist first (reuses its trigger logic, adds a push send path alongside email).
+- **Dependencies:** FB-09
+- **Acceptance Criteria:**
+  ```
+  Given a user has granted notification permission and has a trip day starting today
+  When the reminder scheduler runs
+  Then a push notification is sent summarizing today's stop count and first stop time
+
+  Given a user has not granted notification permission
+  When the scheduler runs
+  Then they still receive the FB-09 email reminder as a fallback
+  ```
+
+---
+
+### FB-26 · Story · Accessibility (a11y) pass
+- **Epic:** SCRUM-11 (DOCS) — no better epic exists; consider creating a UX/POLISH epic at grooming (same caveat as FB-11/FB-21)
+- **Assignee:** Neel
+- **Priority:** Medium
+- **Story Points:** 3
+- **Labels:** frontend, accessibility, ux
+- **Components:** frontend
+- **Description:**
+  ```
+  Audit and fix accessibility gaps: color contrast against WCAG AA, aria-labels on map markers and icon-only buttons, full keyboard navigation through trip-create/edit forms and the stop list, and screen-reader-friendly announcements for async state changes (e.g. "trip optimized", "suggestion loading").
+  ```
+- **Business Value:** Improves usability for everyone, not just users with disabilities, and is exactly the kind of non-functional-requirement polish a grading rubric or real-product bar looks for.
+- **Acceptance Criteria:**
+  ```
+  Given the trip-create/edit forms and stop list
+  When navigated via keyboard only
+  Then every interactive element is reachable and operable without a mouse
+
+  Given map markers and icon-only buttons
+  When inspected with a screen reader
+  Then each has a meaningful accessible name
+
+  Given the app's color palette
+  When checked against WCAG AA contrast ratios
+  Then text/background combinations pass, and any failures are fixed
+  ```
+
+---
+
 ## SECTION 3 — Summary table
 
 | ID | Summary | Owner | SP | Priority | Depends on |
@@ -707,10 +986,26 @@ If any of the above is inaccurate at ticket-creation time, verify via `getVisibl
 | FB-16b | Frontend silent-refresh interceptor | Neel | — | — | FB-16a |
 | FB-17 | Gemini-driven itinerary scheduling (day/time/reasoning + meals) | Tanish | 5 | Medium | SCRUM-244, FB-08 |
 | FB-18 | Frontend alternative-suggestion popups | Neel | 3 | Low | FB-17 |
+| FB-19 | Trip budget & expense tracking parent | — | 5 | Medium | — |
+| FB-19a | Backend budget/cost fields + aggregation | Tanish | — | — | — |
+| FB-19b | Frontend budget display | Neel | — | — | FB-19a |
+| FB-20 | "Leave by" travel-time banner | Neel | 2 | Low | FB-17 / SCRUM-244 |
+| FB-21 | Empty states & first-run onboarding | Neel | 2 | Low | — |
+| FB-22 | Trip templates / clone a trip parent | — | 5 | Medium | — |
+| FB-22a | Backend clone endpoint | Tanish | — | — | — |
+| FB-22b | Frontend "clone this trip" button | Neel | — | — | FB-22a |
+| FB-23 | Drag-and-drop manual stop reordering | Neel + Tanish | 3 | Medium | SCRUM-244 |
+| FB-24 | Packing checklist per trip parent | — | 5 | Low | — |
+| FB-24a | Backend packing list CRUD | Tanish | — | — | — |
+| FB-24b | Frontend packing list UI | Neel | — | — | FB-24a |
+| FB-25 | Push notifications for trip-day reminders | Neel + Pratham/Tanish | 3 | Low | FB-09 |
+| FB-26 | Accessibility (a11y) pass | Neel | 3 | Medium | — |
 
-**Total SP (excluding subtasks):** ~67
+**Total SP (excluding subtasks):** ~95
 
-**Note (2026-07-27):** SCRUM-244 (+ SCRUM-244a/b) — the day/time scheduling foundation FB-17 depends on — is not part of this fall-break backlog; it's a real Jira ticket already being worked this sprint, created after discovering FB-04/SCRUM-175 assumed scheduling data that didn't exist. See the FB-04 entry above for the full story.
+**Note (2026-07-27):** SCRUM-244 (+ SCRUM-244a/b) — the day/time scheduling foundation FB-17/FB-20/FB-23 depend on — is not part of this fall-break backlog; it's a real Jira ticket already being worked this sprint, created after discovering FB-04/SCRUM-175 assumed scheduling data that didn't exist. See the FB-04 entry above for the full story.
+
+**Note (2026-07-27):** FB-19 through FB-26 were added as a batch of user-friendliness improvements, deliberately unsequenced into a phase below — Tanish will select which of these to pull into fall vs. leave for winter term during the monthly syncs, rather than committing to an order now.
 
 ---
 
