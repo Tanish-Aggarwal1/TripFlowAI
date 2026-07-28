@@ -85,6 +85,20 @@ public class OrsClientTest {
     }
 
     @Test
+    void getDirections_tooManyRequests_throwsOrsRateLimitException() {
+        server.expect(requestTo(BASE_URL + "/v2/directions/driving-car/geojson"))
+                .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS)
+                        .body("{\"error\":\"quota exceeded\"}")
+                        .contentType(MediaType.APPLICATION_JSON));
+
+        OrsDirectionsRequest request = OrsDirectionsRequest.of(List.of(new double[]{-79.9, 45.0}));
+
+        assertThatThrownBy(() -> orsClient.getDirections(request))
+                .isInstanceOf(OrsRateLimitException.class);
+        server.verify();
+    }
+
+    @Test
     void optimize_success_returnsOrderedSteps() {
         String body = """
                 {
