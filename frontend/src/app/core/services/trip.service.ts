@@ -86,6 +86,16 @@ export class TripService {
       .pipe(catchError((err: HttpErrorResponse) => this.handleError(err)));
   }
 
+  // SCRUM-177: responseType 'blob' since this is a file download, not JSON. Error
+  // bodies come back as a Blob too (not parsed JSON) in that case, but handleError's
+  // 403/404 overrides are plain strings that don't need to read the body, so mapping
+  // still resolves correctly.
+  exportIcs(tripId: number): Observable<Blob> {
+    return this.http
+      .get(`${this.baseUrl}/${tripId}/calendar.ics`, { responseType: 'blob' })
+      .pipe(catchError((err: HttpErrorResponse) => this.handleError(err)));
+  }
+
   // ── MAPPING ──────────────────────────────────────────────────────────────────
 
   private toSummary(trip: TripResponse): TripSummaryResponse {

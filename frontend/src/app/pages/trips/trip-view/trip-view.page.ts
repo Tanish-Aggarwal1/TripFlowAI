@@ -18,7 +18,7 @@ import {
   ToastController,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { create } from 'ionicons/icons';
+import { create, calendarOutline } from 'ionicons/icons';
 import { TripService } from '../../../core/services/trip.service';
 import { StopResponse, TripResponse } from '../../../core/models/trip.model';
 import { TripMapComponent } from '../components/trip-map/trip-map.component';
@@ -64,11 +64,12 @@ export class TripViewPage implements OnInit {
   loading = true;
   error: string | null = null;
   optimizing = false;
+  exporting = false;
 
   private tripId = 0;
 
   constructor() {
-    addIcons({ create });
+    addIcons({ create, calendarOutline });
   }
 
   ngOnInit(): void {
@@ -150,4 +151,43 @@ export class TripViewPage implements OnInit {
       },
     });
   }
+
+  exportToCalendar(): void {
+    if (!this.trip || this.exporting) return;
+    this.exporting = true;
+    const filename = `${sanitizeFilename(this.trip.title)}.ics`;
+
+    this.tripService.exportIcs(this.trip.id).subscribe({
+      next: (blob) => {
+        this.exporting = false;
+        downloadBlob(blob, filename);
+      },
+      error: async (err) => {
+        this.exporting = false;
+        const toast = await this.toastCtrl.create({
+          message: err.message ?? 'Could not export calendar.',
+          duration: 2500,
+          color: 'danger',
+        });
+        await toast.present();
+      },
+    });
+  }
+}
+
+function downloadBlob(blob: Blob, filename: string): void {
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  window.URL.revokeObjectURL(url);
+}
+
+// Mirrors the backend's TripExportController#sanitizeFilename — the server-set
+// Content-Disposition filename never reaches us here (Blob downloads lose response
+// headers), so the client picks its own name for the `download` attribute.
+function sanitizeFilename(title: string): string {
+  const sanitized = title.replace(/[^a-zA-Z0-9 -]/g, '').trim();
+  return sanitized || 'trip';
 }
