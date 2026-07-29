@@ -3,7 +3,9 @@ import {
   ElementRef, ViewChild, OnChanges, OnDestroy, SimpleChanges, AfterViewInit
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { IonButton } from '@ionic/angular/standalone';
+import { IonButton, IonSpinner, IonIcon } from '@ionic/angular/standalone';
+import { addIcons } from 'ionicons';
+import { navigate } from 'ionicons/icons';
 import mapboxgl from 'mapbox-gl';
 import { environment } from '../../../../../environments/environment';
 import { TripResponse, StopResponse } from '../../../../core/models/trip.model';
@@ -11,15 +13,18 @@ import { TripResponse, StopResponse } from '../../../../core/models/trip.model';
 @Component({
   selector: 'app-trip-map',
   standalone: true,
-  imports: [CommonModule, IonButton],
+  imports: [CommonModule, IonButton,  IonSpinner, IonIcon],
   templateUrl: './trip-map.component.html',
   styleUrls: ['./trip-map.component.scss'],
 })
 export class TripMapComponent implements AfterViewInit, OnChanges, OnDestroy {
   @Input({ required: true }) trip!: TripResponse;
+  @Input() optimizing = false;
   @Output() optimizeRequested = new EventEmitter<void>();
   @Output() stopSelected = new EventEmitter<StopResponse>();
-
+  constructor() {
+    addIcons({ navigate });
+  }
   @ViewChild('mapContainer', { static: true }) mapContainer!: ElementRef<HTMLDivElement>;
 
   map: mapboxgl.Map | null = null;
@@ -35,6 +40,10 @@ export class TripMapComponent implements AfterViewInit, OnChanges, OnDestroy {
 
   get sortedStops(): StopResponse[] {
     return this.trip?.stops ? [...this.trip.stops].sort((a, b) => a.stopOrder - b.stopOrder) : [];
+  }
+
+  get canOptimize(): boolean {
+    return (this.trip?.stops?.length ?? 0) >= 2;
   }
 
   ngAfterViewInit(): void {
