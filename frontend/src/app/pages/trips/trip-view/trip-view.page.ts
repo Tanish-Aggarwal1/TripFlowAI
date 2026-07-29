@@ -18,10 +18,13 @@ import {
   ToastController,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { create, calendarOutline } from 'ionicons/icons';
+import { create, calendarOutline, sparkles } from 'ionicons/icons';
 import { TripService } from '../../../core/services/trip.service';
-import { StopResponse, TripResponse } from '../../../core/models/trip.model';
+import { StopResponse, TripResponse, SuggestedItineraryResponse } from '../../../core/models/trip.model';
 import { TripMapComponent } from '../components/trip-map/trip-map.component';
+import { IonModal } from '@ionic/angular/standalone';
+import { AiPreferencesFormComponent } from '../components/ai-preferences-form/ai-preferences-form.component';
+import { AiSuggestionCardsComponent } from '../components/ai-suggestion-cards/ai-suggestion-cards.component';
 
 // SCRUM-244b: consecutive stops sharing a dayNumber, in existing stopOrder — dayNumber
 // is monotonically non-decreasing along stopOrder (ItineraryScheduler never assigns an
@@ -52,6 +55,9 @@ interface DayGroup {
     IonItemDivider,
     IonLabel,
     TripMapComponent,
+    IonModal, 
+    AiPreferencesFormComponent, 
+    AiSuggestionCardsComponent
   ],
 })
 export class TripViewPage implements OnInit {
@@ -65,11 +71,15 @@ export class TripViewPage implements OnInit {
   error: string | null = null;
   optimizing = false;
   exporting = false;
+    // SCRUM-67 wiring: hosts the SCRUM-155 preferences form, then swaps to the
+  // SCRUM-156 suggestion cards once a response comes back.
+  aiModalOpen = false;
+  aiSuggestions: SuggestedItineraryResponse | null = null;
 
   private tripId = 0;
 
   constructor() {
-    addIcons({ create, calendarOutline });
+    addIcons({ create, calendarOutline, sparkles});
   }
 
   ngOnInit(): void {
@@ -130,6 +140,27 @@ export class TripViewPage implements OnInit {
   editTrip(): void {
     if (this.trip) {
       this.router.navigate(['/trips', this.trip.id, 'edit']);
+    }
+  }
+  openAiSuggest(): void {
+    this.aiSuggestions = null;
+    this.aiModalOpen = true;
+  }
+
+  closeAiModal(): void {
+    this.aiModalOpen = false;
+    this.aiSuggestions = null;
+  }
+
+  onSuggested(response: SuggestedItineraryResponse): void {
+    this.aiSuggestions = response;
+  }
+
+  // Appends locally rather than refetching the whole trip so the modal doesn't
+  // flash the page-level loading spinner behind it on every accepted card.
+  onStopAdded(stop: StopResponse): void {
+    if (this.trip) {
+      this.trip = { ...this.trip, stops: [...this.trip.stops, stop] };
     }
   }
 
