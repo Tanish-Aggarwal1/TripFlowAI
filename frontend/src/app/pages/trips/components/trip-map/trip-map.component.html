@@ -1,4 +1,23 @@
 <div class="trip-map-wrapper">
+
+    <div class="trip-map-actions">
+    <ion-button
+      size="small"
+      [disabled]="optimizing || !canOptimize"
+      [title]="canOptimize ? 'Recalculate the optimal stop order' : 'Add at least 2 stops to optimize the route'"
+      (click)="requestOptimize()">
+      @if (optimizing) {
+        <ion-spinner name="crescent" slot="start"></ion-spinner>
+        Optimizing...
+      } @else {
+        <ion-icon slot="start" name="navigate"></ion-icon>
+        Optimize Route
+      }
+    </ion-button>
+    @if (!canOptimize) {
+      <p class="optimize-hint">Add at least 2 stops to optimize the route.</p>
+    }
+  </div>
   <div #mapContainer class="trip-map-container"></div>
 
   @if (mapFailed) {
@@ -13,10 +32,10 @@
     </div>
   }
 
-  @if (!mapFailed && routeMissing) {
+  <!-- @if (!mapFailed && routeMissing) {
     <div class="trip-map-warning-banner">
       <span>Route not yet optimized.</span>
       <ion-button size="small" fill="clear" (click)="requestOptimize()">Optimize now</ion-button>
     </div>
-  }
+  } -->
 </div>

@@ -45,6 +45,24 @@
   font-size: 13px;
 }
 
+.trip-map-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+
+  ion-spinner {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.optimize-hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ion-color-medium);
+}
+
 // NOTE: .trip-map-marker and .trip-map-popup are NOT styled here.
 // Mapbox creates those DOM nodes via document.createElement, outside
 // Angular's view encapsulation, so component-scoped styles never reach
