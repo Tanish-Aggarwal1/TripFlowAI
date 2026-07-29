@@ -293,4 +293,61 @@ public class AiControllerIT {
 				.andExpect(status().isBadGateway())
 				.andExpect(jsonPath("$.status").value(502));
 	}
+
+	@Test
+	void suggestItinerary_geminiReturnsEmptyCandidates_propagates502() throws Exception {
+		User owner = createTestUser("emptyresp");
+		Long tripId = createTrip(owner);
+
+		// GeminiClient treats a null/empty candidate list as a failure and throws
+		// GeminiClientException, which GlobalExceptionHandler maps to 502.
+		String geminiBody = """
+				{ "candidates": [] }
+				""";
+		geminiMockServer.expect(requestTo(ENDPOINT)).andExpect(method(HttpMethod.POST))
+				.andRespond(withSuccess(geminiBody, MediaType.APPLICATION_JSON));
+
+		mockMvc.perform(post("/api/trips/" + tripId + "/ai-suggest").with(csrf())
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("{}")
+						.with(asUser(owner)))
+				.andExpect(status().isBadGateway())
+				.andExpect(jsonPath("$.status").value(502));
+
+		geminiMockServer.verify();
+	}
+
+	@Test
+	void suggestItinerary_promptTooLarge_returns400WithoutCallingGemini() throws Exception {
+		User owner = createTestUser("toolongprompt");
+
+		// ItineraryPromptTemplate caps the rendered prompt at 8000 chars. Stop names are
+		// not @Size-bounded on count, so many long-named stops push the {{destinations}}
+		// substitution past the limit. PromptTooLargeException is thrown by render()
+		// before geminiClient is ever called, and GlobalExceptionHandler maps it to 400.
+		List<CreateStopRequest> stops = new java.util.ArrayList<>();
+		String longName = "x".repeat(200); // at the CreateStopRequest @Size(max=200) ceiling
+		for (int i = 0; i < 45; i++) { // 45 * 200 = 9000 chars of names alone > 8000 limit
+			stops.add(new CreateStopRequest(longName, 45.0, -75.0, null, null, null));
+		}
+		CreateTripRequest tripRequest = new CreateTripRequest("Big Trip", null, null, TripVisibility.PRIVATE, stops);
+
+		MvcResult result = mockMvc.perform(post("/api/trips").with(csrf())
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(objectMapper.writeValueAsString(tripRequest))
+						.with(asUser(owner)))
+				.andExpect(status().isCreated())
+				.andReturn();
+		Long tripId = objectMapper.readTree(result.getResponse().getContentAsString()).get("id").asLong();
+
+		mockMvc.perform(post("/api/trips/" + tripId + "/ai-suggest").with(csrf())
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("{}")
+						.with(asUser(owner)))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.status").value(400));
+
+		// No expectations were registered — passes only if Gemini was never called.
+		geminiMockServer.verify();
+	}
 }
