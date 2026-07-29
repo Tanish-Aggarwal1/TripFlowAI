@@ -33,17 +33,17 @@ module.exports = function (config) {
     { type: 'lcovonly' },
     { type: 'json-summary' }   // ← add this
   ],
-  // SCRUM-214/236: measured 2026-07-28 at statements 67.9% / branches 57.89% /
-  // functions 66.17% / lines 70.37% (see docs/ci.md) — floor set a few points below,
-  // same method SCRUM-206 used for the backend. karma-coverage fails the `npm run
+  // SCRUM-247: measured 2026-07-28 at statements 96.81% / branches 88.23% /
+  // functions 93.95% / lines 97.41% (see docs/ci.md) — floor set a few points below,
+  // same method SCRUM-206/214 used. karma-coverage fails the `npm run
   // test:ci` step itself when a metric drops below its floor, so frontend-ci.yml
   // needs no separate gating step.
   check: {
     global: {
-      statements: 65,
-      branches: 55,
-      functions: 63,
-      lines: 68,
+      statements: 93,
+      branches: 84,
+      functions: 90,
+      lines: 94,
     },
   },
 },
