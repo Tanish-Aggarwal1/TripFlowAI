@@ -91,6 +91,14 @@ export class TripViewPage implements OnInit {
       },
     });
   }
+  
+  justOptimized = false;
+
+  get sortedStops() {
+    return this.trip?.stops
+      ? [...this.trip.stops].sort((a, b) => a.stopOrder - b.stopOrder)
+      : [];
+  }
 
   get dayGroups(): DayGroup[] {
     if (!this.trip) return [];
@@ -133,6 +141,9 @@ export class TripViewPage implements OnInit {
       next: async (updated) => {
         this.trip = updated;
         this.optimizing = false;
+        this.justOptimized = true;
+        setTimeout(() => (this.justOptimized = false), 1200);
+
         const toast = await this.toastCtrl.create({
           message: 'Route optimized.',
           duration: 2000,

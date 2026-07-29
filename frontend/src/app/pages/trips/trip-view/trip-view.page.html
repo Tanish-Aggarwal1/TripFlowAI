@@ -7,9 +7,9 @@
     <ion-buttons slot="end">
       <ion-button (click)="exportToCalendar()" [disabled]="!trip || exporting" aria-label="Export to Calendar">
         @if (exporting) {
-          <ion-spinner name="dots" slot="icon-only"></ion-spinner>
+        <ion-spinner name="dots" slot="icon-only"></ion-spinner>
         } @else {
-          <ion-icon name="calendar-outline" slot="icon-only"></ion-icon>
+        <ion-icon name="calendar-outline" slot="icon-only"></ion-icon>
         }
       </ion-button>
       <ion-button (click)="editTrip()" [disabled]="!trip">
@@ -21,48 +21,44 @@
 
 <ion-content>
   @if (loading) {
-    <div class="centered">
-      <ion-spinner></ion-spinner>
-    </div>
+  <div class="centered">
+    <ion-spinner></ion-spinner>
+  </div>
   }
 
   @if (error) {
-    <div class="centered error-block">
-      <p>{{ error }}</p>
-      <ion-button (click)="loadTrip()">Retry</ion-button>
-    </div>
+  <div class="centered error-block">
+    <p>{{ error }}</p>
+    <ion-button (click)="loadTrip()">Retry</ion-button>
+  </div>
   }
 
   @if (trip && !loading) {
-    <div class="trip-map-host">
-      <app-trip-map
-        [trip]="trip"
-        [optimizing]="optimizing"
-        (optimizeRequested)="onOptimizeRequested()">
-      </app-trip-map>
-    </div>
+  <div class="trip-map-host">
+    <app-trip-map [trip]="trip" [optimizing]="optimizing" (optimizeRequested)="onOptimizeRequested()">
+    </app-trip-map>
+  </div>
 
-    <ion-list>
-      @for (group of dayGroups; track group.dayNumber ?? 'unscheduled') {
-        @if (group.dayNumber !== null) {
-          <ion-item-divider>
-            <ion-label>Day {{ group.dayNumber }}</ion-label>
-          </ion-item-divider>
-        }
-        @for (stop of group.stops; track stop.id) {
-          <ion-item>
-            <ion-label>
-              <h3>{{ stop.stopOrder + 1 }}. {{ stop.name }}</h3>
-              @if (stop.plannedTime) {
-                <p class="planned-time">{{ formatPlannedTime(stop.plannedTime) }}</p>
-              }
-              @if (stop.address) {
-                <p>{{ stop.address }}</p>
-              }
-            </ion-label>
-          </ion-item>
-        }
+  <ion-list>
+    @for (group of dayGroups; track group.dayNumber ?? 'unscheduled') {
+    @if (group.dayNumber !== null) {
+    <ion-item-divider>
+      <ion-label>Day {{ group.dayNumber }}</ion-label>
+    </ion-item-divider>
+    }
+    <ion-list [class.just-optimized]="justOptimized">
+      @for (stop of sortedStops; track stop.id) {
+      <ion-item>
+        <ion-label>
+          <h3>{{ stop.stopOrder + 1 }}. {{ stop.name }}</h3>
+          @if (stop.address) {
+          <p>{{ stop.address }}</p>
+          }
+        </ion-label>
+      </ion-item>
       }
     </ion-list>
+    }
+  </ion-list>
   }
 </ion-content>
