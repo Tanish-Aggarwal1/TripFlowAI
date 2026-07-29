@@ -200,6 +200,56 @@ describe('TripService', () => {
     );
   });
 
+  it('should add a stop via the nested stop-create endpoint', (done) => {
+    const mockStop = {
+      id: 9,
+      name: 'St. Lawrence Market',
+      latitude: 43.6487,
+      longitude: -79.3715,
+      address: null,
+      stopOrder: 1,
+      status: 'PLANNED' as const,
+      notes: 'Fits your interest in food and history.',
+      dayNumber: null,
+      plannedTime: null,
+      stopType: 'SIGHTSEEING' as const,
+    };
+
+    service
+      .addStop(50, {
+        name: 'St. Lawrence Market',
+        latitude: 43.6487,
+        longitude: -79.3715,
+        notes: 'Fits your interest in food and history.',
+      })
+      .subscribe((result) => {
+        expect(result).toEqual(mockStop);
+        done();
+      });
+
+    const req = httpMock.expectOne('http://localhost:8080/api/trips/50/stops');
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({
+      name: 'St. Lawrence Market',
+      latitude: 43.6487,
+      longitude: -79.3715,
+      notes: 'Fits your interest in food and history.',
+    });
+    req.flush(mockStop);
+  });
+
+  it('should handle error from addStop', (done) => {
+    service.addStop(50, { name: 'X', latitude: 0, longitude: 0 }).subscribe(
+      () => fail('should have failed'),
+      (error: any) => {
+        expect(error.status).toBe(404);
+        done();
+      }
+    );
+
+    const req = httpMock.expectOne('http://localhost:8080/api/trips/50/stops');
+    req.flush({ message: 'Trip not found.' }, { status: 404, statusText: 'Not Found' });
+  });
   it('should fetch a single trip', (done) => {
     const mockTrip = {
       id: 5,

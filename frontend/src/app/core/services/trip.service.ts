@@ -11,6 +11,8 @@ import {
   UpdateTripRequest,
   ItineraryPreferencesRequest,
   SuggestedItineraryResponse,
+  CreateStopRequest,
+  StopResponse,
 } from '../models/trip.model';
 
 @Injectable({ providedIn: 'root' })
@@ -83,6 +85,14 @@ export class TripService {
   ): Observable<SuggestedItineraryResponse> {
     return this.http
       .post<SuggestedItineraryResponse>(`${this.baseUrl}/${tripId}/ai-suggest`, preferences)
+      .pipe(catchError((err: HttpErrorResponse) => this.handleError(err)));
+  }
+
+  // SCRUM-156: calls the existing nested stop-create endpoint (StopController) so an
+  // individual AI suggestion can be accepted as a stop without a full trip update.
+  addStop(tripId: number, request: CreateStopRequest): Observable<StopResponse> {
+    return this.http
+      .post<StopResponse>(`${this.baseUrl}/${tripId}/stops`, request)
       .pipe(catchError((err: HttpErrorResponse) => this.handleError(err)));
   }
 
