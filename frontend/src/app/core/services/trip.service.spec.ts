@@ -199,4 +199,116 @@ describe('TripService', () => {
       { status: 502, statusText: 'Bad Gateway' }
     );
   });
+
+  it('should fetch a single trip', (done) => {
+    const mockTrip = {
+      id: 5,
+      title: 'Trip 5',
+      description: null,
+      tags: [],
+      visibility: 'PUBLIC' as const,
+      status: 'DRAFT' as const,
+      ownerId: 1,
+      stops: [],
+      createdAt: '2026-07-22T00:00:00Z',
+      updatedAt: '2026-07-22T00:00:00Z',
+      routeGeometry: null,
+      startDate: null,
+    };
+
+    service.getTrip(5).subscribe((trip) => {
+      expect(trip).toEqual(mockTrip);
+      done();
+    });
+
+    const req = httpMock.expectOne('http://localhost:8080/api/trips/5');
+    expect(req.request.method).toBe('GET');
+    req.flush(mockTrip);
+  });
+
+  it('should update a trip and sync the signal', (done) => {
+    const existingSummary = { id: 3, title: 'Old title', visibility: 'PUBLIC' as const, status: 'DRAFT' as const, createdAt: '2026-07-22T00:00:00Z', updatedAt: '2026-07-22T00:00:00Z', stopCount: 0, coverPhotoUrl: null };
+    const updatedTrip = {
+      id: 3,
+      title: 'New title',
+      description: null,
+      tags: [],
+      visibility: 'PUBLIC' as const,
+      status: 'DRAFT' as const,
+      ownerId: 1,
+      stops: [],
+      createdAt: '2026-07-22T00:00:00Z',
+      updatedAt: '2026-07-23T00:00:00Z',
+      routeGeometry: null,
+      startDate: null,
+    };
+
+    service.trips.set([existingSummary]);
+    service.updateTrip(3, { title: 'New title', visibility: 'PUBLIC', stops: [] }).subscribe((trip) => {
+      expect(trip).toEqual(updatedTrip);
+      expect(service.trips()).toEqual([jasmine.objectContaining({ id: 3, title: 'New title' })]);
+      done();
+    });
+
+    const req = httpMock.expectOne('http://localhost:8080/api/trips/3');
+    expect(req.request.method).toBe('PUT');
+    req.flush(updatedTrip);
+  });
+
+  it('should delete a trip and remove it from the signal', (done) => {
+    const summary = { id: 7, title: 'Trip 7', visibility: 'PUBLIC' as const, status: 'DRAFT' as const, createdAt: '2026-07-22T00:00:00Z', updatedAt: '2026-07-22T00:00:00Z', stopCount: 0, coverPhotoUrl: null };
+
+    service.trips.set([summary]);
+    service.deleteTrip(7).subscribe(() => {
+      expect(service.trips()).toEqual([]);
+      done();
+    });
+
+    const req = httpMock.expectOne('http://localhost:8080/api/trips/7');
+    expect(req.request.method).toBe('DELETE');
+    req.flush(null);
+  });
+
+  it('should optimize a trip and sync the signal', (done) => {
+    const existingSummary = { id: 9, title: 'Trip 9', visibility: 'PUBLIC' as const, status: 'DRAFT' as const, createdAt: '2026-07-22T00:00:00Z', updatedAt: '2026-07-22T00:00:00Z', stopCount: 0, coverPhotoUrl: null };
+    const optimizedTrip = {
+      id: 9,
+      title: 'Trip 9',
+      description: null,
+      tags: [],
+      visibility: 'PUBLIC' as const,
+      status: 'DRAFT' as const,
+      ownerId: 1,
+      stops: [],
+      createdAt: '2026-07-22T00:00:00Z',
+      updatedAt: '2026-07-23T00:00:00Z',
+      routeGeometry: '{"type":"LineString","coordinates":[]}',
+      startDate: null,
+    };
+
+    service.trips.set([existingSummary]);
+    service.optimizeTrip(9).subscribe((trip) => {
+      expect(trip).toEqual(optimizedTrip);
+      expect(service.trips()).toEqual([jasmine.objectContaining({ id: 9 })]);
+      done();
+    });
+
+    const req = httpMock.expectOne('http://localhost:8080/api/trips/9/optimize');
+    expect(req.request.method).toBe('POST');
+    req.flush(optimizedTrip);
+  });
+
+  it('should export a trip calendar as a blob', (done) => {
+    const mockBlob = new Blob(['BEGIN:VCALENDAR'], { type: 'text/calendar' });
+
+    service.exportIcs(11).subscribe((blob) => {
+      expect(blob).toEqual(mockBlob);
+      done();
+    });
+
+    const req = httpMock.expectOne('http://localhost:8080/api/trips/11/calendar.ics');
+    expect(req.request.method).toBe('GET');
+    expect(req.request.responseType).toBe('blob');
+    req.flush(mockBlob);
+  });
 });
