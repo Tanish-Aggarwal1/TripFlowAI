@@ -1,0 +1,63 @@
+.ai-suggestion-cards {
+  padding: 8px 4px;
+}
+
+.summary {
+  font-size: 14px;
+  color: var(--ion-color-medium);
+  margin: 0 0 12px 4px;
+}
+
+.empty {
+  text-align: center;
+  color: var(--ion-color-medium);
+  padding: 16px 0;
+  font-size: 14px;
+}
+
+.card {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  border: 1px solid var(--ion-color-light-shade);
+  border-radius: 8px;
+
+  &.accepted {
+    opacity: 0.6;
+  }
+
+  h4 {
+    margin: 0 0 4px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--ion-color-dark);
+  }
+}
+
+.reason {
+  font-size: 13px;
+  color: var(--ion-color-medium);
+  margin: 0 0 4px;
+}
+
+.coords {
+  font-size: 12px;
+  color: var(--ion-color-medium);
+  margin: 0;
+}
+
+.card-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.accepted-label {
+  font-size: 12px;
+  color: var(--ion-color-success);
+  font-weight: 600;
+  padding: 6px 4px;
+}
