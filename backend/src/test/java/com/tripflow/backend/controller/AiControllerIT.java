@@ -13,6 +13,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.net.SocketTimeoutException;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -306,6 +307,28 @@ public class AiControllerIT {
 				""";
 		geminiMockServer.expect(requestTo(ENDPOINT)).andExpect(method(HttpMethod.POST))
 				.andRespond(withSuccess(geminiBody, MediaType.APPLICATION_JSON));
+
+		mockMvc.perform(post("/api/trips/" + tripId + "/ai-suggest").with(csrf())
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("{}")
+						.with(asUser(owner)))
+				.andExpect(status().isBadGateway())
+				.andExpect(jsonPath("$.status").value(502));
+
+		geminiMockServer.verify();
+	}
+
+	@Test
+	void suggestItinerary_geminiReadTimeout_propagates502() throws Exception {
+		User owner = createTestUser("timeout");
+		Long tripId = createTrip(owner);
+
+		// Mirrors the unit-level GeminiClientTest.generateContent_timeout case, but here the
+		// thrown SocketTimeoutException propagates through the real GeminiClient (wrapped as
+		// GeminiClientException) and out through GlobalExceptionHandler, proving the 502
+		// mapping fires end-to-end rather than surfacing as a raw 500.
+		geminiMockServer.expect(requestTo(ENDPOINT)).andExpect(method(HttpMethod.POST))
+				.andRespond(request -> { throw new SocketTimeoutException("Read timed out"); });
 
 		mockMvc.perform(post("/api/trips/" + tripId + "/ai-suggest").with(csrf())
 						.contentType(MediaType.APPLICATION_JSON)
