@@ -3,7 +3,7 @@ import { Router } from '@angular/router';
 import {
   IonHeader, IonToolbar, IonTitle, IonContent, IonButton,
   IonList, IonItem, IonLabel, IonBadge, IonIcon,
-  IonFab, IonFabButton, IonSpinner, AlertController,
+  IonFab, IonFabButton, IonSpinner, AlertController, ToastController,
   ViewWillEnter
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
@@ -27,6 +27,7 @@ export class DashboardPage implements ViewWillEnter {
     private tripService = inject(TripService);
     private router = inject(Router);
     private alertCtrl = inject(AlertController);
+    private toastCtrl = inject(ToastController);
 
   trips: TripSummaryResponse[] = [];
   loading = true;
@@ -84,7 +85,7 @@ export class DashboardPage implements ViewWillEnter {
                 this.trips = this.trips.filter((t) => t.id !== trip.id);
               },
               error: (err) => {
-                this.error = err.message;
+                this.showToast(err.message, 'danger');
               },
             });
           },
@@ -92,6 +93,15 @@ export class DashboardPage implements ViewWillEnter {
       ],
     });
     await alert.present();
+  }
+
+  private async showToast(message: string, color: string): Promise<void> {
+    const toast = await this.toastCtrl.create({
+      message,
+      color,
+      duration: 2000,
+    });
+    await toast.present();
   }
 
   statusColor(status: string): string {
