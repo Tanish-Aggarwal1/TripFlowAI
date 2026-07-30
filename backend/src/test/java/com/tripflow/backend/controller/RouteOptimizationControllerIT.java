@@ -10,6 +10,7 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -403,6 +404,69 @@ public class RouteOptimizationControllerIT {
 		mockMvc.perform(post("/api/trips/" + tripId + "/optimize").with(csrf()).with(asUser(user)))
 				.andExpect(status().isUnprocessableEntity())
 				.andExpect(jsonPath("$.status").value(422));
+
+		orsMockServer.verify();
+	}
+
+	// ═══════════════════════════════════════════════════════════════════════
+	// SCRUM-68 regression single-flow: create trip → add stops → optimize → view
+	// reordered result. Crosses TripController, StopController, optimize, and the
+	// GET /api/trips/{id} read in one test — each step is otherwise covered in
+	// isolation, but this pins the full pre-AI-integration surface as one chain.
+	// ═══════════════════════════════════════════════════════════════════════
+
+	@Test
+	void createTrip_addStops_optimize_thenViewReordered_singleFlow() throws Exception {
+		User user = createTestUser("singleflow");
+		// 1. Create trip with one stop (CreateTripRequest.stops is @NotEmpty).
+		CreateTripRequest oneStopTrip = new CreateTripRequest(
+				"Single-Flow Trip", null, null, TripVisibility.PRIVATE,
+				List.of(new CreateStopRequest("Toronto", 43.65, -79.38, null, null, null)));
+		JsonNode trip = createTrip(user, oneStopTrip);
+		Long tripId = trip.get("id").asLong();
+		long torontoId = stopIdByName(trip, "Toronto");
+
+		// 2. Add two more stops via the nested stops endpoint (the "add stops" step).
+		mockMvc.perform(post("/api/trips/" + tripId + "/stops").with(csrf()).with(asUser(user))
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(objectMapper.writeValueAsString(
+								new CreateStopRequest("Ottawa", 45.42, -75.70, null, null, null))))
+				.andExpect(status().isCreated());
+		mockMvc.perform(post("/api/trips/" + tripId + "/stops").with(csrf()).with(asUser(user))
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(objectMapper.writeValueAsString(
+								new CreateStopRequest("Montreal", 45.50, -73.57, null, null, null))))
+				.andExpect(status().isCreated());
+
+		// Re-read to pick up the added stop ids (needed for the canned ORS response).
+		JsonNode reloaded = objectMapper.readTree(mockMvc
+				.perform(get("/api/trips/" + tripId).with(csrf()).with(asUser(user)))
+				.andExpect(status().isOk())
+				.andReturn().getResponse().getContentAsString());
+		long ottawaId = stopIdByName(reloaded, "Ottawa");
+		long montrealId = stopIdByName(reloaded, "Montreal");
+
+		// 3. Optimize — ORS returns Toronto → Montreal → Ottawa (round-trip from Toronto).
+		orsMockServer.expect(requestTo(ORS_BASE_URL + "/optimization"))
+				.andExpect(method(HttpMethod.POST))
+				.andRespond(withSuccess(cannedOptimizationResponse(torontoId, ottawaId, montrealId),
+						MediaType.APPLICATION_JSON));
+		orsMockServer.expect(requestTo(ORS_BASE_URL + "/v2/directions/driving-car/geojson"))
+				.andExpect(method(HttpMethod.POST))
+				.andRespond(withSuccess(CANNED_DIRECTIONS_RESPONSE, MediaType.APPLICATION_JSON));
+
+		mockMvc.perform(post("/api/trips/" + tripId + "/optimize").with(csrf()).with(asUser(user)))
+				.andExpect(status().isOk());
+
+		// 4. View the reordered result via the standard trip read.
+		mockMvc.perform(get("/api/trips/" + tripId).with(csrf()).with(asUser(user)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.stops[0].name").value("Toronto"))
+				.andExpect(jsonPath("$.stops[0].stopOrder").value(0))
+				.andExpect(jsonPath("$.stops[1].name").value("Montreal"))
+				.andExpect(jsonPath("$.stops[1].stopOrder").value(1))
+				.andExpect(jsonPath("$.stops[2].name").value("Ottawa"))
+				.andExpect(jsonPath("$.stops[2].stopOrder").value(2));
 
 		orsMockServer.verify();
 	}

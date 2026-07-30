@@ -17,12 +17,16 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.context.ImportTestcontainers;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.transaction.annotation.Transactional;
+
+import jakarta.persistence.EntityManager;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tripflow.backend.domain.User;
@@ -48,6 +52,12 @@ class TripControllerIT {
 
 	@Autowired
 	private UserRepository userRepository;
+
+	@Autowired
+	private JdbcTemplate jdbcTemplate;
+
+	@Autowired
+	private EntityManager entityManager;
 
 	private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -172,6 +182,35 @@ class TripControllerIT {
 				.andExpect(status().isNoContent());
 
 		mockMvc.perform(get("/api/trips/" + tripId).with(csrf()).with(asUser(user))).andExpect(status().isNotFound());
+	}
+
+	@Test
+	void deleteTrip_cascadesToStops_removesAllStopRows() throws Exception {
+		// SCRUM-68 regression: deleting a trip must cascade to its stop rows. The existing
+		// deleteTrip_owner test only asserts the trip is gone (404 on re-read); this one
+		// verifies at the DB level that no orphan stop rows linger for the deleted trip.
+		User user = createTestUser("cascadedelete");
+		CreateStopRequest stop1 = new CreateStopRequest("Ottawa", 45.42, -75.70, null, null, null);
+		CreateStopRequest stop2 = new CreateStopRequest("Toronto", 43.65, -79.38, null, null, null);
+		CreateTripRequest tripRequest = new CreateTripRequest(
+				"Multi-Stop Trip", null, null, TripVisibility.PRIVATE, List.of(stop1, stop2));
+		Long tripId = createTrip(user, tripRequest);
+
+		Integer stopsBefore = jdbcTemplate.queryForObject(
+				"SELECT COUNT(*) FROM stops WHERE trip_id = ?", Integer.class, tripId);
+		org.assertj.core.api.Assertions.assertThat(stopsBefore).isEqualTo(2);
+
+		mockMvc.perform(delete("/api/trips/" + tripId).with(csrf()).with(asUser(user)))
+				.andExpect(status().isNoContent());
+
+		// tripRepository.delete marks the trip for removal; Hibernate only issues the
+		// DELETE (and the FK ON DELETE CASCADE that removes stops) on flush. Force it
+		// before querying, since the raw JdbcTemplate count bypasses Hibernate's auto-flush.
+		entityManager.flush();
+
+		Integer stopsAfter = jdbcTemplate.queryForObject(
+				"SELECT COUNT(*) FROM stops WHERE trip_id = ?", Integer.class, tripId);
+		org.assertj.core.api.Assertions.assertThat(stopsAfter).isZero();
 	}
 
 	@Test
