@@ -38,13 +38,11 @@ public class StopPhotoService {
     private final StopPhotoRepository stopPhotoRepository;
     private final CloudinarySigningService signingService;
 
- // change this method's signature and body:
-
     @Transactional(readOnly = true)
     public PhotoSignatureResponse getUploadSignature(Long stopId, Long requesterId) {
         Stop stop = loadOwnedStop(stopId, requesterId);
         log.info("Issued photo-upload signature stopId={} requesterId={}", stop.getId(), requesterId);
-        SignedUploadRequest signed = signingService.sign(Map.of());
+        SignedUploadRequest signed = signingService.sign(Map.of("folder", "stops/" + stop.getId()));
         return new PhotoSignatureResponse(
                 signed.cloudName(),
                 signed.apiKey(),
