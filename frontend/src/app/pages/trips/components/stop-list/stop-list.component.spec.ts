@@ -135,6 +135,25 @@ describe('StopListComponent', () => {
     });
   });
 
+  describe('rendering with duplicate stop names', () => {
+    it('keeps each row bound to its own data after removing a duplicate-named stop', () => {
+      component.stops = [
+        { name: 'Coffee', latitude: 1, longitude: 1, address: 'First St' },
+        { name: 'Coffee', latitude: 2, longitude: 2, address: 'Second St' },
+      ];
+      fixture.detectChanges();
+
+      component.removeStop(0);
+      fixture.detectChanges();
+
+      const rows: NodeListOf<HTMLElement> = fixture.nativeElement.querySelectorAll('ion-item h3');
+      expect(rows.length).toBe(1);
+      expect(rows[0].textContent).toContain('1. Coffee');
+      const addresses: NodeListOf<HTMLElement> = fixture.nativeElement.querySelectorAll('ion-item p');
+      expect(addresses[0].textContent).toContain('Second St');
+    });
+  });
+
   describe('handleReorder', () => {
     it('moves a stop from one index to another and emits the updated list', () => {
       component.stops = [
