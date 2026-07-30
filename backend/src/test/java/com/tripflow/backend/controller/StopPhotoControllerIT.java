@@ -95,6 +95,7 @@ class StopPhotoControllerIT {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.signature").exists())
                 .andExpect(jsonPath("$.apiKey").exists())
+                .andExpect(jsonPath("$.uploadParams.folder").value("stops/" + stopId))
                 .andExpect(jsonPath("$..apiSecret").doesNotExist());
 
         // 2. mock upload already happened client-side; persist the result
