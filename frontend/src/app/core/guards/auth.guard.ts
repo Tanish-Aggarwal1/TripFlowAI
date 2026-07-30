@@ -1,14 +1,16 @@
 import { inject } from '@angular/core';
-import { CanActivateFn, Router } from '@angular/router';
+import { CanActivateFn } from '@angular/router';
 import { AuthService } from '../services/auth.service';
 
+// Checks token expiry fresh on every navigation, rather than trusting the
+// isAuthenticated signal, which only updates on explicit login()/logout()
+// calls and would otherwise let an already-expired session through.
 export const authGuard: CanActivateFn = () => {
   const authService = inject(AuthService);
-  const router = inject(Router);
 
-  if (authService.isAuthenticated()) {
+  if (authService.hasValidToken()) {
     return true;
   }
-  router.navigate(['/login']);
+  authService.logout();
   return false;
 };

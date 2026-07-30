@@ -67,7 +67,7 @@ export class AuthService {
     return throwError(() => error);
   }
 
-  private hasValidToken(): boolean {
+  hasValidToken(): boolean {
     const token = localStorage.getItem(TOKEN_KEY);
     if (!token) return false;
     try {

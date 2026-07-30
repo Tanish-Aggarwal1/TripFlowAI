@@ -1,20 +1,17 @@
 import { TestBed } from '@angular/core/testing';
-import { ActivatedRouteSnapshot, Router, RouterStateSnapshot } from '@angular/router';
+import { ActivatedRouteSnapshot, RouterStateSnapshot } from '@angular/router';
 import { authGuard } from './auth.guard';
 import { AuthService } from '../services/auth.service';
 
 describe('authGuard', () => {
   let authServiceSpy: jasmine.SpyObj<AuthService>;
-  let routerSpy: jasmine.SpyObj<Router>;
 
   beforeEach(() => {
-    authServiceSpy = jasmine.createSpyObj('AuthService', ['isAuthenticated']);
-    routerSpy = jasmine.createSpyObj('Router', ['navigate']);
+    authServiceSpy = jasmine.createSpyObj('AuthService', ['hasValidToken', 'logout']);
 
     TestBed.configureTestingModule({
       providers: [
         { provide: AuthService, useValue: authServiceSpy },
-        { provide: Router, useValue: routerSpy },
       ],
     });
   });
@@ -25,17 +22,17 @@ describe('authGuard', () => {
     );
   }
 
-  it('allows navigation when authenticated', () => {
-    authServiceSpy.isAuthenticated.and.returnValue(true);
+  it('allows navigation when the token is valid, checked fresh each time', () => {
+    authServiceSpy.hasValidToken.and.returnValue(true);
 
     expect(runGuard()).toBeTrue();
-    expect(routerSpy.navigate).not.toHaveBeenCalled();
+    expect(authServiceSpy.logout).not.toHaveBeenCalled();
   });
 
-  it('redirects to /login and blocks navigation when not authenticated', () => {
-    authServiceSpy.isAuthenticated.and.returnValue(false);
+  it('logs out and blocks navigation when the token is missing or expired', () => {
+    authServiceSpy.hasValidToken.and.returnValue(false);
 
     expect(runGuard()).toBeFalse();
-    expect(routerSpy.navigate).toHaveBeenCalledWith(['/login']);
+    expect(authServiceSpy.logout).toHaveBeenCalled();
   });
 });
