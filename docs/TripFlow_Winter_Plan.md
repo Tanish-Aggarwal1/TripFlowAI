@@ -4,7 +4,7 @@
 
 **Relationship to the fall plan:** Fall break work (`docs/TripFlow_fall_Break_Plan.md`) was meant to de-risk winter, not replace it. In particular, FB-19/20/21 (community discovery feed, like, clone) moved from a winter item into the fall plan after SCRUM-74c's prod regression pass found those endpoints didn't exist yet — see `docs/qa/prod-regression-photos-social.md`. If any fall-break item doesn't land before winter starts, carry it into this backlog rather than dropping it silently.
 
-**SDP and AJF modules are this-semester deliverables, not winter ones.** The SDP (`docs/SDP/SDP.md`) and both AJF module logs (`docs/ajf-module-a.md`, module B) are due by the end of *this* semester (fall) — only the capstone project itself carries forward into winter term. That's why finalizing those two docs is scoped as FB-22/FB-23 in the fall plan (Section 2 there), not as winter work items here — don't reintroduce them as winter scope by mistake.
+**SDP and AJF modules are not winter work.** The SDP (`docs/SDP/SDP.md`) and both AJF module logs (`docs/ajf-module-a.md`, module B) are due within the next two weeks — this semester's/MVP's current sprint, before the fall-break plan's Aug 17–Jan window even starts. They're not tracked in the fall plan or here; handle as immediate current-sprint Jira work. Don't reintroduce them as winter scope.
 
 **Ground rules (carried forward from fall):**
 - Serialize-point rule stays in force: async Slack ping before touching `pom.xml`, `application.properties`, `SecurityConfig.java`, `GlobalExceptionHandler.java`, `BaseEntity.java` — and any new migration-adjacent file fall break introduces (e.g. if FB-20's `trip_likes` migration lands, its follow-on changes count too).
