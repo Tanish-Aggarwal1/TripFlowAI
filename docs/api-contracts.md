@@ -8,9 +8,9 @@ Living document. Add a new section per epic as endpoints are built. Update if a 
 **Request:**
 ```json
 {
+  "username": "string",
   "email": "string",
-  "password": "string",
-  "displayName": "string"
+  "password": "string"
 }
 ```
 **Success (201):**

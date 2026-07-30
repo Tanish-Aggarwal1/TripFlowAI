@@ -231,32 +231,32 @@ If any of the above is inaccurate at ticket-creation time, verify via `getVisibl
 
 ---
 
-### FB-06 · Story · Progress tracking — mark stops visited
+### FB-06 · Task · Trip completion percentage
 - **Epic:** SCRUM-6 (TRIP)
-- **Assignee:** — (parent; Tanish backend, Neel frontend)
+- **Assignee:** Tanish (backend) + Neel (frontend)
 - **Priority:** Medium
-- **Story Points:** 5
-- **Labels:** feature, api-contract-change, needs-frontend-coordination
-- **Components:** api, frontend, database
+- **Story Points:** 2
+- **Labels:** feature, api-contract-change
+- **Components:** api, frontend
 - **Description:**
   ```
-  Users can mark individual stops as "visited" during a trip. A completion percentage is calculated per trip. Introduces a new boolean field on Stop (or a separate stop_progress table if per-user progress on shared trips is needed — decide during grooming).
+  Corrected 2026-07-30 — this ticket originally proposed adding a "mark stop visited" mechanic from scratch, assuming no such field existed. That's now stale: Stop.status (PLANNED/VISITED/SKIPPED) already exists end-to-end — migration, entity, CreateStopRequest/UpdateStopRequest/StopResponse, StopController's PUT endpoint, and the edit-stop-form UI (SCRUM-250, merged 2026-07-30) all already support toggling a stop to VISITED. The only genuinely missing piece is a computed completion percentage — nothing currently calculates or exposes visitedCount/totalStopCount anywhere.
   ```
-- **Business Value:** Core "progress tracking" scope item from the original product vision; enables the community-feed "trips I've completed" feature in winter without new backend work.
-- **Technical Notes:** Requires a Flyway migration → serialize-point coordination. DTO change → Neel review required. Decide during grooming: field on stops table (simplest, per-owner) vs stop_progress table (per-user, needed for shared/community trips).
+- **Business Value:** Small, cheap addition on top of infrastructure that already shipped — a completion percentage is a natural, low-cost complement to the discovery feed (SCRUM-71/72) once that lands, without duplicating already-built work.
+- **Technical Notes:** No migration needed — `status` already exists on `Stop`. Add a derived `completionPercent` (or `visitedStopCount`/`stopCount` pair, let the frontend compute the ratio) to `TripResponse` (additive, non-breaking). Requires Neel review (DTO change).
 - **Acceptance Criteria:**
   ```
-  Given a trip owner viewing a stop
-  When they toggle "visited"
-  Then the state persists across reloads
-  And the trip's completion percentage updates in the UI
+  Given a trip with some stops marked VISITED and some not
+  When GET /api/trips/{id} is called
+  Then the response includes enough data to compute the completion percentage (e.g. visitedStopCount + stopCount, or a precomputed completionPercent)
 
-  Given a trip with all stops marked visited
-  When the completion percentage is calculated
-  Then it returns 100
+  Given a trip with all stops VISITED
+  When the completion percentage is computed
+  Then it is 100
 
-  And the migration adds the visited column (or table) cleanly on a fresh DB
-  And the DTO change is documented in the API standards section of the SDP
+  Given a trip with zero stops
+  When the completion percentage is computed
+  Then it does not divide by zero (returns 0 or null, not an error)
   ```
 
 ---
@@ -528,8 +528,6 @@ If any of the above is inaccurate at ticket-creation time, verify via `getVisibl
 ```
   Extend CreateStopRequest and UpdateStopRequest with two new optional fields: mapboxPlaceId (String) and address (String). Update TripService (and the resolvePlace / stop creation path) so that when mapboxPlaceId is provided, it is used as the external_place_id for Place dedup — falling back to the existing lat/lng-based path when mapboxPlaceId is absent. Update StopMapper / TripMapper as needed. Update or add unit tests covering both paths (with-mapboxPlaceId and without).
 
-  Note interaction with FB-06 (progress tracking) if that's already landed — no conflict expected, both are additive to Stop, but verify migration order at implementation time.
-
   Note interaction with REF-20 (unique constraint on places.external_place_id) if that's landed — this ticket relies on that constraint working correctly to guarantee dedup under concurrent stop creation.
 ```
 - **Acceptance Criteria:**
@@ -677,6 +675,310 @@ If any of the above is inaccurate at ticket-creation time, verify via `getVisibl
 
 ---
 
+**Correction (2026-07-30):** FB-19/20/21 below were briefly removed on the mistaken theory that Jira's `SCRUM-71`/`SCRUM-72` (SOCIAL epic, `week-12` label) meant this scope was already scheduled for the current semester rather than fall break. Confirmed with Tanish: all fall-break items, including these, are correctly fall-scoped — this semester's feature work is done as of the Aug 6 presentation, and everything from here (including SCRUM-71/72) rolls into fall/winter. Restored below, unchanged in scope. One real, still-useful finding from that detour: **SCRUM-71/SCRUM-71b/71c/71d and SCRUM-72/72b already exist as Jira tickets** covering nearly this exact scope (discovery feed, like, clone, photo/review UI) — when these get created for real per Section 5's instructions, extend/reuse those existing tickets instead of opening brand-new duplicate ones. See `docs/social-features-traceability-audit.md` for the full comparison (their real endpoint path `/api/discovery/trips` vs. this doc's `/api/trips/discover`, 404-vs-403 on private-trip access, clone's `"Copy of {title}"` rename, a stale migration filename in SCRUM-161) and for the genuinely missing pieces added below (FB-19c/19d creator-info + ratings, FB-24 save/bookmark) plus the separate Trip Tracking items (FB-25 foreground MVP, FB-26 stretch/blocked).
+
+---
+
+### FB-19 · Story · Community: public trip discovery feed (+ title search) — parent
+- **Epic:** SCRUM-9 (SOCIAL)
+- **Assignee:** — (parent, subtasks own the work)
+- **Priority:** High
+- **Story Points:** 5
+- **Labels:** feature, social, api-contract-change, needs-frontend-coordination
+- **Components:** api, frontend
+- **Description:**
+  ```
+  Moved up from SCRUM-74c (originally slated for winter) — regression testing during SCRUM-74 found the backend has no way to browse PUBLIC trips other than your own: GET /api/trips only ever returns the authenticated user's own trips. Add a discovery feed endpoint that lists other users' PUBLIC trips, and fold SCRUM-74c's "search by title, case-insensitively" scenario into the same endpoint as a query param rather than a separate ticket.
+  ```
+- **Business Value:** SCRUM-9 (SOCIAL) has existed as a reserved epic with nothing built against it — this is the foundational piece the rest of the community feature set (like, clone) needs something to operate on. Also the item SCRUM-74c's checklist couldn't test because it didn't exist yet.
+- **Technical Notes:**
+  - New `GET /api/trips/discover` — reuses the exact `Pageable`/paged-response convention from `GET /api/trips` (REF-21), filtered to `visibility = PUBLIC` across all users, plus an optional `?q=` for case-insensitive title match. Reuse FB-07's search implementation approach once that lands rather than inventing a second pattern for the same thing.
+  - Returns the same `TripSummaryResponse` shape as `GET /api/trips` — no new DTO needed unless FB-20 (like count) lands first, in which case it's already on the shared shape.
+  - No new migration — filters on the existing `visibility` column.
+  - Requires Neel review (new endpoint).
+  - **Cross-reference:** Jira's SCRUM-71b covers this same endpoint (as `GET /api/discovery/trips`, a different path) — reconcile the path with whichever ships first rather than running both.
+- **Subtasks:** FB-19a, FB-19b, FB-19c, FB-19d
+
+---
+
+### FB-19a · Subtask · Backend discovery feed endpoint
+- **Parent:** FB-19
+- **Assignee:** Tanish
+- **Story Points:** — (inherits, ~3 of the 5)
+- **Description:**
+  ```
+  Add GET /api/trips/discover?page=&size=&sort=&q= returning a Page<TripSummaryResponse> of PUBLIC trips across all users (not just the requester's own), optionally filtered by case-insensitive title match on q. Still requires a valid JWT like every other endpoint — SecurityConfig denies by default — this is "discoverable by any logged-in user," not a public unauthenticated endpoint.
+  ```
+- **Acceptance Criteria:**
+  ```
+  Given trips owned by multiple users, some PRIVATE and some PUBLIC
+  When an authenticated user calls GET /api/trips/discover
+  Then only PUBLIC trips are returned, regardless of owner
+  And PRIVATE trips never appear, including the requester's own PRIVATE trips
+
+  Given a q query param
+  When GET /api/trips/discover?q=paris is called
+  Then only PUBLIC trips whose title contains "paris" (case-insensitive) are returned
+
+  And the response uses the same paged shape as GET /api/trips
+  ```
+
+---
+
+### FB-19b · Subtask · Frontend discovery feed page
+- **Parent:** FB-19
+- **Assignee:** Neel
+- **Story Points:** — (inherits, ~2 of the 5)
+- **Description:**
+  ```
+  New "Discover" tab/page listing PUBLIC trips from the feed endpoint, with a search box wired to the ?q= param. Tapping a trip opens the existing trip-view page (already handles the PUBLIC non-owner read path).
+  ```
+- **Acceptance Criteria:**
+  ```
+  Given the Discover page
+  When it loads
+  Then it shows a paginated list of PUBLIC trips from other users
+  And typing in the search box filters the list by title
+  ```
+
+---
+
+### FB-19c · Subtask · Expose creator info on trip responses
+- **Parent:** FB-19
+- **Assignee:** Tanish
+- **Story Points:** — (inherits, ~1 additional)
+- **Description:**
+  ```
+  Gap found during the social-features traceability audit (docs/social-features-traceability-audit.md): neither TripSummaryResponse nor TripResponse exposes anything about the trip's owner beyond ownerId: Long. A discovery feed showing "creator information" needs at least a display name. Add ownerUsername (reusing the existing User.username — no new field on User needed) to both DTOs, additive/non-breaking.
+  ```
+- **Acceptance Criteria:**
+  ```
+  Given a trip owned by a user with username "alex"
+  When GET /api/trips/discover or GET /api/trips/{id} is called
+  Then the response includes ownerUsername: "alex"
+  And existing consumers of these DTOs are unaffected (additive field only)
+  ```
+
+---
+
+### FB-19d · Subtask · Trip ratings (star rating, trip-level)
+- **Parent:** FB-19
+- **Assignee:** Tanish
+- **Story Points:** — (inherits, ~2 additional)
+- **Description:**
+  ```
+  Gap found during the social-features traceability audit: SCRUM-72b's per-stop "review field" is a single owner-editable text note per stop, not a rating, and not per-trip. Add a separate trip-level numeric rating (1-5) that other users can leave on a PUBLIC trip, plus an average + count on the trip response, following the same join-table pattern as trip_likes (FB-20a) so a user can't rate the same trip repeatedly.
+  ```
+- **Technical Notes:** New migration: `trip_ratings(user_id, trip_id, rating SMALLINT, created_at)`, PK `(user_id, trip_id)`. Compute `average_rating`/`rating_count` via aggregate query rather than a hand-maintained denormalized column, same reasoning as FB-20's like_count.
+- **Acceptance Criteria:**
+  ```
+  Given a PUBLIC trip
+  When a user submits a rating 1-5
+  Then their rating is recorded (one rating per user per trip; re-rating updates, doesn't duplicate)
+  And the trip response includes averageRating and ratingCount
+
+  Given a PRIVATE trip
+  When a non-owner attempts to rate it
+  Then the response is 404 (matching the existence-hiding convention used for like/clone)
+  ```
+
+---
+
+### FB-20 · Story · Community: like a public trip — parent
+- **Epic:** SCRUM-9 (SOCIAL)
+- **Assignee:** — (parent, subtasks own the work)
+- **Priority:** Medium
+- **Story Points:** 3
+- **Labels:** feature, social, api-contract-change, database
+- **Components:** api, frontend, database
+- **Description:**
+  ```
+  Moved up from SCRUM-74c. Let a user like a PUBLIC trip; the count is visible to anyone who can see the trip. A denormalized counter alone isn't enough — without a per-user record of who's liked what, the same user could like the same trip repeatedly by replaying the request. Track individual likes in a join table with a uniqueness constraint, and derive the count from it.
+  ```
+- **Business Value:** Baseline social-proof mechanic for the discovery feed (FB-19) — a feed with no engagement signal is just a second trip list.
+- **Technical Notes:**
+  - New Flyway migration: `trip_likes` table — `id`, `trip_id` (FK), `user_id` (FK), `created_at`, unique constraint on `(trip_id, user_id)` so a repeat like is a no-op, not a duplicate row.
+  - `POST /api/trips/{id}/like` (idempotent — liking an already-liked trip just returns current state, doesn't error) / `DELETE /api/trips/{id}/like` (unlike). Only allowed on `PUBLIC` trips — `403` on `PRIVATE`.
+  - Add `likeCount` to `TripSummaryResponse` and the full trip response (additive, non-breaking). Compute via `COUNT(*)` on `trip_likes` — don't hand-maintain a separate denormalized counter column; at this scale a count query is simpler and can't drift out of sync with the join table.
+  - Serialize-point: new migration file. DTO change → Neel review required.
+  - **Cross-reference:** Jira's SCRUM-71c covers this same scope and deliberately returns `404` (not `403`) on a private-trip like attempt, to avoid leaking existence — reconcile which status code ships rather than running both conventions.
+- **Subtasks:** FB-20a, FB-20b
+
+---
+
+### FB-20a · Subtask · Backend like/unlike endpoints + trip_likes migration
+- **Parent:** FB-20
+- **Assignee:** Tanish
+- **Story Points:** — (inherits, ~2 of the 5)
+- **Description:**
+  ```
+  Add the trip_likes migration, POST/DELETE /api/trips/{id}/like, and likeCount on TripSummaryResponse/TripResponse computed from trip_likes. Reject (403) liking/unliking a PRIVATE trip.
+  ```
+- **Acceptance Criteria:**
+  ```
+  Given a PUBLIC trip with no likes from the requester
+  When POST /api/trips/{id}/like is called
+  Then a trip_likes row is created and likeCount increments by 1
+  Given the same trip is liked again by the same user
+  When POST /api/trips/{id}/like is called again
+  Then no duplicate row is created and likeCount is unchanged
+
+  Given a liked trip
+  When DELETE /api/trips/{id}/like is called
+  Then the trip_likes row is removed and likeCount decrements by 1
+
+  Given a PRIVATE trip
+  When a non-owner calls POST /api/trips/{id}/like
+  Then the response is 403
+  ```
+
+---
+
+### FB-20b · Subtask · Frontend like button
+- **Parent:** FB-20
+- **Assignee:** Neel
+- **Story Points:** — (inherits, ~1 of the 5)
+- **Description:**
+  ```
+  Add a like button + count on the trip-view page and discovery feed cards (FB-19b). Toggles between POST/DELETE based on current state.
+  ```
+- **Acceptance Criteria:**
+  ```
+  Given a PUBLIC trip the user hasn't liked
+  When they tap the like button
+  Then the count increments immediately and the button reflects the liked state
+  And tapping again unlikes and decrements
+  ```
+
+---
+
+### FB-21 · Story · Community: clone a public trip — parent
+- **Epic:** SCRUM-9 (SOCIAL)
+- **Assignee:** — (parent, subtasks own the work)
+- **Priority:** Medium
+- **Story Points:** 3
+- **Labels:** feature, social, api-contract-change
+- **Components:** api, frontend
+- **Description:**
+  ```
+  Moved up from SCRUM-74c. Let a user copy a PUBLIC trip (metadata + stops) into their own account as a new, independent trip they can then edit freely.
+  ```
+- **Business Value:** Turns discovery (FB-19) into actual reuse — browsing someone else's itinerary is much more useful if you can start your own trip from it instead of only reading it.
+- **Technical Notes:**
+  - `POST /api/trips/{id}/clone` — only allowed on `PUBLIC` trips (403 on `PRIVATE`, same as like). Deep-copies title/description/tags/stops (with fresh `Place` associations reused via the existing `resolvePlace` dedup path — no need to duplicate `Place` rows) into a brand-new `Trip` owned by the requester.
+  - Cloned trip is always created `PRIVATE` regardless of the source's visibility — the cloner didn't opt into publishing their copy, so default to private and let them toggle it themselves via the existing visibility flow.
+  - Explicitly out of scope for this pass: cloning stop photos (StopPhoto rows) — the copy starts with no photos, same as any newly created trip. Note this in the PR description so it isn't mistaken for a bug when a clone's stops show no photo gallery.
+  - Serialize-point: none beyond the usual DTO/endpoint review. No migration needed.
+  - **Cross-reference:** Jira's SCRUM-71d already specs this (also 404-not-403 on a private source, and renames the clone's title to `"Copy of {title}"` — this draft doesn't). Reconcile before implementing either.
+- **Subtasks:** FB-21a, FB-21b
+
+---
+
+### FB-21a · Subtask · Backend clone endpoint
+- **Parent:** FB-21
+- **Assignee:** Tanish
+- **Story Points:** — (inherits, ~2 of the 5)
+- **Description:**
+  ```
+  Add POST /api/trips/{id}/clone. Deep-copy title/description/tags/stops into a new Trip owned by the requester, visibility forced to PRIVATE, status reset to DRAFT, no photos carried over. 403 on PRIVATE source trips (unless requester is already the owner, in which case cloning your own trip is allowed but pointless enough not to special-case away).
+  ```
+- **Acceptance Criteria:**
+  ```
+  Given a PUBLIC trip with 3 stops
+  When a different user calls POST /api/trips/{id}/clone
+  Then a new trip is created, owned by the requester, with the same title/description/tags/stops
+  And the new trip's visibility is PRIVATE regardless of the source's visibility
+  And the new trip has no stop photos even if the source trip's stops did
+
+  Given a PRIVATE trip
+  When a non-owner calls POST /api/trips/{id}/clone
+  Then the response is 403
+  ```
+
+---
+
+### FB-21b · Subtask · Frontend clone button
+- **Parent:** FB-21
+- **Assignee:** Neel
+- **Story Points:** — (inherits, ~1 of the 5)
+- **Description:**
+  ```
+  Add a "Clone this trip" button on the trip-view page when viewing a PUBLIC trip you don't own. On success, navigate to the new trip's edit page so the user can immediately customize their copy.
+  ```
+- **Acceptance Criteria:**
+  ```
+  Given a PUBLIC trip owned by someone else
+  When the user taps "Clone this trip"
+  Then a new trip is created in their account and they're navigated to its edit page
+  ```
+
+---
+
+### FB-24 · Story · Save/bookmark a trip
+- **Epic:** SCRUM-9 (SOCIAL)
+- **Assignee:** Tanish (backend) + Neel (frontend)
+- **Priority:** Low
+- **Story Points:** 3
+- **Labels:** feature, social, database
+- **Components:** api, frontend, database
+- **Description:**
+  ```
+  Gap found during the social-features traceability audit: distinct from "like" (a public signal) and "clone" (a full copy) — a private list of trips the user wants to revisit, reusing the exact trip_likes migration/endpoint pattern (FB-20a) with a saved_trips table instead.
+  ```
+- **Business Value:** Cheap to add right alongside FB-20 given the identical shape — rounds out the feed's engagement actions (like, save, clone) as a set.
+- **Acceptance Criteria:**
+  ```
+  Given a PUBLIC trip
+  When a user saves it
+  Then it appears in that user's "Saved trips" list
+  And saving twice is idempotent (no duplicate rows)
+  ```
+- **Dependencies:** FB-20a (reuses its pattern)
+
+---
+
+### FB-25 · Story · Foreground stop-arrival detection (Trip Tracking MVP)
+- **Epic:** SCRUM-6 (TRIP)
+- **Assignee:** Neel (frontend) + Tanish (backend, minimal)
+- **Priority:** Medium
+- **Story Points:** 5
+- **Labels:** feature, location, frontend
+- **Components:** frontend
+- **Description:**
+  ```
+  Gap found during the social-features traceability audit — "Trip Tracking" as proposed (auto-detect arrival, mark stops visited, prompt for review/photo) has zero coverage anywhere. The manual half already exists (Stop.status + edit-stop-form, shipped via SCRUM-250). This ticket covers the automatic half, scoped to foreground-only: while the trip-view page is open, watch device location (web Geolocation API — no native plugin/shell required) and compare against each unvisited stop's lat/lng. Within a configurable radius (e.g. 100m), prompt the user to confirm arrival and mark the stop VISITED via the existing PUT /api/trips/{tripId}/stops/{stopId} endpoint — no backend change needed for the mark-visited part itself.
+  ```
+- **Business Value:** The realistic version of "Trip Tracking" that fits the current architecture — true background/push tracking (FB-26 below) is blocked on a native shell that doesn't exist yet.
+- **Technical Notes:** No migration needed. Explicitly foreground-only — no background detection, no push notification (see FB-26). Reuses the existing stop-status update flow entirely; this is a frontend-only ticket plus, optionally, a small backend addition for FB-06's completion percentage to react to the newly-visited stop.
+- **Acceptance Criteria:**
+  ```
+  Given the trip-view page is open and the user grants location permission
+  When the device's location comes within the configured radius of an unvisited stop
+  Then the user is prompted to confirm arrival
+  And confirming marks the stop VISITED via the existing update-stop flow
+
+  Given location permission is denied
+  Then the trip view still functions normally, with no tracking and no error state
+  ```
+- **Dependencies:** none (does not require FB-14/native build)
+
+---
+
+### FB-26 · Task · Push notification for stop arrival (stretch, blocked on FB-14)
+- **Epic:** SCRUM-10 (DEVOPS)
+- **Assignee:** — (unassigned, stretch)
+- **Priority:** Low
+- **Story Points:** 5
+- **Labels:** stretch-goal, mobile, notifications
+- **Components:** frontend, devops
+- **Description:**
+  ```
+  True background arrival detection + push notification, as opposed to FB-25's foreground-only MVP. Hard dependency: requires a native shell (Capacitor), which FB-14 is only a build spike for, not a finished deliverable — without it, iOS PWA background geolocation/push is unreliable-to-unsupported. Do not schedule this until FB-14 concludes with a working native build.
+  ```
+- **Dependencies:** FB-14 (native Capacitor build spike) must land successfully first
+
+---
+
 ## SECTION 3 — Summary table
 
 | ID | Summary | Owner | SP | Priority | Depends on |
@@ -690,7 +992,7 @@ If any of the above is inaccurate at ticket-creation time, verify via `getVisibl
 | FB-05 | PDF itinerary export parent | — | 5 | Medium | — |
 | FB-05a | Backend PDF endpoint | Tanish | — | — | — |
 | FB-05b | Frontend PDF button | Neel | — | — | FB-05a |
-| FB-06 | Progress tracking (stops visited) | Tanish + Neel | 5 | Medium | — |
+| FB-06 | Trip completion percentage | Tanish + Neel | 2 | Medium | — |
 | FB-07 | Search/filter on trip list | Neel + Tanish | 3 | Medium | REF-21 / SCRUM-110 |
 | FB-08 | Gemini prompt engineering pass | Tanish | 3 | Medium | — |
 | FB-09 | Notification system (email) | Pratham/Tanish | 5 | Medium | — |
@@ -707,8 +1009,26 @@ If any of the above is inaccurate at ticket-creation time, verify via `getVisibl
 | FB-16b | Frontend silent-refresh interceptor | Neel | — | — | FB-16a |
 | FB-17 | Gemini-driven itinerary scheduling (day/time/reasoning + meals) | Tanish | 5 | Medium | SCRUM-244, FB-08 |
 | FB-18 | Frontend alternative-suggestion popups | Neel | 3 | Low | FB-17 |
+| FB-19 | Community: discovery feed + title search | — | 5 | High | — |
+| FB-19a | Backend discovery feed endpoint | Tanish | — | — | — |
+| FB-19b | Frontend discovery feed page | Neel | — | — | FB-19a |
+| FB-19c | Expose creator info on trip responses | Tanish | — | — | — |
+| FB-19d | Trip ratings (star rating, trip-level) | Tanish | — | — | FB-20a (soft) |
+| FB-20 | Community: like a public trip | — | 3 | Medium | — |
+| FB-20a | Backend like/unlike + trip_likes migration | Tanish | — | — | — |
+| FB-20b | Frontend like button | Neel | — | — | FB-20a |
+| FB-21 | Community: clone a public trip | — | 3 | Medium | — |
+| FB-21a | Backend clone endpoint | Tanish | — | — | — |
+| FB-21b | Frontend clone button | Neel | — | — | FB-21a |
+| FB-24 | Save/bookmark a trip | Tanish + Neel | 3 | Low | FB-20a |
+| FB-25 | Foreground stop-arrival detection (Trip Tracking MVP) | Neel + Tanish | 5 | Medium | — |
+| FB-26 | Push notification for stop arrival (stretch) | — | 5 | Low | FB-14 |
 
-**Total SP (excluding subtasks):** ~67
+**Total SP (excluding subtasks):** ~93
+
+**Note (2026-07-30):** FB-19/20/21 were briefly removed and then restored — see the correction note in Section 2 above. FB-19c/19d, FB-24, FB-25, and FB-26 are new items added after the social-features traceability audit (`docs/social-features-traceability-audit.md`) surfaced genuine gaps (creator info, ratings, save/bookmark, and the entirely-missing Trip Tracking feature) beyond what FB-19/20/21 already covered.
+
+**Note (2026-07-30):** SDP finalization and AJF module log finalization are due within the next two weeks — this semester's/MVP's current sprint, before this fall-break plan's Aug 17–Jan window even starts — so they don't belong in this document at all. Not tracked here or in the winter plan; handle as immediate, current-sprint Jira work instead.
 
 **Note (2026-07-27):** SCRUM-244 (+ SCRUM-244a/b) — the day/time scheduling foundation FB-17 depends on — is not part of this fall-break backlog; it's a real Jira ticket already being worked this sprint, created after discovering FB-04/SCRUM-175 assumed scheduling data that didn't exist. See the FB-04 entry above for the full story.
 
@@ -720,11 +1040,13 @@ If any of the above is inaccurate at ticket-creation time, verify via `getVisibl
 
 **Phase 2 — Sept:** FB-03 (Pratham, after Phase 1). FB-04 + FB-04a/b (Tanish+Neel). FB-10 (Neel).
 
-**Phase 3 — Oct:** FB-05 + FB-05a/b. FB-06 (needs migration coordination — best done when at least 2 team members are available for the same week).
+**Phase 3 — Oct:** FB-05 + FB-05a/b. FB-06 (no migration needed anymore — small, can slot in anytime capacity allows, e.g. paired with the discovery feed once SCRUM-71/72 land so the completion percentage has feed context).
 
-**Phase 4 — Nov/Dec:** FB-09, FB-12, FB-13, FB-14 as capacity allows. FB-07 anytime after REF-21 lands. FB-17 (needs SCRUM-244 already landed) + FB-18 as capacity allows, ideally paired with or right after FB-08.
+**Phase 4 — Nov/Dec:** FB-09, FB-12, FB-13, FB-14 as capacity allows. FB-07 anytime after REF-21 lands. FB-17 (needs SCRUM-244 already landed) + FB-18 as capacity allows, ideally paired with or right after FB-08. FB-19 (discovery feed) once FB-07's search pattern exists to mirror — otherwise anytime capacity allows; FB-19c/FB-19d alongside or right after. FB-20/FB-21 (like/clone) after FB-19, same phase if capacity allows; FB-24 (save) alongside FB-20. FB-25 (foreground tracking MVP) anytime, no dependency. FB-26 (push notification stretch) only after FB-14 actually lands a working native build — don't start it before then.
 
-**Left for winter term:** community/discovery feed integration, final regression pass, production hardening, deployment automation, SDP finalization, all documentation deliverables, presentation prep. That's still a substantial semester — the break work de-risks it, doesn't gut it.
+**Not in this plan — tracked elsewhere:** SDP finalization and AJF module log finalization are due within the next two weeks, before this fall-break window even starts — current-sprint Jira work, not in either planning doc.
+
+**Left for winter term:** final regression pass, production hardening, deployment automation, presentation prep. See `docs/TripFlow_Winter_Plan.md` for the detailed breakdown.
 
 ---
 
@@ -733,7 +1055,7 @@ If any of the above is inaccurate at ticket-creation time, verify via `getVisibl
 When Tanish provides this file to create tickets:
 
 1. Verify epic keys in section 1 still exist and are accurate — run `searchJiraIssuesUsingJql` with `issuetype = Epic AND project = SCRUM`.
-2. Create parent stories/tasks first (FB-01, FB-02, FB-03, FB-04, FB-05, FB-06, FB-07, FB-08, FB-09, FB-10, FB-11, FB-12, FB-13, FB-14).
+2. Create parent stories/tasks first (FB-01, FB-02, FB-03, FB-04, FB-05, FB-06, FB-07, FB-08, FB-09, FB-10, FB-11, FB-12, FB-13, FB-14, FB-19, FB-20, FB-21, FB-24, FB-25, FB-26). For FB-19/20/21 specifically, check whether SCRUM-71/72 (and their subtasks SCRUM-71b/71c/71d/72b) still exist and are unstarted first — reconcile into those existing tickets rather than creating new duplicate ones if so.
 3. Create subtasks after parents exist, using the parent's newly-created SCRUM key.
 4. Use `contentFormat: markdown` on the description field.
 5. Do NOT set `customfield_10020` (sprint) — leave in backlog.
