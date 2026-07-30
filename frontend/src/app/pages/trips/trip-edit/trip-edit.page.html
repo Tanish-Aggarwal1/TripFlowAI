@@ -1,7 +1,9 @@
 <ion-header>
   <ion-toolbar color="primary">
     <ion-buttons slot="start">
-      <ion-back-button defaultHref="/dashboard" (click)="onBackButtonClick($event)"></ion-back-button>
+      <ion-button (click)="confirmBack()">
+        <ion-icon slot="icon-only" name="arrow-back"></ion-icon>
+      </ion-button>
     </ion-buttons>
     <ion-title>{{ isEditMode ? 'Edit Trip' : 'New Trip' }}</ion-title>
     <ion-buttons slot="end">
