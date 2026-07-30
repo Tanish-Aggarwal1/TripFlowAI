@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
-import { AlertController } from '@ionic/angular/standalone';
+import { AlertController, ToastController } from '@ionic/angular/standalone';
 import { of, throwError } from 'rxjs';
 import { DashboardPage } from './dashboard.page';
 import { TripService } from '../../../core/services/trip.service';
@@ -12,6 +12,7 @@ describe('DashboardPage', () => {
   let tripServiceSpy: jasmine.SpyObj<TripService>;
   let routerSpy: jasmine.SpyObj<Router>;
   let alertCtrlSpy: jasmine.SpyObj<AlertController>;
+  let toastCtrlSpy: jasmine.SpyObj<ToastController>;
 
   const summary: TripSummaryResponse = {
     id: 1,
@@ -28,6 +29,8 @@ describe('DashboardPage', () => {
     tripServiceSpy = jasmine.createSpyObj('TripService', ['listTrips', 'deleteTrip']);
     routerSpy = jasmine.createSpyObj('Router', ['navigate']);
     alertCtrlSpy = jasmine.createSpyObj('AlertController', ['create']);
+    toastCtrlSpy = jasmine.createSpyObj('ToastController', ['create']);
+    toastCtrlSpy.create.and.returnValue(Promise.resolve({ present: () => Promise.resolve() } as any));
 
     tripServiceSpy.listTrips.and.returnValue(
       of({
@@ -42,6 +45,7 @@ describe('DashboardPage', () => {
         { provide: TripService, useValue: tripServiceSpy },
         { provide: Router, useValue: routerSpy },
         { provide: AlertController, useValue: alertCtrlSpy },
+        { provide: ToastController, useValue: toastCtrlSpy },
       ],
     }).compileComponents();
 
@@ -139,7 +143,7 @@ describe('DashboardPage', () => {
       expect(component.trips).toEqual([]);
     });
 
-    it('sets an error message when delete fails', async () => {
+    it('shows a toast and keeps the trip list intact when delete fails', async () => {
       component.trips = [summary];
       const invokeDeleteHandler = stubAlertWithDeleteHandler();
       tripServiceSpy.deleteTrip.and.returnValue(throwError(() => new Error('Trip not found.')));
@@ -148,7 +152,11 @@ describe('DashboardPage', () => {
       await component.confirmDelete(summary, event);
       invokeDeleteHandler();
 
-      expect(component.error).toBe('Trip not found.');
+      expect(toastCtrlSpy.create).toHaveBeenCalledWith(
+        jasmine.objectContaining({ message: 'Trip not found.', color: 'danger' }),
+      );
+      expect(component.trips).toEqual([summary]);
+      expect(component.error).toBeNull();
     });
   });
 });
