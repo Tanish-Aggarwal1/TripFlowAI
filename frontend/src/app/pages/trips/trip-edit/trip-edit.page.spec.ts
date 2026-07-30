@@ -193,19 +193,4 @@ describe('TripEditPage', () => {
     });
   });
 
-  describe('onBackButtonClick', () => {
-    beforeEach(() => configure(null));
-
-    it('prevents default back-button navigation and opens the confirm dialog', () => {
-      component.ngOnInit();
-      const presentSpy = jasmine.createSpy('present').and.returnValue(Promise.resolve());
-      alertCtrlSpy.create.and.returnValue(Promise.resolve({ present: presentSpy } as any));
-      const event = jasmine.createSpyObj<Event>('Event', ['preventDefault']);
-
-      component.onBackButtonClick(event);
-
-      expect(event.preventDefault).toHaveBeenCalled();
-      expect(alertCtrlSpy.create).toHaveBeenCalled();
-    });
-  });
 });

@@ -15,14 +15,13 @@ import {
   IonSelect,
   IonSelectOption,
   IonSpinner,
-  IonBackButton,
   IonButtons,
   IonIcon,
   AlertController,
   ToastController,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { save, map as mapIcon } from 'ionicons/icons';
+import { save, arrowBack, map as mapIcon } from 'ionicons/icons';
 import { TripService } from '../../../core/services/trip.service';
 import {
   TripResponse,
@@ -52,7 +51,6 @@ import { StopListComponent } from '../components/stop-list/stop-list.component';
     IonSelect,
     IonSelectOption,
     IonSpinner,
-    IonBackButton,
     IonButtons,
     IonIcon,
     StopListComponent,
@@ -82,7 +80,7 @@ export class TripEditPage implements OnInit {
   stops: CreateStopRequest[] = [];
 
   constructor() {
-    addIcons({ save, map: mapIcon });
+    addIcons({ save, arrowBack, map: mapIcon });
   }
 
   ngOnInit(): void {
@@ -187,14 +185,6 @@ export class TripEditPage implements OnInit {
   }
 
   // ── Unsaved changes guard ─────────────────────────────────────────────────
-  // ion-back-button navigates immediately on click by default (via the Ionic
-  // router-outlet's navigation stack) — prevent that so confirmBack()'s dialog
-  // is the only way back, same as before this used a plain ion-button.
-  onBackButtonClick(event: Event): void {
-    event.preventDefault();
-    this.confirmBack();
-  }
-
   async confirmBack(): Promise<void> {
     const alert = await this.alertCtrl.create({
       header: 'Discard changes?',
