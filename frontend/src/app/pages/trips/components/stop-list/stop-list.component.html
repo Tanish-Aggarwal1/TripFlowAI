@@ -1,5 +1,5 @@
 <ion-reorder-group (ionItemReorder)="handleReorder($event)" [disabled]="false">
-  @for (stop of stops; track stop.name; let i = $index) {
+  @for (stop of stops; track i; let i = $index) {
     <ion-item>
       <ion-reorder slot="start"></ion-reorder>
 
