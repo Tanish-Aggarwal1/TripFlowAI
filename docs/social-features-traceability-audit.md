@@ -3,7 +3,9 @@
 **Date:** 2026-07-30
 **Scope:** Three proposed features — **For You Feed**, **Clone Trip**, **Trip Tracking** — cross-referenced against the GitHub repo (`main@9ef3c20` + open PRs #169/#170/#171), the Jira board (`SCRUM` project), `docs/TripFlow_fall_Break_Plan.md`, `docs/TripFlow_Winter_Plan.md`, and the current MVP/epic roadmap.
 
-**Headline finding:** Two of the three proposed features are **already tracked in Jira**, in detail, assigned, and scheduled for the current semester — not missing, and not fall/winter material. **SCRUM-71** ("Public/private toggle + discovery feed endpoints," Pratham, subtasks SCRUM-71b/71c/71d) and **SCRUM-72** ("Photo upload & review UI per stop," Neel, subtask SCRUM-72b) sit under the `SCRUM-9` (SOCIAL) epic, labeled `week-12`, and are explicitly called out as the reason `SCRUM-215` (a completed architecture audit) restructured `TripService` ahead of time. This session's own earlier work (`docs/TripFlow_fall_Break_Plan.md`'s FB-19/20/21) duplicated that scope without finding it first — corrected as part of this audit; see the "Documentation Updates Applied" section at the end.
+**Headline finding:** Two of the three proposed features are **already tracked in Jira** — not missing. **SCRUM-71** ("Public/private toggle + discovery feed endpoints," Pratham, subtasks SCRUM-71b/71c/71d) and **SCRUM-72** ("Photo upload & review UI per stop," Neel, subtask SCRUM-72b) sit under the `SCRUM-9` (SOCIAL) epic, fully specced with acceptance criteria, To Do. `docs/TripFlow_fall_Break_Plan.md` already independently drafted the same scope as FB-19/20/21 — this session briefly (and incorrectly) treated that as a duplicate to remove, on the theory that the tickets' `week-12` label meant "current semester, not fall break." Confirmed with Tanish: all fall-break items are correctly fall-scoped, including these — this semester's feature work is done as of the Aug 6 presentation, and this whole area (SCRUM-71/72 included) rolls into fall/winter. FB-19/20/21 are restored, unchanged in original scope, in the fall plan. The one thing worth keeping from that detour: SCRUM-71/72 already exist as real Jira tickets covering nearly this scope, so when FB-19/20/21 get created for real, they should extend those existing tickets rather than open new duplicate ones (Section 2 of the fall plan now says this explicitly).
+
+**Third feature (Trip Tracking) is genuinely missing** — see the matrix below. All newly-identified gaps across all three features (search on the feed, creator info, ratings, save/bookmark, and Trip Tracking's foreground MVP + blocked push-notification stretch) have been added directly to the fall plan as FB-19c, FB-19d, FB-24, FB-25, and FB-26 — see "Documentation Updates Applied" at the end.
 
 ---
 
@@ -11,8 +13,8 @@
 
 | Proposed Feature | GitHub Status | Jira Status | Fall Plan Status | Winter Plan Status | Overall Recommendation |
 |---|---|---|---|---|---|
-| **For You Feed** | Not implemented. No discovery/feed page in `frontend/src/app/pages`; no `GET /api/discovery/**` or `GET /api/trips/discover` in `TripController`; `TripSummaryResponse.coverPhotoUrl` exists as a stub field (always `null`); `Trip.tags` exists and is reusable. No creator-name exposure, no rating field, no save/bookmark, no comment, no share. | **Partially covered.** SCRUM-71 (feed) + SCRUM-71c (like) + SCRUM-72/72b (photo gallery + per-stop review + feed thumbnails) already scoped with full acceptance criteria, To Do, `week-12`. Search (`?q=`), creator info, numeric ratings, save/bookmark, share, and comments are **not** in any existing ticket's AC. | Previously duplicated as FB-19/FB-20 (see corrections below) — now removed. | Not mentioned. | Treat SCRUM-71/72 as the source of truth; do not re-plan them. File the genuinely missing pieces (search, creator info, ratings, save, share) as new tickets — see Section 4. |
-| **Clone Trip** | Not implemented. No `POST /api/trips/{id}/clone`, no clone button anywhere in `trip-view`. | **Covered.** SCRUM-71d (subtask of SCRUM-71) fully specs deep-copy semantics, ownership, visibility reset, and the `"Copy of {title}"` rename, with explicit ACs. To Do, `week-12`, Pratham. | Previously duplicated as FB-21 with conflicting details — now removed. | Not mentioned. | Treat SCRUM-71d as authoritative. No new ticket needed — it's essentially fully specced already. |
+| **For You Feed** | Not implemented. No discovery/feed page in `frontend/src/app/pages`; no `GET /api/discovery/**` or `GET /api/trips/discover` in `TripController`; `TripSummaryResponse.coverPhotoUrl` exists as a stub field (always `null`); `Trip.tags` exists and is reusable. No creator-name exposure, no rating field, no save/bookmark, no comment, no share. | **Covered as backlog.** SCRUM-71 (feed) + SCRUM-71c (like) + SCRUM-72/72b (photo gallery + per-stop review + feed thumbnails) already scoped with full acceptance criteria, To Do. Search (`?q=`), creator info, numeric ratings, save/bookmark, share, and comments are **not** in any existing ticket's AC. | **Covered.** FB-19 (discovery feed + search), FB-20 (like) — same scope as SCRUM-71/71b/71c, drafted independently. Reconcile the two rather than building both. | Not mentioned (correctly — this is fall scope). | Fall-break work. When creating tickets, extend SCRUM-71/72 rather than opening duplicates. Newly-found gaps (search, creator info, ratings, save) added to the fall plan as FB-19c/19d/24 — see Section 4. |
+| **Clone Trip** | Not implemented. No `POST /api/trips/{id}/clone`, no clone button anywhere in `trip-view`. | **Covered as backlog.** SCRUM-71d (subtask of SCRUM-71) fully specs deep-copy semantics, ownership, visibility reset, and the `"Copy of {title}"` rename, with explicit ACs. To Do. | **Covered.** FB-21 — same scope as SCRUM-71d, with a couple of differing details (see Section 3). | Not mentioned (correctly). | Fall-break work. Reconcile FB-21 with SCRUM-71d before implementing (403-vs-404, title rename) rather than building two versions. |
 | **Trip Tracking** (auto arrival detection, auto mark-visited, prompt for review/photo/notes) | **Partially implemented.** Manual "mark visited" is fully shipped end-to-end: `Stop.status` (`PLANNED`/`VISITED`/`SKIPPED`) exists in the entity, migration, `CreateStopRequest`/`UpdateStopRequest`/`StopResponse`, `StopController`'s `PUT` endpoint, and the `edit-stop-form` UI component (SCRUM-250, merged 2026-07-30). Automatic GPS-based arrival detection: 0%. Completion percentage: 0% (no field computes it anywhere). Review/rating prompts on arrival: 0%. | **Not tracked anywhere.** No ticket for GPS/geolocation, arrival detection, completion percentage, or arrival-triggered prompts exists in the whole board (searched `geolocation`, `arriv*`, `completion`, `progress`, `visited`, `background`, `push notif*`). | FB-06 existed but was **stale** — it described adding a "new boolean field on Stop," not realizing the field already shipped via SCRUM-250. Corrected in this session (see below) and rescoped to just the completion-percentage piece. | Not mentioned. | The manual half already exists — nothing to build there. The automatic/GPS half is genuinely missing entirely and is the single largest new-infrastructure item across all three proposals (see Section 2). Recommend scoping down to a foreground-only MVP rather than true background tracking — see Section 5. |
 
 ---
@@ -55,7 +57,7 @@
 |---|---|---|
 | `docs/api-contracts.md` | Photo Upload section said "not yet implemented" months after SCRUM-152/153 shipped it. | **Fixed** in PR #170 (this session, earlier). |
 | `docs/api-contracts.md` | `POST /api/auth/register` example showed a `displayName` field; the real `RegisterRequest` DTO uses `username` (no `displayName` field exists anywhere in the `User` entity). | **Fixed** in this session — see corrections below. |
-| `docs/TripFlow_fall_Break_Plan.md` | FB-19/FB-20/FB-21 duplicated SCRUM-71/72's scope, with conflicting details (endpoint path `/api/trips/discover` vs. real `/api/discovery/trips`; `403` vs. the real `404`-to-avoid-existence-leak on private-trip like/clone attempts; no title rename on clone vs. the real `"Copy of {title}"`; no search in the AC). | **Fixed** in this session — FB-19/20/21 removed, replaced with a cross-reference note. |
+| `docs/TripFlow_fall_Break_Plan.md` | FB-19/FB-20/FB-21 (fall-scope, correctly) have a few conflicting details vs. the real SCRUM-71/72 specs: endpoint path `/api/trips/discover` vs. real `/api/discovery/trips`; `403` vs. the real `404`-to-avoid-existence-leak on private-trip like/clone attempts; no title rename on clone vs. the real `"Copy of {title}"`. | **Flagged, not reconciled** — cross-reference notes added at each FB-19/20/21 entry pointing at the real Jira spec; whoever implements should reconcile which convention ships. |
 | `docs/TripFlow_fall_Break_Plan.md` | FB-06 described adding "a new boolean field on Stop" as if it didn't exist — stale relative to SCRUM-250 (merged same day). | **Fixed** in this session — FB-06 rescoped to just the completion-percentage gap. |
 | `docs/ajf-module-b.md` | Doesn't exist. `docs/ajf-module-a.md` is a maintained per-sprint log; SCRUM-9/71/72 are explicitly labeled `ajf-module-b` / "Part of AJF Module B" in their Jira descriptions, with no equivalent doc. | **Not fixed** — flagged as a new work item (Section 4, item I) rather than authored blind; whoever owns Module B should write it. |
 | Jira `SCRUM-161` (SCRUM-71c) | Description names the migration file `V7__create_trip_likes.sql`. The repo is already at `V8__create_stop_photos.sql` (`backend/src/main/resources/db/migration/`) — `V7` is taken by `V7__stop_scheduling.sql`. The real filename at implementation time will be `V9__...`. | **Not fixed** — this is a Jira ticket, not a repo file; flagged for correction when SCRUM-71c is picked up (Section 4, item H). |
@@ -63,11 +65,11 @@
 
 ---
 
-## 4. New Jira Work Items (draft — no sprint assigned, per instructions)
+## 4. New Work Items
 
-These are additive to SCRUM-71/72, not replacements — SCRUM-71/72 already cover the bulk of "For You Feed" and all of "Clone Trip." Only genuinely missing pieces are drafted below.
+These are additive to FB-19/20/21 and SCRUM-71/72, not replacements — those already cover the bulk of "For You Feed" and all of "Clone Trip." Only genuinely missing pieces are covered here. Item A (search) was already in FB-19/FB-19a's original scope, so no new item was needed for it. Items B, C, D, F, and G have been added directly to `docs/TripFlow_fall_Break_Plan.md` as **FB-19c, FB-19d, FB-24, FB-25, and FB-26** respectively — reproduced below for reference/traceability, not as separate pending drafts. Items H, I, J are Jira-only corrections/additions and remain to action separately (not fall-plan items).
 
-### A. Subtask of SCRUM-71 — Search filter on discovery feed
+### A. Already in FB-19/FB-19a's scope — search filter on discovery feed
 - **Summary:** Add `?q=` case-insensitive title filter to `GET /api/discovery/trips`
 - **Epic:** SCRUM-9 (SOCIAL)
 - **Priority:** Medium
@@ -82,7 +84,7 @@ These are additive to SCRUM-71/72, not replacements — SCRUM-71/72 already cove
   ```
 - **Dependencies:** SCRUM-71b
 
-### B. Subtask of SCRUM-71 — Expose creator info on trip responses
+### B. Now FB-19c in the fall plan — Expose creator info on trip responses
 - **Summary:** Add owner username to TripSummaryResponse/TripResponse
 - **Epic:** SCRUM-9 (SOCIAL)
 - **Priority:** Medium
@@ -97,7 +99,7 @@ These are additive to SCRUM-71/72, not replacements — SCRUM-71/72 already cove
   ```
 - **Dependencies:** none
 
-### C. New Story under SCRUM-9 (SOCIAL) — Trip ratings
+### C. Now FB-19d in the fall plan — Trip ratings
 - **Summary:** Numeric trip rating (1-5 stars)
 - **Epic:** SCRUM-9 (SOCIAL)
 - **Priority:** Medium
@@ -118,7 +120,7 @@ These are additive to SCRUM-71/72, not replacements — SCRUM-71/72 already cove
   ```
 - **Dependencies:** SCRUM-71 (visibility enforcement pattern), soft dependency on SCRUM-72b landing first for UI consistency
 
-### D. New Story under SCRUM-9 (SOCIAL) — Save/bookmark a trip
+### D. Now FB-24 in the fall plan — Save/bookmark a trip
 - **Summary:** Save (bookmark) a public trip without cloning it
 - **Epic:** SCRUM-9 (SOCIAL)
 - **Priority:** Low
@@ -137,7 +139,7 @@ These are additive to SCRUM-71/72, not replacements — SCRUM-71/72 already cove
 ### E. FB-06 (fall plan) — already corrected in this session
 See Section 3 — no new ticket needed, existing fall-plan item rescoped in place.
 
-### F. New Story under SCRUM-6 (TRIP) — Foreground stop-arrival detection (MVP)
+### F. Now FB-25 in the fall plan — Foreground stop-arrival detection (MVP)
 - **Summary:** Detect arrival at a planned stop while the trip is open (foreground only)
 - **Epic:** SCRUM-6 (TRIP)
 - **Priority:** Medium
@@ -156,7 +158,7 @@ See Section 3 — no new ticket needed, existing fall-plan item rescoped in plac
   ```
 - **Dependencies:** none (does not require FB-14/native build)
 
-### G. New Task under SCRUM-10 (DEVOPS) — Push notification for stop arrival (stretch, blocked)
+### G. Now FB-26 in the fall plan — Push notification for stop arrival (stretch, blocked)
 - **Summary:** Push notification on stop arrival (background)
 - **Epic:** SCRUM-10 (DEVOPS)
 - **Priority:** Low
@@ -195,6 +197,6 @@ Deliberately **not** recommending: comments (proposal itself flagged as optional
 
 ## Documentation Updates Applied This Session
 
-- `docs/TripFlow_fall_Break_Plan.md`: removed FB-19/FB-20/FB-21 (duplicated SCRUM-71/72), replaced with a cross-reference note; rescoped FB-06 to the completion-percentage gap only (was stale — described work SCRUM-250 already shipped); updated the summary table, total SP (~78 → ~62), Phase 3/4 sequencing, "left for winter" note, and the ticket-creation instruction list accordingly.
+- `docs/TripFlow_fall_Break_Plan.md`: FB-19/FB-20/FB-21 confirmed correctly fall-scoped (briefly removed, then restored, with cross-reference notes to the real SCRUM-71/72 specs added at each). Rescoped FB-06 to the completion-percentage gap only — was stale, described work SCRUM-250 already shipped. Added FB-19c (creator info), FB-19d (ratings), FB-24 (save/bookmark), FB-25 (foreground stop-arrival MVP), and FB-26 (push notification stretch, blocked on FB-14) for the gaps this audit found. Updated the summary table, total SP (~62 → ~93), Section 2/3/4 sequencing notes, and the ticket-creation instruction list accordingly.
 - `docs/api-contracts.md`: fixed the register-endpoint example (`displayName` → `username`, matching the real `RegisterRequest` DTO).
 - This file (`docs/social-features-traceability-audit.md`) added as the audit record.
