@@ -355,16 +355,58 @@ Exceeding the limit returns `429 Too Many Requests` with the standard `ApiError`
 
 ---
 
-## Photo Upload — Cloudinary (SCRUM-66, planned)
+## Photo Upload — Cloudinary (SCRUM-152/153)
 
-*Not yet implemented. Endpoint contract will be added here once SCRUM-66 lands.*
+Direct-to-Cloudinary upload: the backend only issues a signature and persists the resulting URL — no binary ever passes through our backend.
 
-**Planned flow:**
-1. `POST /api/trips/{tripId}/stops/{stopId}/photos/upload-params` — backend issues Cloudinary signed upload parameters.
-2. Client uploads directly to Cloudinary using the signed params (no binary data passes through our backend).
-3. Client sends the resulting Cloudinary URL back via `POST /api/trips/{tripId}/stops/{stopId}/photos` to persist the reference.
+### POST /api/stops/{stopId}/photo-signature
+Owner-only. Issues Cloudinary signed upload parameters.
 
-**Prerequisite:** A `Photo` entity and Flyway migration (not yet created) to store the Cloudinary URL against a stop.
+**Success (200):**
+```json
+{
+  "cloudName": "string",
+  "apiKey": "string",
+  "timestamp": 0,
+  "signature": "string",
+  "uploadParams": {}
+}
+```
+**Errors:** 403 (not owner), 404 (stop not found)
+
+### POST /api/stops/{stopId}/photos
+Owner-only. Persists a photo reference after the client has uploaded directly to Cloudinary using the signature above.
+
+**Request:**
+```json
+{
+  "url": "string",
+  "cloudinaryPublicId": "string",
+  "caption": "string"
+}
+```
+**Success (201):**
+```json
+{
+  "id": 1,
+  "stopId": 1,
+  "url": "string",
+  "cloudinaryPublicId": "string",
+  "caption": "string",
+  "createdAt": "ISO-8601 datetime"
+}
+```
+**Errors:** 403 (not owner), 404 (stop not found), 400 (validation — `url` required)
+
+### GET /api/stops/{stopId}/photos
+Owner sees any stop's photos; non-owner only if the stop's parent trip is `PUBLIC`.
+**Success (200):** array of the photo object shape above.
+**Errors:** 403 (private trip, requester not owner), 404 (stop not found)
+
+### DELETE /api/stops/{stopId}/photos/{photoId}
+Owner-only.
+**Success (204):** no body.
+**Errors:** 403 (not owner), 404 (photo not found, or belongs to a different stop — same 404 either way so existence isn't leaked)
 
 ---
 
