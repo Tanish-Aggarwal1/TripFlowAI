@@ -1,0 +1,44 @@
+<div class="edit-stop-form">
+  <h3>Edit stop</h3>
+
+  <ion-item>
+    <ion-label position="stacked">Name</ion-label>
+    <ion-input [(ngModel)]="name" placeholder="Stop name"></ion-input>
+  </ion-item>
+
+  <ion-item>
+    <ion-label position="stacked">Address</ion-label>
+    <ion-input [(ngModel)]="address" placeholder="Optional"></ion-input>
+  </ion-item>
+
+  <ion-item>
+    <ion-label position="stacked">Notes</ion-label>
+    <ion-textarea [(ngModel)]="notes" placeholder="Optional" autoGrow="true"></ion-textarea>
+  </ion-item>
+
+  <ion-item>
+    <ion-label position="stacked">Status</ion-label>
+    <ion-select [(ngModel)]="status" interface="popover">
+      <ion-select-option value="PLANNED">Planned</ion-select-option>
+      <ion-select-option value="VISITED">Visited</ion-select-option>
+      <ion-select-option value="SKIPPED">Skipped</ion-select-option>
+    </ion-select>
+  </ion-item>
+
+  @if (formError) {
+    <p class="form-error">{{ formError }}</p>
+  }
+
+  <div class="actions">
+    <ion-button fill="clear" (click)="cancel()" [disabled]="submitting">Cancel</ion-button>
+    <ion-button (click)="submit()" [disabled]="submitting">
+      @if (submitting) {
+        <ion-spinner name="dots" slot="start"></ion-spinner>
+        Saving...
+      } @else {
+        <ion-icon name="checkmark" slot="start"></ion-icon>
+        Save
+      }
+    </ion-button>
+  </div>
+</div>

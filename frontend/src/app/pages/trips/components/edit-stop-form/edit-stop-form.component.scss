@@ -1,0 +1,23 @@
+.edit-stop-form {
+  padding: 12px 4px;
+
+  h3 {
+    font-size: 15px;
+    font-weight: 600;
+    margin: 0 0 8px 4px;
+    color: var(--ion-color-dark);
+  }
+}
+
+.form-error {
+  color: var(--ion-color-danger);
+  font-size: 13px;
+  margin: 6px 0 0 4px;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}

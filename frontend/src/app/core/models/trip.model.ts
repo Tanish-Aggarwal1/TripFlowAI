@@ -21,6 +21,16 @@ export interface CreateStopRequest {
   notes?: string;
 }
 
+export interface UpdateStopRequest {
+  name: string;
+  latitude: number;
+  longitude: number;
+  address?: string;
+  externalPlaceId?: string;
+  notes?: string;
+  status?: StopStatus; // omit to leave unchanged
+}
+
 export interface StopResponse {
   id: number;
   name: string;
