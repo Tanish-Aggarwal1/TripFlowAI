@@ -677,6 +677,197 @@ If any of the above is inaccurate at ticket-creation time, verify via `getVisibl
 
 ---
 
+### FB-19 · Story · Community: public trip discovery feed (+ title search) — parent
+- **Epic:** SCRUM-9 (SOCIAL)
+- **Assignee:** — (parent, subtasks own the work)
+- **Priority:** High
+- **Story Points:** 5
+- **Labels:** feature, social, api-contract-change, needs-frontend-coordination
+- **Components:** api, frontend
+- **Description:**
+  ```
+  Moved up from SCRUM-74c (originally slated for winter) — regression testing during SCRUM-74 found the backend has no way to browse PUBLIC trips other than your own: GET /api/trips only ever returns the authenticated user's own trips. Add a discovery feed endpoint that lists other users' PUBLIC trips, and fold SCRUM-74c's "search by title, case-insensitively" scenario into the same endpoint as a query param rather than a separate ticket.
+  ```
+- **Business Value:** SCRUM-9 (SOCIAL) has existed as a reserved epic with nothing built against it — this is the foundational piece the rest of the community feature set (like, clone) needs something to operate on. Also the item SCRUM-74c's checklist couldn't test because it didn't exist yet.
+- **Technical Notes:**
+  - New `GET /api/trips/discover` — reuses the exact `Pageable`/paged-response convention from `GET /api/trips` (REF-21), filtered to `visibility = PUBLIC` across all users, plus an optional `?q=` for case-insensitive title match. Reuse FB-07's search implementation approach once that lands rather than inventing a second pattern for the same thing.
+  - Returns the same `TripSummaryResponse` shape as `GET /api/trips` — no new DTO needed unless FB-20 (like count) lands first, in which case it's already on the shared shape.
+  - No new migration — filters on the existing `visibility` column.
+  - Requires Neel review (new endpoint).
+- **Subtasks:** FB-19a, FB-19b
+
+---
+
+### FB-19a · Subtask · Backend discovery feed endpoint
+- **Parent:** FB-19
+- **Assignee:** Tanish
+- **Story Points:** — (inherits, ~3 of the 5)
+- **Description:**
+  ```
+  Add GET /api/trips/discover?page=&size=&sort=&q= returning a Page<TripSummaryResponse> of PUBLIC trips across all users (not just the requester's own), optionally filtered by case-insensitive title match on q. Still requires a valid JWT like every other endpoint — SecurityConfig denies by default — this is "discoverable by any logged-in user," not a public unauthenticated endpoint.
+  ```
+- **Acceptance Criteria:**
+  ```
+  Given trips owned by multiple users, some PRIVATE and some PUBLIC
+  When an authenticated user calls GET /api/trips/discover
+  Then only PUBLIC trips are returned, regardless of owner
+  And PRIVATE trips never appear, including the requester's own PRIVATE trips
+
+  Given a q query param
+  When GET /api/trips/discover?q=paris is called
+  Then only PUBLIC trips whose title contains "paris" (case-insensitive) are returned
+
+  And the response uses the same paged shape as GET /api/trips
+  ```
+
+---
+
+### FB-19b · Subtask · Frontend discovery feed page
+- **Parent:** FB-19
+- **Assignee:** Neel
+- **Story Points:** — (inherits, ~2 of the 5)
+- **Description:**
+  ```
+  New "Discover" tab/page listing PUBLIC trips from the feed endpoint, with a search box wired to the ?q= param. Tapping a trip opens the existing trip-view page (already handles the PUBLIC non-owner read path).
+  ```
+- **Acceptance Criteria:**
+  ```
+  Given the Discover page
+  When it loads
+  Then it shows a paginated list of PUBLIC trips from other users
+  And typing in the search box filters the list by title
+  ```
+
+---
+
+### FB-20 · Story · Community: like a public trip — parent
+- **Epic:** SCRUM-9 (SOCIAL)
+- **Assignee:** — (parent, subtasks own the work)
+- **Priority:** Medium
+- **Story Points:** 3
+- **Labels:** feature, social, api-contract-change, database
+- **Components:** api, frontend, database
+- **Description:**
+  ```
+  Moved up from SCRUM-74c. Let a user like a PUBLIC trip; the count is visible to anyone who can see the trip. A denormalized counter alone isn't enough — without a per-user record of who's liked what, the same user could like the same trip repeatedly by replaying the request. Track individual likes in a join table with a uniqueness constraint, and derive the count from it.
+  ```
+- **Business Value:** Baseline social-proof mechanic for the discovery feed (FB-19) — a feed with no engagement signal is just a second trip list.
+- **Technical Notes:**
+  - New Flyway migration: `trip_likes` table — `id`, `trip_id` (FK), `user_id` (FK), `created_at`, unique constraint on `(trip_id, user_id)` so a repeat like is a no-op, not a duplicate row.
+  - `POST /api/trips/{id}/like` (idempotent — liking an already-liked trip just returns current state, doesn't error) / `DELETE /api/trips/{id}/like` (unlike). Only allowed on `PUBLIC` trips — `403` on `PRIVATE`.
+  - Add `likeCount` to `TripSummaryResponse` and the full trip response (additive, non-breaking). Compute via `COUNT(*)` on `trip_likes` — don't hand-maintain a separate denormalized counter column; at this scale a count query is simpler and can't drift out of sync with the join table.
+  - Serialize-point: new migration file. DTO change → Neel review required.
+- **Subtasks:** FB-20a, FB-20b
+
+---
+
+### FB-20a · Subtask · Backend like/unlike endpoints + trip_likes migration
+- **Parent:** FB-20
+- **Assignee:** Tanish
+- **Story Points:** — (inherits, ~2 of the 5)
+- **Description:**
+  ```
+  Add the trip_likes migration, POST/DELETE /api/trips/{id}/like, and likeCount on TripSummaryResponse/TripResponse computed from trip_likes. Reject (403) liking/unliking a PRIVATE trip.
+  ```
+- **Acceptance Criteria:**
+  ```
+  Given a PUBLIC trip with no likes from the requester
+  When POST /api/trips/{id}/like is called
+  Then a trip_likes row is created and likeCount increments by 1
+  Given the same trip is liked again by the same user
+  When POST /api/trips/{id}/like is called again
+  Then no duplicate row is created and likeCount is unchanged
+
+  Given a liked trip
+  When DELETE /api/trips/{id}/like is called
+  Then the trip_likes row is removed and likeCount decrements by 1
+
+  Given a PRIVATE trip
+  When a non-owner calls POST /api/trips/{id}/like
+  Then the response is 403
+  ```
+
+---
+
+### FB-20b · Subtask · Frontend like button
+- **Parent:** FB-20
+- **Assignee:** Neel
+- **Story Points:** — (inherits, ~1 of the 5)
+- **Description:**
+  ```
+  Add a like button + count on the trip-view page and discovery feed cards (FB-19b). Toggles between POST/DELETE based on current state.
+  ```
+- **Acceptance Criteria:**
+  ```
+  Given a PUBLIC trip the user hasn't liked
+  When they tap the like button
+  Then the count increments immediately and the button reflects the liked state
+  And tapping again unlikes and decrements
+  ```
+
+---
+
+### FB-21 · Story · Community: clone a public trip — parent
+- **Epic:** SCRUM-9 (SOCIAL)
+- **Assignee:** — (parent, subtasks own the work)
+- **Priority:** Medium
+- **Story Points:** 3
+- **Labels:** feature, social, api-contract-change
+- **Components:** api, frontend
+- **Description:**
+  ```
+  Moved up from SCRUM-74c. Let a user copy a PUBLIC trip (metadata + stops) into their own account as a new, independent trip they can then edit freely.
+  ```
+- **Business Value:** Turns discovery (FB-19) into actual reuse — browsing someone else's itinerary is much more useful if you can start your own trip from it instead of only reading it.
+- **Technical Notes:**
+  - `POST /api/trips/{id}/clone` — only allowed on `PUBLIC` trips (403 on `PRIVATE`, same as like). Deep-copies title/description/tags/stops (with fresh `Place` associations reused via the existing `resolvePlace` dedup path — no need to duplicate `Place` rows) into a brand-new `Trip` owned by the requester.
+  - Cloned trip is always created `PRIVATE` regardless of the source's visibility — the cloner didn't opt into publishing their copy, so default to private and let them toggle it themselves via the existing visibility flow.
+  - Explicitly out of scope for this pass: cloning stop photos (StopPhoto rows) — the copy starts with no photos, same as any newly created trip. Note this in the PR description so it isn't mistaken for a bug when a clone's stops show no photo gallery.
+  - Serialize-point: none beyond the usual DTO/endpoint review. No migration needed.
+- **Subtasks:** FB-21a, FB-21b
+
+---
+
+### FB-21a · Subtask · Backend clone endpoint
+- **Parent:** FB-21
+- **Assignee:** Tanish
+- **Story Points:** — (inherits, ~2 of the 5)
+- **Description:**
+  ```
+  Add POST /api/trips/{id}/clone. Deep-copy title/description/tags/stops into a new Trip owned by the requester, visibility forced to PRIVATE, status reset to DRAFT, no photos carried over. 403 on PRIVATE source trips (unless requester is already the owner, in which case cloning your own trip is allowed but pointless enough not to special-case away).
+  ```
+- **Acceptance Criteria:**
+  ```
+  Given a PUBLIC trip with 3 stops
+  When a different user calls POST /api/trips/{id}/clone
+  Then a new trip is created, owned by the requester, with the same title/description/tags/stops
+  And the new trip's visibility is PRIVATE regardless of the source's visibility
+  And the new trip has no stop photos even if the source trip's stops did
+
+  Given a PRIVATE trip
+  When a non-owner calls POST /api/trips/{id}/clone
+  Then the response is 403
+  ```
+
+---
+
+### FB-21b · Subtask · Frontend clone button
+- **Parent:** FB-21
+- **Assignee:** Neel
+- **Story Points:** — (inherits, ~1 of the 5)
+- **Description:**
+  ```
+  Add a "Clone this trip" button on the trip-view page when viewing a PUBLIC trip you don't own. On success, navigate to the new trip's edit page so the user can immediately customize their copy.
+  ```
+- **Acceptance Criteria:**
+  ```
+  Given a PUBLIC trip owned by someone else
+  When the user taps "Clone this trip"
+  Then a new trip is created in their account and they're navigated to its edit page
+  ```
+
+---
+
 ## SECTION 3 — Summary table
 
 | ID | Summary | Owner | SP | Priority | Depends on |
@@ -707,8 +898,19 @@ If any of the above is inaccurate at ticket-creation time, verify via `getVisibl
 | FB-16b | Frontend silent-refresh interceptor | Neel | — | — | FB-16a |
 | FB-17 | Gemini-driven itinerary scheduling (day/time/reasoning + meals) | Tanish | 5 | Medium | SCRUM-244, FB-08 |
 | FB-18 | Frontend alternative-suggestion popups | Neel | 3 | Low | FB-17 |
+| FB-19 | Community: discovery feed + title search | — | 5 | High | — |
+| FB-19a | Backend discovery feed endpoint | Tanish | — | — | — |
+| FB-19b | Frontend discovery feed page | Neel | — | — | FB-19a |
+| FB-20 | Community: like a public trip | — | 3 | Medium | — |
+| FB-20a | Backend like/unlike + trip_likes migration | Tanish | — | — | — |
+| FB-20b | Frontend like button | Neel | — | — | FB-20a |
+| FB-21 | Community: clone a public trip | — | 3 | Medium | — |
+| FB-21a | Backend clone endpoint | Tanish | — | — | — |
+| FB-21b | Frontend clone button | Neel | — | — | FB-21a |
 
-**Total SP (excluding subtasks):** ~67
+**Total SP (excluding subtasks):** ~78
+
+**Note (2026-07-30):** FB-19/20/21 (community discovery feed, like, clone) were originally scoped for winter term but moved up into this fall-break backlog after SCRUM-74c's prod regression pass found the backend had none of these endpoints yet — see `docs/qa/prod-regression-photos-social.md`. Search-by-title (also in SCRUM-74c) is folded into FB-19's discovery endpoint rather than a standalone ticket.
 
 **Note (2026-07-27):** SCRUM-244 (+ SCRUM-244a/b) — the day/time scheduling foundation FB-17 depends on — is not part of this fall-break backlog; it's a real Jira ticket already being worked this sprint, created after discovering FB-04/SCRUM-175 assumed scheduling data that didn't exist. See the FB-04 entry above for the full story.
 
@@ -722,9 +924,9 @@ If any of the above is inaccurate at ticket-creation time, verify via `getVisibl
 
 **Phase 3 — Oct:** FB-05 + FB-05a/b. FB-06 (needs migration coordination — best done when at least 2 team members are available for the same week).
 
-**Phase 4 — Nov/Dec:** FB-09, FB-12, FB-13, FB-14 as capacity allows. FB-07 anytime after REF-21 lands. FB-17 (needs SCRUM-244 already landed) + FB-18 as capacity allows, ideally paired with or right after FB-08.
+**Phase 4 — Nov/Dec:** FB-09, FB-12, FB-13, FB-14 as capacity allows. FB-07 anytime after REF-21 lands. FB-17 (needs SCRUM-244 already landed) + FB-18 as capacity allows, ideally paired with or right after FB-08. FB-19 (discovery feed) once FB-07's search pattern exists to mirror — otherwise anytime capacity allows. FB-20/FB-21 (like/clone) after FB-19, same phase if capacity allows.
 
-**Left for winter term:** community/discovery feed integration, final regression pass, production hardening, deployment automation, SDP finalization, all documentation deliverables, presentation prep. That's still a substantial semester — the break work de-risks it, doesn't gut it.
+**Left for winter term:** final regression pass, production hardening, deployment automation, SDP finalization, all documentation deliverables, presentation prep. See `docs/TripFlow_Winter_Plan.md` for the detailed breakdown. (Community/discovery feed moved into this fall-break plan as FB-19/20/21 — no longer a winter item, though winter is still where it gets its final regression pass and demo polish alongside everything else.)
 
 ---
 
@@ -733,7 +935,7 @@ If any of the above is inaccurate at ticket-creation time, verify via `getVisibl
 When Tanish provides this file to create tickets:
 
 1. Verify epic keys in section 1 still exist and are accurate — run `searchJiraIssuesUsingJql` with `issuetype = Epic AND project = SCRUM`.
-2. Create parent stories/tasks first (FB-01, FB-02, FB-03, FB-04, FB-05, FB-06, FB-07, FB-08, FB-09, FB-10, FB-11, FB-12, FB-13, FB-14).
+2. Create parent stories/tasks first (FB-01, FB-02, FB-03, FB-04, FB-05, FB-06, FB-07, FB-08, FB-09, FB-10, FB-11, FB-12, FB-13, FB-14, FB-19, FB-20, FB-21).
 3. Create subtasks after parents exist, using the parent's newly-created SCRUM key.
 4. Use `contentFormat: markdown` on the description field.
 5. Do NOT set `customfield_10020` (sprint) — leave in backlog.
