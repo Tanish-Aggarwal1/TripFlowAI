@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.tripflow.backend.client.cloudinary.SignedUploadRequest;
+import com.tripflow.backend.dto.PhotoSignatureResponse;
 import com.tripflow.backend.dto.CreateStopPhotoRequest;
 import com.tripflow.backend.dto.StopPhotoResponse;
 import com.tripflow.backend.security.UserPrincipal;
@@ -30,7 +30,7 @@ public class StopPhotoController {
     private final StopPhotoService stopPhotoService;
 
     @PostMapping("/photo-signature")
-    public ResponseEntity<SignedUploadRequest> getUploadSignature(
+    public ResponseEntity<PhotoSignatureResponse> getUploadSignature(
             @PathVariable Long stopId, @AuthenticationPrincipal UserPrincipal principal) {
         return ResponseEntity.ok(stopPhotoService.getUploadSignature(stopId, principal.userId()));
     }

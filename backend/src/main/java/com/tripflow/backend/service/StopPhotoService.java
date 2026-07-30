@@ -18,6 +18,7 @@ import com.tripflow.backend.exception.ForbiddenException;
 import com.tripflow.backend.exception.ResourceNotFoundException;
 import com.tripflow.backend.repository.StopPhotoRepository;
 import com.tripflow.backend.repository.StopRepository;
+import com.tripflow.backend.dto.PhotoSignatureResponse;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -37,11 +38,20 @@ public class StopPhotoService {
     private final StopPhotoRepository stopPhotoRepository;
     private final CloudinarySigningService signingService;
 
+ // change this method's signature and body:
+
     @Transactional(readOnly = true)
-    public SignedUploadRequest getUploadSignature(Long stopId, Long requesterId) {
+    public PhotoSignatureResponse getUploadSignature(Long stopId, Long requesterId) {
         Stop stop = loadOwnedStop(stopId, requesterId);
         log.info("Issued photo-upload signature stopId={} requesterId={}", stop.getId(), requesterId);
-        return signingService.sign(Map.of());
+        SignedUploadRequest signed = signingService.sign(Map.of());
+        return new PhotoSignatureResponse(
+                signed.cloudName(),
+                signed.apiKey(),
+                signed.timestamp(),
+                signed.signature(),
+                signed.uploadParams()
+        );
     }
 
     @Transactional
