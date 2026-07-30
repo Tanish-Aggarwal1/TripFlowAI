@@ -4,6 +4,8 @@
 
 **Relationship to the fall plan:** Fall break work (`docs/TripFlow_fall_Break_Plan.md`) was meant to de-risk winter, not replace it. In particular, FB-19/20/21 (community discovery feed, like, clone) moved from a winter item into the fall plan after SCRUM-74c's prod regression pass found those endpoints didn't exist yet — see `docs/qa/prod-regression-photos-social.md`. If any fall-break item doesn't land before winter starts, carry it into this backlog rather than dropping it silently.
 
+**SDP and AJF modules are this-semester deliverables, not winter ones.** The SDP (`docs/SDP/SDP.md`) and both AJF module logs (`docs/ajf-module-a.md`, module B) are due by the end of *this* semester (fall) — only the capstone project itself carries forward into winter term. That's why finalizing those two docs is scoped as FB-22/FB-23 in the fall plan (Section 2 there), not as winter work items here — don't reintroduce them as winter scope by mistake.
+
 **Ground rules (carried forward from fall):**
 - Serialize-point rule stays in force: async Slack ping before touching `pom.xml`, `application.properties`, `SecurityConfig.java`, `GlobalExceptionHandler.java`, `BaseEntity.java` — and any new migration-adjacent file fall break introduces (e.g. if FB-20's `trip_likes` migration lands, its follow-on changes count too).
 - Neel remains required reviewer on any DTO / API contract change.
@@ -75,22 +77,7 @@
 
 ---
 
-### WP-04 · Task · SDP finalization
-- **Epic:** SCRUM-11 (DOCS)
-- **Priority:** High
-- **Story Points:** 3
-- **Labels:** docs, sdp
-- **Components:** docs
-- **Description:**
-  ```
-  docs/SDP/SDP.md is a living document. Before final submission: fill in Section 10 (Change Log) for the full project lifecycle, not just early sprints; re-verify Sections 3/4/6/8 (tech stack, package structure, testing strategy, coding standards) still match what actually shipped, since fall-break work will have touched several of these; confirm docs/SDP/coding-standards.md wasn't silently drifted from during break-speed development.
-  ```
-- **Business Value:** Direct grading deliverable — a stale SDP is a worse artifact than a shorter but accurate one.
-- **Dependencies:** none
-
----
-
-### WP-05 · Task · Retro backlog catch-up
+### WP-04 · Task · Retro backlog catch-up
 - **Epic:** SCRUM-11 (DOCS)
 - **Priority:** Medium
 - **Story Points:** 2
@@ -105,7 +92,7 @@
 
 ---
 
-### WP-06 · Task · Documentation freshness audit
+### WP-05 · Task · Documentation freshness audit
 - **Epic:** SCRUM-11 (DOCS)
 - **Priority:** Medium
 - **Story Points:** 2
@@ -120,7 +107,7 @@
 
 ---
 
-### WP-07 · Story · Final end-to-end regression + sign-off
+### WP-06 · Story · Final end-to-end regression + sign-off
 - **Epic:** SCRUM-6 (TRIP) / cross-cutting
 - **Priority:** High
 - **Story Points:** 5
@@ -135,22 +122,7 @@
 
 ---
 
-### WP-08 · Task · AJF module log finalization + demo prep
-- **Epic:** SCRUM-11 (DOCS)
-- **Priority:** High
-- **Story Points:** 3
-- **Labels:** docs, presentation
-- **Components:** docs
-- **Description:**
-  ```
-  docs/ajf-module-a.md (and its Module B counterpart) are running per-sprint logs of grading-relevant technical work, last updated through Sprint 4. Add entries for Sprint 5 onward and all fall-break work, then write a final consolidated "Presentation Notes" section: demo flow script, architecture talking points, advanced-concept callouts — updated to include whatever fall break actually added (community feed, refresh tokens, etc.) rather than only what existed at the last update.
-  ```
-- **Business Value:** Direct grading/presentation deliverable; a demo script written under time pressure the night before is worse than one iterated on incrementally.
-- **Dependencies:** Best done after most fall-break + winter feature work has landed, so it reflects the actual final feature set rather than needing a rewrite.
-
----
-
-### WP-09 · Task · Demo/seed data script
+### WP-07 · Task · Demo/seed data script
 - **Epic:** SCRUM-10 (DEVOPS)
 - **Priority:** Medium
 - **Story Points:** 2
@@ -165,7 +137,7 @@
 
 ---
 
-### WP-10 · Task · Grading/portfolio README pass
+### WP-08 · Task · Grading/portfolio README pass
 - **Epic:** SCRUM-11 (DOCS)
 - **Priority:** Low
 - **Story Points:** 2
@@ -187,14 +159,12 @@
 | WP-01 | Production hardening pass | High | 5 | — |
 | WP-02 | Deployment automation / smoke test | Medium | 3 | — |
 | WP-03 | Load/perf test on rate-limited endpoints | Medium | 3 | — |
-| WP-04 | SDP finalization | High | 3 | — |
-| WP-05 | Retro backlog catch-up | Medium | 2 | — |
-| WP-06 | Documentation freshness audit | Medium | 2 | — |
-| WP-07 | Final end-to-end regression + sign-off | High | 5 | WP-01 |
-| WP-08 | AJF module log finalization + demo prep | High | 3 | (late) |
-| WP-09 | Demo/seed data script | Medium | 2 | FB-19/20 (soft) |
-| WP-10 | Grading/portfolio README pass | Low | 2 | (last) |
+| WP-04 | Retro backlog catch-up | Medium | 2 | — |
+| WP-05 | Documentation freshness audit | Medium | 2 | — |
+| WP-06 | Final end-to-end regression + sign-off | High | 5 | WP-01 |
+| WP-07 | Demo/seed data script | Medium | 2 | FB-19/20 (soft) |
+| WP-08 | Grading/portfolio README pass | Low | 2 | (last) |
 
-**Total SP:** ~30 (excludes SCRUM-74's already-tracked regression work, Section 1)
+**Total SP:** ~24 (excludes SCRUM-74's already-tracked regression work, Section 1)
 
 **Note:** This backlog will grow once winter starts and the team knows what actually shipped over break — treat this as the floor, not the ceiling, of winter scope.

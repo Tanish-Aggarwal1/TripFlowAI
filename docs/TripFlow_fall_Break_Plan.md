@@ -868,6 +868,38 @@ If any of the above is inaccurate at ticket-creation time, verify via `getVisibl
 
 ---
 
+### FB-22 · Task · SDP finalization
+- **Epic:** SCRUM-11 (DOCS)
+- **Assignee:** Tanish
+- **Priority:** High
+- **Story Points:** 3
+- **Labels:** docs, sdp
+- **Components:** docs
+- **Description:**
+  ```
+  The SDP (docs/SDP/SDP.md) is due this semester, not winter — only the capstone project itself carries forward into winter term. Before the fall submission deadline: fill in Section 10 (Change Log) for the full project lifecycle to date; re-verify Sections 3/4/6/8 (tech stack, package structure, testing strategy, coding standards) still match what actually shipped, since fall-break work touches several of these; confirm docs/SDP/coding-standards.md wasn't silently drifted from during break-speed development.
+  ```
+- **Business Value:** Direct grading deliverable for this semester — a stale SDP is a worse artifact than a shorter but accurate one.
+- **Dependencies:** Best done near the end of the break, once most other fall items have landed, so the Change Log and package-structure sections reflect the actual final state rather than needing a rewrite.
+
+---
+
+### FB-23 · Task · AJF module log finalization + demo prep
+- **Epic:** SCRUM-11 (DOCS)
+- **Assignee:** Tanish (Module A) / Pratham (Module B)
+- **Priority:** High
+- **Story Points:** 3
+- **Labels:** docs, presentation
+- **Components:** docs
+- **Description:**
+  ```
+  docs/ajf-module-a.md and its Module B counterpart are due this semester, not winter — only the capstone project carries forward. They're running per-sprint logs of grading-relevant technical work, last updated through Sprint 4. Add entries for Sprint 5 onward and all fall-break work, then write a final consolidated "Presentation Notes" section per module: demo flow script, architecture talking points, advanced-concept callouts — reflecting whatever fall break actually added (community feed, refresh tokens, etc.), not just what existed at the last update.
+  ```
+- **Business Value:** Direct grading/presentation deliverable for this semester; a demo script written under time pressure the night before is worse than one iterated on incrementally.
+- **Dependencies:** Best done last, once all other fall-break items have landed, so it reflects the actual final feature set.
+
+---
+
 ## SECTION 3 — Summary table
 
 | ID | Summary | Owner | SP | Priority | Depends on |
@@ -907,10 +939,14 @@ If any of the above is inaccurate at ticket-creation time, verify via `getVisibl
 | FB-21 | Community: clone a public trip | — | 3 | Medium | — |
 | FB-21a | Backend clone endpoint | Tanish | — | — | — |
 | FB-21b | Frontend clone button | Neel | — | — | FB-21a |
+| FB-22 | SDP finalization | Tanish | 3 | High | — |
+| FB-23 | AJF module log finalization + demo prep | Tanish/Pratham | 3 | High | — |
 
-**Total SP (excluding subtasks):** ~78
+**Total SP (excluding subtasks):** ~84
 
 **Note (2026-07-30):** FB-19/20/21 (community discovery feed, like, clone) were originally scoped for winter term but moved up into this fall-break backlog after SCRUM-74c's prod regression pass found the backend had none of these endpoints yet — see `docs/qa/prod-regression-photos-social.md`. Search-by-title (also in SCRUM-74c) is folded into FB-19's discovery endpoint rather than a standalone ticket.
+
+**Note (2026-07-30):** FB-22 (SDP) and FB-23 (AJF module logs) are this-semester grading deliverables, not winter items — only the capstone project itself carries forward into winter term. They belong here, not in `docs/TripFlow_Winter_Plan.md`.
 
 **Note (2026-07-27):** SCRUM-244 (+ SCRUM-244a/b) — the day/time scheduling foundation FB-17 depends on — is not part of this fall-break backlog; it's a real Jira ticket already being worked this sprint, created after discovering FB-04/SCRUM-175 assumed scheduling data that didn't exist. See the FB-04 entry above for the full story.
 
@@ -924,9 +960,9 @@ If any of the above is inaccurate at ticket-creation time, verify via `getVisibl
 
 **Phase 3 — Oct:** FB-05 + FB-05a/b. FB-06 (needs migration coordination — best done when at least 2 team members are available for the same week).
 
-**Phase 4 — Nov/Dec:** FB-09, FB-12, FB-13, FB-14 as capacity allows. FB-07 anytime after REF-21 lands. FB-17 (needs SCRUM-244 already landed) + FB-18 as capacity allows, ideally paired with or right after FB-08. FB-19 (discovery feed) once FB-07's search pattern exists to mirror — otherwise anytime capacity allows. FB-20/FB-21 (like/clone) after FB-19, same phase if capacity allows.
+**Phase 4 — Nov/Dec:** FB-09, FB-12, FB-13, FB-14 as capacity allows. FB-07 anytime after REF-21 lands. FB-17 (needs SCRUM-244 already landed) + FB-18 as capacity allows, ideally paired with or right after FB-08. FB-19 (discovery feed) once FB-07's search pattern exists to mirror — otherwise anytime capacity allows. FB-20/FB-21 (like/clone) after FB-19, same phase if capacity allows. FB-22 (SDP) and FB-23 (AJF logs) last, once most other fall items have landed — they're due this semester and should reflect the actual final break state, not be written early and go stale.
 
-**Left for winter term:** final regression pass, production hardening, deployment automation, SDP finalization, all documentation deliverables, presentation prep. See `docs/TripFlow_Winter_Plan.md` for the detailed breakdown. (Community/discovery feed moved into this fall-break plan as FB-19/20/21 — no longer a winter item, though winter is still where it gets its final regression pass and demo polish alongside everything else.)
+**Left for winter term:** final regression pass, production hardening, deployment automation, presentation prep (the capstone project only — SDP and AJF module logs are this-semester deliverables, see FB-22/FB-23 above). See `docs/TripFlow_Winter_Plan.md` for the detailed breakdown. (Community/discovery feed moved into this fall-break plan as FB-19/20/21 — no longer a winter item, though winter is still where it gets its final regression pass and demo polish alongside everything else.)
 
 ---
 
@@ -935,7 +971,7 @@ If any of the above is inaccurate at ticket-creation time, verify via `getVisibl
 When Tanish provides this file to create tickets:
 
 1. Verify epic keys in section 1 still exist and are accurate — run `searchJiraIssuesUsingJql` with `issuetype = Epic AND project = SCRUM`.
-2. Create parent stories/tasks first (FB-01, FB-02, FB-03, FB-04, FB-05, FB-06, FB-07, FB-08, FB-09, FB-10, FB-11, FB-12, FB-13, FB-14, FB-19, FB-20, FB-21).
+2. Create parent stories/tasks first (FB-01, FB-02, FB-03, FB-04, FB-05, FB-06, FB-07, FB-08, FB-09, FB-10, FB-11, FB-12, FB-13, FB-14, FB-19, FB-20, FB-21, FB-22, FB-23).
 3. Create subtasks after parents exist, using the parent's newly-created SCRUM key.
 4. Use `contentFormat: markdown` on the description field.
 5. Do NOT set `customfield_10020` (sprint) — leave in backlog.
