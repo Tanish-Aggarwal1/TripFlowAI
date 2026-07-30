@@ -25,6 +25,7 @@ import { TripMapComponent } from '../components/trip-map/trip-map.component';
 import { IonModal } from '@ionic/angular/standalone';
 import { AiPreferencesFormComponent } from '../components/ai-preferences-form/ai-preferences-form.component';
 import { AiSuggestionCardsComponent } from '../components/ai-suggestion-cards/ai-suggestion-cards.component';
+import { EditStopFormComponent } from '../components/edit-stop-form/edit-stop-form.component';
 
 // SCRUM-244b: consecutive stops sharing a dayNumber, in existing stopOrder — dayNumber
 // is monotonically non-decreasing along stopOrder (ItineraryScheduler never assigns an
@@ -55,9 +56,10 @@ interface DayGroup {
     IonItemDivider,
     IonLabel,
     TripMapComponent,
-    IonModal, 
-    AiPreferencesFormComponent, 
-    AiSuggestionCardsComponent
+    IonModal,
+    AiPreferencesFormComponent,
+    AiSuggestionCardsComponent,
+    EditStopFormComponent,
   ],
 })
 export class TripViewPage implements OnInit {
@@ -75,6 +77,9 @@ export class TripViewPage implements OnInit {
   // SCRUM-156 suggestion cards once a response comes back.
   aiModalOpen = false;
   aiSuggestions: SuggestedItineraryResponse | null = null;
+
+  // SCRUM-250
+  editingStop: StopResponse | null = null;
 
   private tripId = 0;
 
@@ -162,6 +167,26 @@ export class TripViewPage implements OnInit {
     if (this.trip) {
       this.trip = { ...this.trip, stops: [...this.trip.stops, stop] };
     }
+  }
+
+  openEditStop(stop: StopResponse): void {
+    this.editingStop = stop;
+  }
+
+  closeEditStop(): void {
+    this.editingStop = null;
+  }
+
+  // Patches the edited stop in place rather than refetching the whole trip so
+  // the modal doesn't flash the page-level loading spinner behind it.
+  onStopUpdated(updated: StopResponse): void {
+    if (this.trip) {
+      this.trip = {
+        ...this.trip,
+        stops: this.trip.stops.map((s) => (s.id === updated.id ? updated : s)),
+      };
+    }
+    this.editingStop = null;
   }
 
   onOptimizeRequested(): void {

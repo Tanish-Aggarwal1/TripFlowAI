@@ -250,6 +250,65 @@ describe('TripService', () => {
     const req = httpMock.expectOne('http://localhost:8080/api/trips/50/stops');
     req.flush({ message: 'Trip not found.' }, { status: 404, statusText: 'Not Found' });
   });
+
+  it('should update a stop via the nested stop-update endpoint', (done) => {
+    const mockStop = {
+      id: 9,
+      name: 'St. Lawrence Market',
+      latitude: 43.6487,
+      longitude: -79.3715,
+      address: '93 Front St E',
+      stopOrder: 1,
+      status: 'VISITED' as const,
+      notes: 'Went early to beat the crowds.',
+      dayNumber: null,
+      plannedTime: null,
+      stopType: 'SIGHTSEEING' as const,
+    };
+
+    service
+      .updateStop(50, 9, {
+        name: 'St. Lawrence Market',
+        latitude: 43.6487,
+        longitude: -79.3715,
+        address: '93 Front St E',
+        notes: 'Went early to beat the crowds.',
+        status: 'VISITED',
+      })
+      .subscribe((result) => {
+        expect(result).toEqual(mockStop);
+        done();
+      });
+
+    const req = httpMock.expectOne('http://localhost:8080/api/trips/50/stops/9');
+    expect(req.request.method).toBe('PUT');
+    expect(req.request.body).toEqual({
+      name: 'St. Lawrence Market',
+      latitude: 43.6487,
+      longitude: -79.3715,
+      address: '93 Front St E',
+      notes: 'Went early to beat the crowds.',
+      status: 'VISITED',
+    });
+    req.flush(mockStop);
+  });
+
+  it('should handle error from updateStop', (done) => {
+    service.updateStop(50, 9, { name: 'X', latitude: 0, longitude: 0 }).subscribe(
+      () => fail('should have failed'),
+      (error: any) => {
+        expect(error.status).toBe(403);
+        done();
+      }
+    );
+
+    const req = httpMock.expectOne('http://localhost:8080/api/trips/50/stops/9');
+    req.flush(
+      { message: 'You do not have permission to do that.' },
+      { status: 403, statusText: 'Forbidden' },
+    );
+  });
+
   it('should fetch a single trip', (done) => {
     const mockTrip = {
       id: 5,

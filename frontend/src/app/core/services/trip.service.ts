@@ -12,6 +12,7 @@ import {
   ItineraryPreferencesRequest,
   SuggestedItineraryResponse,
   CreateStopRequest,
+  UpdateStopRequest,
   StopResponse,
 } from '../models/trip.model';
 
@@ -93,6 +94,17 @@ export class TripService {
   addStop(tripId: number, request: CreateStopRequest): Observable<StopResponse> {
     return this.http
       .post<StopResponse>(`${this.baseUrl}/${tripId}/stops`, request)
+      .pipe(catchError((err: HttpErrorResponse) => this.handleError(err)));
+  }
+
+  // SCRUM-250: calls the existing nested stop-update endpoint (StopController).
+  updateStop(
+    tripId: number,
+    stopId: number,
+    request: UpdateStopRequest,
+  ): Observable<StopResponse> {
+    return this.http
+      .put<StopResponse>(`${this.baseUrl}/${tripId}/stops/${stopId}`, request)
       .pipe(catchError((err: HttpErrorResponse) => this.handleError(err)));
   }
 

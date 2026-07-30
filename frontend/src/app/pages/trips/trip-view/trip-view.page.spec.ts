@@ -345,4 +345,45 @@ describe('TripViewPage', () => {
       expect(component.trip).toBeNull();
     });
   });
+
+  describe('Edit stop modal (SCRUM-250 wiring)', () => {
+    it('openEditStop sets the stop being edited', () => {
+      const target = stop({ id: 2, name: 'Casa Loma' });
+
+      component.openEditStop(target);
+
+      expect(component.editingStop).toEqual(target);
+    });
+
+    it('closeEditStop clears the stop being edited', () => {
+      component.editingStop = stop({ id: 2 });
+
+      component.closeEditStop();
+
+      expect(component.editingStop).toBeNull();
+    });
+
+    it('onStopUpdated replaces the matching stop in place and closes the modal', () => {
+      component.trip = trip({ id: 1, stops: [stop({ id: 1, name: 'Old' }), stop({ id: 2 })] });
+      component.editingStop = stop({ id: 1, name: 'Old' });
+
+      component.onStopUpdated(stop({ id: 1, name: 'New Name' }));
+
+      expect(component.trip!.stops.map((s) => [s.id, s.name])).toEqual([
+        [1, 'New Name'],
+        [2, 'Stop'],
+      ]);
+      expect(component.editingStop).toBeNull();
+    });
+
+    it('onStopUpdated is a no-op on the trip if there is no loaded trip', () => {
+      component.trip = null;
+      component.editingStop = stop({ id: 1 });
+
+      component.onStopUpdated(stop({ id: 1, name: 'New Name' }));
+
+      expect(component.trip).toBeNull();
+      expect(component.editingStop).toBeNull();
+    });
+  });
 });
