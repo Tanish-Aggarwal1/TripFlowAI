@@ -9,9 +9,11 @@ import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.tripflow.backend.exception.GeminiParsingException;
 
 /**
- * Parses Gemini's raw text output into the strict {@link SuggestedItinerary} schema.
- * Uses a dedicated, locally-configured ObjectMapper rather than the shared app-wide
- * bean, so this parse stays strict regardless of what JacksonConfig sets globally.
+ * Parses Gemini's raw text output into a strict target schema — {@link SuggestedItinerary}
+ * via the convenience overload, or any other Gemini response record (e.g.
+ * {@link GeneratedTripPlan}) via the generic overload. Uses a dedicated,
+ * locally-configured ObjectMapper rather than the shared app-wide bean, so this
+ * parse stays strict regardless of what JacksonConfig sets globally.
  */
 @Component
 public class GeminiResponseParser {
@@ -21,6 +23,10 @@ public class GeminiResponseParser {
             .build();
 
     public SuggestedItinerary parse(String rawText) {
+        return parse(rawText, SuggestedItinerary.class);
+    }
+
+    public <T> T parse(String rawText, Class<T> type) {
         if (rawText == null || rawText.isBlank()) {
             throw new GeminiParsingException("Gemini returned an empty response body");
         }
@@ -28,10 +34,10 @@ public class GeminiResponseParser {
         String candidate = stripCodeFences(rawText.trim());
 
         try {
-            return STRICT_MAPPER.readValue(candidate, SuggestedItinerary.class);
+            return STRICT_MAPPER.readValue(candidate, type);
         } catch (JsonProcessingException ex) {
             throw new GeminiParsingException(
-                    "Gemini response was not valid JSON matching the itinerary schema", ex);
+                    "Gemini response was not valid JSON matching the " + type.getSimpleName() + " schema", ex);
         }
     }
 

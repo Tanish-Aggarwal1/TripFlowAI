@@ -1,0 +1,38 @@
+<div class="ai-trip-prompt">
+  <h3>Describe your trip</h3>
+  <p class="hint">e.g. "3 days in Kyoto, food and temples, moderate budget"</p>
+
+  <ion-item>
+    <ion-label position="stacked">Prompt</ion-label>
+    <ion-textarea
+      [(ngModel)]="promptText"
+      placeholder="Describe the trip you want"
+      autoGrow="true"
+      rows="3"
+    ></ion-textarea>
+  </ion-item>
+
+  <ion-item>
+    <ion-label position="stacked">Title (optional)</ion-label>
+    <ion-input [(ngModel)]="title" placeholder="Leave blank to let Gemini name it"></ion-input>
+  </ion-item>
+
+  @if (formError) {
+    <p class="form-error">{{ formError }}</p>
+  }
+
+  <p class="hint">This can take up to 30 seconds.</p>
+
+  <div class="actions">
+    <ion-button fill="clear" (click)="cancel()" [disabled]="submitting">Cancel</ion-button>
+    <ion-button (click)="submit()" [disabled]="submitting">
+      @if (submitting) {
+        <ion-spinner name="dots" slot="start"></ion-spinner>
+        Generating...
+      } @else {
+        <ion-icon name="sparkles" slot="start"></ion-icon>
+        Create Trip
+      }
+    </ion-button>
+  </div>
+</div>

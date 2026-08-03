@@ -66,6 +66,11 @@ export interface UpdateTripRequest {
   startDate?: string;
 }
 
+export interface GenerateTripRequest {
+  prompt: string;
+  title?: string;
+}
+
 export interface TripResponse {
   id: number;
   title: string;

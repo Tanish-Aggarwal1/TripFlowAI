@@ -1,29 +1,31 @@
 import { Component, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import {
-  IonHeader, IonToolbar, IonTitle, IonContent, IonButton,
+  IonHeader, IonToolbar, IonTitle, IonContent, IonButton, IonButtons,
   IonList, IonItem, IonLabel, IonBadge, IonIcon,
-  IonFab, IonFabButton, IonSpinner, AlertController, ToastController,
+  IonFab, IonFabButton, IonFabList, IonModal, IonSpinner, AlertController, ToastController,
   ViewWillEnter
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { add, lockClosed, globeOutline, trash, create } from 'ionicons/icons';
+import { add, lockClosed, globeOutline, trash, create, sparkles } from 'ionicons/icons';
 import { TripService } from '../../../core/services/trip.service';
-import { TripSummaryResponse } from '../../../core/models/trip.model';
+import { TripSummaryResponse, TripResponse } from '../../../core/models/trip.model';
+import { AiTripPromptComponent } from '../components/ai-trip-prompt/ai-trip-prompt.component';
 
 @Component({
   selector: 'app-dashboard',
   templateUrl: 'dashboard.page.html',
   styleUrls: ['dashboard.page.scss'],
   imports: [
-    IonHeader, IonToolbar, IonTitle, IonContent, IonButton,
+    IonHeader, IonToolbar, IonTitle, IonContent, IonButton, IonButtons,
     IonList, IonItem, IonLabel, IonBadge, IonIcon,
-    IonFab, IonFabButton, IonSpinner,
+    IonFab, IonFabButton, IonFabList, IonModal, IonSpinner,
+    AiTripPromptComponent,
   ],
 })
 export class DashboardPage implements ViewWillEnter {
 
-  
+
     private tripService = inject(TripService);
     private router = inject(Router);
     private alertCtrl = inject(AlertController);
@@ -33,8 +35,13 @@ export class DashboardPage implements ViewWillEnter {
   loading = true;
   error: string | null = null;
 
+  // "Create with AI" modal (dashboard entry point for generating a whole new
+  // trip from a free-text prompt), distinct from the SCRUM-67 ai-suggest
+  // modal on trip-view, which only adds suggestions onto an existing trip.
+  aiModalOpen = false;
+
   constructor() {
-    addIcons({ add, lockClosed, globeOutline, trash, create });
+    addIcons({ add, lockClosed, globeOutline, trash, create, sparkles });
   }
 
   ionViewWillEnter(): void {
@@ -67,6 +74,19 @@ export class DashboardPage implements ViewWillEnter {
 
   createTrip(): void {
     this.router.navigate(['/trips/new']);
+  }
+
+  openAiCreate(): void {
+    this.aiModalOpen = true;
+  }
+
+  closeAiModal(): void {
+    this.aiModalOpen = false;
+  }
+
+  onAiTripCreated(trip: TripResponse): void {
+    this.aiModalOpen = false;
+    this.router.navigate(['/trips', trip.id]);
   }
 
   async confirmDelete(trip: TripSummaryResponse, event: Event): Promise<void> {

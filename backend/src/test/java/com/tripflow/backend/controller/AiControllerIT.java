@@ -41,6 +41,7 @@ import com.tripflow.backend.domain.User;
 import com.tripflow.backend.domain.enums.TripVisibility;
 import com.tripflow.backend.dto.CreateStopRequest;
 import com.tripflow.backend.dto.CreateTripRequest;
+import com.tripflow.backend.repository.TripRepository;
 import com.tripflow.backend.repository.UserRepository;
 import com.tripflow.backend.security.UserPrincipal;
 import com.tripflow.backend.testsupport.PostgresTestcontainersConfiguration;
@@ -85,6 +86,7 @@ public class AiControllerIT {
 
 	@Autowired private MockMvc mockMvc;
 	@Autowired private UserRepository userRepository;
+	@Autowired private TripRepository tripRepository;
 	@Autowired private MockRestServiceServer geminiMockServer;
 
 	@BeforeEach
@@ -371,6 +373,148 @@ public class AiControllerIT {
 				.andExpect(jsonPath("$.status").value(400));
 
 		// No expectations were registered — passes only if Gemini was never called.
+		geminiMockServer.verify();
+	}
+
+	@Test
+	void generateTrip_happyPath_returns201WithPersistedTrip() throws Exception {
+		User owner = createTestUser("generate-happy");
+
+		String geminiBody = """
+				{
+				  "candidates": [
+				    { "content": { "role": "model", "parts": [ { "text": "{\\"title\\":\\"Kyoto Food Tour\\",\\"summary\\":\\"A foodie trip\\",\\"stops\\":[{\\"order\\":0,\\"name\\":\\"Nishiki Market\\",\\"latitude\\":35.0051,\\"longitude\\":135.7649,\\"reason\\":\\"Great street food\\"}]}" } ] }, "finishReason": "STOP" }
+				  ]
+				}
+				""";
+		geminiMockServer.expect(requestTo(ENDPOINT)).andExpect(method(HttpMethod.POST))
+				.andRespond(withSuccess(geminiBody, MediaType.APPLICATION_JSON));
+
+		mockMvc.perform(post("/api/trips/ai-generate").with(csrf())
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("{\"prompt\":\"3 days in Kyoto, food and temples\"}")
+						.with(asUser(owner)))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.title").value("Kyoto Food Tour"))
+				.andExpect(jsonPath("$.visibility").value("PRIVATE"))
+				.andExpect(jsonPath("$.stops[0].name").value("Nishiki Market"))
+				.andExpect(jsonPath("$.stops[0].notes").value("Great street food"));
+
+		geminiMockServer.verify();
+	}
+
+	@Test
+	void generateTrip_titleOverride_usesRequestTitleNotGeminis() throws Exception {
+		User owner = createTestUser("generate-title");
+
+		String geminiBody = """
+				{
+				  "candidates": [
+				    { "content": { "role": "model", "parts": [ { "text": "{\\"title\\":\\"Gemini's Title\\",\\"summary\\":\\"x\\",\\"stops\\":[{\\"order\\":0,\\"name\\":\\"Stop\\",\\"latitude\\":1.0,\\"longitude\\":1.0,\\"reason\\":\\"r\\"}]}" } ] }, "finishReason": "STOP" }
+				  ]
+				}
+				""";
+		geminiMockServer.expect(requestTo(ENDPOINT)).andExpect(method(HttpMethod.POST))
+				.andRespond(withSuccess(geminiBody, MediaType.APPLICATION_JSON));
+
+		mockMvc.perform(post("/api/trips/ai-generate").with(csrf())
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("{\"prompt\":\"a trip\",\"title\":\"My Custom Title\"}")
+						.with(asUser(owner)))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.title").value("My Custom Title"));
+	}
+
+	@Test
+	void generateTrip_geminiReturnsEmptyStops_returns422AndPersistsNothing() throws Exception {
+		User owner = createTestUser("generate-empty");
+		long tripsBefore = tripRepository.count();
+
+		String geminiBody = """
+				{
+				  "candidates": [
+				    { "content": { "role": "model", "parts": [ { "text": "{\\"title\\":\\"Empty\\",\\"summary\\":\\"x\\",\\"stops\\":[]}" } ] }, "finishReason": "STOP" }
+				  ]
+				}
+				""";
+		geminiMockServer.expect(requestTo(ENDPOINT)).andExpect(method(HttpMethod.POST))
+				.andRespond(withSuccess(geminiBody, MediaType.APPLICATION_JSON));
+
+		mockMvc.perform(post("/api/trips/ai-generate").with(csrf())
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("{\"prompt\":\"a trip with no stops\"}")
+						.with(asUser(owner)))
+				.andExpect(status().isUnprocessableEntity())
+				.andExpect(jsonPath("$.status").value(422));
+
+		// InsufficientStopsException is thrown before TripService.createTrip is ever
+		// called, so nothing should have been persisted.
+		org.junit.jupiter.api.Assertions.assertEquals(tripsBefore, tripRepository.count());
+	}
+
+	@Test
+	void generateTrip_blankPrompt_returns400WithoutCallingGemini() throws Exception {
+		User owner = createTestUser("generate-blank");
+
+		mockMvc.perform(post("/api/trips/ai-generate").with(csrf())
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("{\"prompt\":\"\"}")
+						.with(asUser(owner)))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.fieldErrors[*].field").value(org.hamcrest.Matchers.hasItem("prompt")));
+
+		// No expectations were registered — passes only if Gemini was never called.
+		geminiMockServer.verify();
+	}
+
+	@Test
+	void generateTrip_geminiReturns5xx_propagates502() throws Exception {
+		User owner = createTestUser("generate-geminidown");
+
+		geminiMockServer.expect(requestTo(ENDPOINT)).andExpect(method(HttpMethod.POST)).andRespond(withServerError());
+
+		mockMvc.perform(post("/api/trips/ai-generate").with(csrf())
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("{\"prompt\":\"a trip\"}")
+						.with(asUser(owner)))
+				.andExpect(status().isBadGateway())
+				.andExpect(jsonPath("$.status").value(502));
+	}
+
+	@Test
+	void generateTrip_exceedsRateLimit_returns429WithoutCallingGemini() throws Exception {
+		User owner = createTestUser("generate-ratelimited");
+
+		String geminiBody = """
+				{
+				  "candidates": [
+				    { "content": { "role": "model", "parts": [ { "text": "{\\"title\\":\\"T\\",\\"summary\\":\\"x\\",\\"stops\\":[{\\"order\\":0,\\"name\\":\\"S\\",\\"latitude\\":1.0,\\"longitude\\":1.0,\\"reason\\":\\"r\\"}]}" } ] }, "finishReason": "STOP" }
+				  ]
+				}
+				""";
+		// app.ratelimit.ai-generate.capacity=5 in application-test.properties.
+		for (int i = 0; i < 5; i++) {
+			geminiMockServer.expect(requestTo(ENDPOINT)).andExpect(method(HttpMethod.POST))
+					.andRespond(withSuccess(geminiBody, MediaType.APPLICATION_JSON));
+		}
+
+		for (int i = 0; i < 5; i++) {
+			mockMvc.perform(post("/api/trips/ai-generate").with(csrf())
+							.contentType(MediaType.APPLICATION_JSON)
+							.content("{\"prompt\":\"a trip\"}")
+							.with(asUser(owner)))
+					.andExpect(status().isCreated());
+		}
+
+		mockMvc.perform(post("/api/trips/ai-generate").with(csrf())
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("{\"prompt\":\"a trip\"}")
+						.with(asUser(owner)))
+				.andExpect(status().isTooManyRequests())
+				.andExpect(jsonPath("$.status").value(429))
+				.andExpect(header().exists("Retry-After"));
+
+		// Only 5 expectations were registered — a 6th call reaching Gemini fails verify().
 		geminiMockServer.verify();
 	}
 }

@@ -105,6 +105,32 @@ describe('DashboardPage', () => {
     expect(routerSpy.navigate).toHaveBeenCalledWith(['/trips/new']);
   });
 
+  describe('AI trip creation modal', () => {
+    it('openAiCreate opens the modal', () => {
+      component.openAiCreate();
+
+      expect(component.aiModalOpen).toBeTrue();
+    });
+
+    it('closeAiModal closes the modal', () => {
+      component.aiModalOpen = true;
+
+      component.closeAiModal();
+
+      expect(component.aiModalOpen).toBeFalse();
+    });
+
+    it('onAiTripCreated closes the modal and navigates to the new trip', () => {
+      component.aiModalOpen = true;
+      const created = { ...summary, id: 42 } as any;
+
+      component.onAiTripCreated(created);
+
+      expect(component.aiModalOpen).toBeFalse();
+      expect(routerSpy.navigate).toHaveBeenCalledWith(['/trips', 42]);
+    });
+  });
+
   describe('statusColor', () => {
     it('maps IN_PROGRESS to warning', () => {
       expect(component.statusColor('IN_PROGRESS')).toBe('warning');
