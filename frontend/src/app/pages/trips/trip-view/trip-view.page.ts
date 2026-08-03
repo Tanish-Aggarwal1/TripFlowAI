@@ -18,9 +18,14 @@ import {
   ToastController,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { create, calendarOutline, sparkles } from 'ionicons/icons';
+import { create, calendarOutline, sparkles, checkmark, checkmarkCircle } from 'ionicons/icons';
 import { TripService } from '../../../core/services/trip.service';
-import { StopResponse, TripResponse, SuggestedItineraryResponse } from '../../../core/models/trip.model';
+import {
+  StopResponse,
+  TripResponse,
+  SuggestedItineraryResponse,
+  UpdateStopRequest,
+} from '../../../core/models/trip.model';
 import { TripMapComponent } from '../components/trip-map/trip-map.component';
 import { IonModal } from '@ionic/angular/standalone';
 import { AiPreferencesFormComponent } from '../components/ai-preferences-form/ai-preferences-form.component';
@@ -81,10 +86,14 @@ export class TripViewPage implements OnInit {
   // SCRUM-250
   editingStop: StopResponse | null = null;
 
+  // Quick "Visited" action — tracks the in-flight stop id so a fast double-tap
+  // can't fire a second PUT before the first one resolves.
+  markingVisitedId: number | null = null;
+
   private tripId = 0;
 
   constructor() {
-    addIcons({ create, calendarOutline, sparkles});
+    addIcons({ create, calendarOutline, sparkles, checkmark, 'checkmark-circle': checkmarkCircle });
   }
 
   ngOnInit(): void {
@@ -187,6 +196,40 @@ export class TripViewPage implements OnInit {
       };
     }
     this.editingStop = null;
+  }
+
+  // One-tap "Visited" quick action on the stop row. The PUT endpoint requires
+  // name/latitude/longitude on every request and overwrites notes/address
+  // unconditionally (only `status` has real omit-to-leave-unchanged semantics),
+  // so every other field must be echoed back unchanged — same as EditStopFormComponent.
+  markVisited(stop: StopResponse): void {
+    if (!this.trip || this.markingVisitedId === stop.id) return;
+    this.markingVisitedId = stop.id;
+
+    const request: UpdateStopRequest = {
+      name: stop.name,
+      latitude: stop.latitude,
+      longitude: stop.longitude,
+      address: stop.address ?? undefined,
+      notes: stop.notes ?? undefined,
+      status: 'VISITED',
+    };
+
+    this.tripService.updateStop(this.trip.id, stop.id, request).subscribe({
+      next: (updated) => {
+        this.markingVisitedId = null;
+        this.onStopUpdated(updated);
+      },
+      error: async (err) => {
+        this.markingVisitedId = null;
+        const toast = await this.toastCtrl.create({
+          message: err.message ?? 'Could not mark stop visited.',
+          duration: 2500,
+          color: 'danger',
+        });
+        await toast.present();
+      },
+    });
   }
 
   onOptimizeRequested(): void {

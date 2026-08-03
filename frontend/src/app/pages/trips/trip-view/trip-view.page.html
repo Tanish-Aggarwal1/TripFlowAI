@@ -58,6 +58,24 @@
           <p>{{ stop.address }}</p>
           }
         </ion-label>
+        @if (stop.status !== 'VISITED') {
+        <ion-button
+          fill="clear"
+          slot="end"
+          color="success"
+          [disabled]="markingVisitedId === stop.id"
+          (click)="markVisited(stop)"
+          aria-label="Mark visited"
+        >
+          @if (markingVisitedId === stop.id) {
+          <ion-spinner name="dots" slot="icon-only"></ion-spinner>
+          } @else {
+          <ion-icon name="checkmark" slot="icon-only"></ion-icon>
+          }
+        </ion-button>
+        } @else {
+        <ion-icon name="checkmark-circle" color="success" slot="end" aria-label="Visited"></ion-icon>
+        }
         <ion-button fill="clear" slot="end" (click)="openEditStop(stop)" aria-label="Edit stop">
           <ion-icon name="create" slot="icon-only"></ion-icon>
         </ion-button>
