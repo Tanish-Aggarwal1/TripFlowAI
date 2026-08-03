@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, provideRouter, Router } from '@angular/router';
 import { ToastController } from '@ionic/angular/standalone';
-import { of, throwError } from 'rxjs';
+import { of, throwError, Subject } from 'rxjs';
 import { TripViewPage } from './trip-view.page';
 import { TripService } from '../../../core/services/trip.service';
 import { StopResponse, TripResponse } from '../../../core/models/trip.model';
@@ -49,7 +49,12 @@ describe('TripViewPage', () => {
   }
 
   beforeEach(async () => {
-    tripServiceSpy = jasmine.createSpyObj('TripService', ['getTrip', 'optimizeTrip', 'exportIcs']);
+    tripServiceSpy = jasmine.createSpyObj('TripService', [
+      'getTrip',
+      'optimizeTrip',
+      'exportIcs',
+      'updateStop',
+    ]);
     toastCtrlSpy = jasmine.createSpyObj('ToastController', ['create']);
     toastCtrlSpy.create.and.returnValue(
       Promise.resolve({ present: () => Promise.resolve() } as any),
@@ -384,6 +389,79 @@ describe('TripViewPage', () => {
 
       expect(component.trip).toBeNull();
       expect(component.editingStop).toBeNull();
+    });
+  });
+
+  describe('markVisited (quick "Visited" action)', () => {
+    it('sends a full echoed payload with only status changed', () => {
+      const target = stop({
+        id: 2,
+        name: 'Casa Loma',
+        latitude: 43.678,
+        longitude: -79.409,
+        address: '1 Austin Terrace',
+        notes: 'Bring camera',
+        status: 'PLANNED',
+      });
+      component.trip = trip({ id: 1, stops: [target] });
+      tripServiceSpy.updateStop.and.returnValue(of({ ...target, status: 'VISITED' }));
+
+      component.markVisited(target);
+
+      expect(tripServiceSpy.updateStop).toHaveBeenCalledWith(1, 2, {
+        name: 'Casa Loma',
+        latitude: 43.678,
+        longitude: -79.409,
+        address: '1 Austin Terrace',
+        notes: 'Bring camera',
+        status: 'VISITED',
+      });
+    });
+
+    it('patches the stop in place via onStopUpdated on success and clears the busy flag', () => {
+      const target = stop({ id: 2, status: 'PLANNED' });
+      component.trip = trip({ id: 1, stops: [target] });
+      const updated = { ...target, status: 'VISITED' as const };
+      tripServiceSpy.updateStop.and.returnValue(of(updated));
+
+      component.markVisited(target);
+
+      expect(component.markingVisitedId).toBeNull();
+      expect(component.trip!.stops[0].status).toBe('VISITED');
+    });
+
+    it('does not issue a second call while one is already in flight for the same stop', () => {
+      const target = stop({ id: 2, status: 'PLANNED' });
+      component.trip = trip({ id: 1, stops: [target] });
+      tripServiceSpy.updateStop.and.returnValue(new Subject<StopResponse>());
+
+      component.markVisited(target);
+      component.markVisited(target);
+
+      expect(tripServiceSpy.updateStop).toHaveBeenCalledTimes(1);
+    });
+
+    it('does nothing when no trip is loaded', () => {
+      component.trip = null;
+
+      component.markVisited(stop({ id: 2 }));
+
+      expect(tripServiceSpy.updateStop).not.toHaveBeenCalled();
+    });
+
+    it('shows an error toast and re-enables the button on failure', async () => {
+      const target = stop({ id: 2, status: 'PLANNED' });
+      component.trip = trip({ id: 1, stops: [target] });
+      tripServiceSpy.updateStop.and.returnValue(throwError(() => new Error('Network error.')));
+
+      component.markVisited(target);
+      await Promise.resolve();
+
+      expect(component.markingVisitedId).toBeNull();
+      expect(component.trip!.stops[0].status).toBe('PLANNED');
+      expect(toastCtrlSpy.create).toHaveBeenCalledWith(
+        jasmine.objectContaining({ message: 'Network error.', color: 'danger' }),
+      );
     });
   });
 });
