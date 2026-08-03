@@ -311,6 +311,30 @@ All fields are optional lists/strings. Gemini uses them as prompt context alongs
 
 ---
 
+### POST /api/trips/ai-generate
+Sends a free-text prompt to Google Gemini and creates a **brand-new trip** with AI-suggested stops in one call — unlike `ai-suggest` above, this endpoint persists. There is no existing trip to own; the created trip belongs to the authenticated caller.
+
+**Auth:** Bearer token required.
+
+**Request:**
+```json
+{
+  "prompt": "3 days in Kyoto, food and temples, moderate budget",
+  "title": "Kyoto Trip"
+}
+```
+`prompt` is required (max 1000 characters). `title` is optional — when omitted, Gemini's own generated title is used instead.
+
+**Success (201):** a full `TripResponse` (same shape as `POST /api/trips`), visibility always `PRIVATE`. Each generated stop's `notes` field is populated with Gemini's stated reason for including it.
+
+**Errors:**
+- 400 — `prompt` missing/blank/too long, or the rendered prompt exceeds the 8,000-character backstop
+- 422 — Gemini returned zero stops for this prompt (nothing is persisted in this case)
+- 429 — the caller exceeded their per-user limit on this endpoint, includes a `Retry-After` header
+- 502 — Gemini API unreachable or returned an unparseable response
+
+---
+
 ## Trip Export (SCRUM-175/176)
 
 ### GET /api/trips/{id}/calendar.ics
@@ -340,13 +364,14 @@ All errors return the standard `ApiError` body.
 
 ## Rate Limiting (SCRUM-173)
 
-`POST /api/trips/{id}/ai-suggest` and `POST /api/trips/{id}/optimize` both call paid/quota-limited external APIs (Gemini, OpenRouteService), so each is capped per authenticated user via an in-memory token bucket (Bucket4j), keyed on the JWT-derived user id — not IP, since multiple users can share an IP (NAT, campus wifi).
+`POST /api/trips/{id}/ai-suggest`, `POST /api/trips/ai-generate`, and `POST /api/trips/{id}/optimize` all call paid/quota-limited external APIs (Gemini, OpenRouteService), so each is capped per authenticated user via an in-memory token bucket (Bucket4j), keyed on the JWT-derived user id — not IP, since multiple users can share an IP (NAT, campus wifi).
 
 **Limits** (externalized in `application.properties`, tunable without a redeploy):
 
 | Property | Default | Endpoint |
 | --- | --- | --- |
 | `app.ratelimit.ai-suggest.capacity` / `.window` | 10 / `1h` | `POST /api/trips/{id}/ai-suggest` |
+| `app.ratelimit.ai-generate.capacity` / `.window` | 5 / `1h` | `POST /api/trips/ai-generate` |
 | `app.ratelimit.optimize.capacity` / `.window` | 20 / `1h` | `POST /api/trips/{id}/optimize` |
 
 Exceeding the limit returns `429 Too Many Requests` with the standard `ApiError` body and a `Retry-After` header (seconds until the next token is available). The counter resets in full once the configured window elapses (Bucket4j "intervally" refill — tokens jump back to full capacity at the window boundary, not a continuous trickle).

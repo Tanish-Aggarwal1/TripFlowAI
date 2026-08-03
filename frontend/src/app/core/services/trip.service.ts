@@ -9,6 +9,7 @@ import {
   PagedResponse,
   CreateTripRequest,
   UpdateTripRequest,
+  GenerateTripRequest,
   ItineraryPreferencesRequest,
   SuggestedItineraryResponse,
   CreateStopRequest,
@@ -44,6 +45,16 @@ export class TripService {
 
   createTrip(request: CreateTripRequest): Observable<TripResponse> {
     return this.http.post<TripResponse>(this.baseUrl, request).pipe(
+      tap((created) => this.trips.update((list) => [this.toSummary(created), ...list])),
+      catchError((err: HttpErrorResponse) => this.handleError(err)),
+    );
+  }
+
+  // SCRUM-ai-generate: sends a free-text prompt to Gemini and creates a whole
+  // new trip in one call — distinct from suggestItinerary/addStop, which only
+  // add suggestions onto a trip that already exists.
+  generateTripWithAi(request: GenerateTripRequest): Observable<TripResponse> {
+    return this.http.post<TripResponse>(`${this.baseUrl}/ai-generate`, request).pipe(
       tap((created) => this.trips.update((list) => [this.toSummary(created), ...list])),
       catchError((err: HttpErrorResponse) => this.handleError(err)),
     );

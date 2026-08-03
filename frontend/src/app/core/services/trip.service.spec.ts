@@ -155,6 +155,51 @@ describe('TripService', () => {
     req.flush(newTrip);
   });
 
+  it('should generate a trip with AI and update the signal', (done) => {
+    const generatedTrip = {
+      id: 4,
+      title: 'Kyoto Food Tour',
+      description: 'A foodie trip',
+      tags: [],
+      visibility: 'PRIVATE' as const,
+      status: 'DRAFT' as const,
+      ownerId: 1,
+      stops: [],
+      createdAt: '2026-07-22T00:00:00Z',
+      updatedAt: '2026-07-22T00:00:00Z',
+      routeGeometry: null,
+      startDate: null,
+    };
+
+    service.trips.set([]);
+    service.generateTripWithAi({ prompt: '3 days in Kyoto, food and temples' }).subscribe((trip) => {
+      expect(trip).toEqual(generatedTrip);
+      expect(service.trips()).toContain(jasmine.objectContaining({ id: 4, title: 'Kyoto Food Tour' }));
+      done();
+    });
+
+    const req = httpMock.expectOne('http://localhost:8080/api/trips/ai-generate');
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ prompt: '3 days in Kyoto, food and temples' });
+    req.flush(generatedTrip);
+  });
+
+  it('should handle a 422 error from generateTripWithAi', (done) => {
+    service.generateTripWithAi({ prompt: 'a trip with nothing in it' }).subscribe(
+      () => fail('should have failed'),
+      (error: any) => {
+        expect(error.status).toBe(422);
+        done();
+      }
+    );
+
+    const req = httpMock.expectOne('http://localhost:8080/api/trips/ai-generate');
+    req.flush(
+      { message: 'Gemini did not return any stops for this prompt' },
+      { status: 422, statusText: 'Unprocessable Entity' },
+    );
+  });
+
   it('should suggest an itinerary', (done) => {
     const mockResponse = {
       tripId: 50,
