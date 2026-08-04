@@ -7,6 +7,7 @@ import { IonButton, IonSpinner, IonIcon } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import { navigate } from 'ionicons/icons';
 import mapboxgl from 'mapbox-gl';
+import type { Geometry } from 'geojson';
 import { environment } from '../../../../../environments/environment';
 import { TripResponse, StopResponse } from '../../../../core/models/trip.model';
 
@@ -158,7 +159,7 @@ export class TripMapComponent implements AfterViewInit, OnChanges, OnDestroy {
       return;
     }
 
-    let geometry: GeoJSON.Geometry;
+    let geometry: Geometry;
     try {
       geometry = JSON.parse(this.trip.routeGeometry);
     } catch (err) {
