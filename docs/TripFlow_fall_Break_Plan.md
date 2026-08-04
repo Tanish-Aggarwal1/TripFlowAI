@@ -473,7 +473,7 @@ If any of the above is inaccurate at ticket-creation time, verify via `getVisibl
 - **Epic:** SCRUM-6 (TRIP)
 - **Assignee:** — (parent, subtasks own the work)
 - **Priority:** High
-- **Story Points:** 5
+- **Story Points:** 6
 - **Labels:** feature, ux, api-contract-change, needs-frontend-coordination, mapbox
 - **Components:** api, frontend
 - **Description:**
@@ -491,7 +491,7 @@ If any of the above is inaccurate at ticket-creation time, verify via `getVisibl
   - `CreateStopRequest` / `UpdateStopRequest` DTO changes are additive (new optional fields) — non-breaking to existing manual-entry flow.
   - Serialize-point coordination is minimal (DTO change only, no `SecurityConfig` / `pom.xml` / migration).
   - Requires Neel review (API contract change), but Neel is also the frontend implementer — natural coordination.
-- **Subtasks:** FB-15a, FB-15b
+- **Subtasks:** FB-15a, FB-15b, FB-15c
 
 ---
 
@@ -546,6 +546,30 @@ If any of the above is inaccurate at ticket-creation time, verify via `getVisibl
   And unit tests cover both paths
   And the DTO contract change is documented in the SDP API standards section
 ```
+
+---
+
+### FB-15c · Subtask · Make stop coordinates editable in edit-stop-form
+- **Parent:** FB-15
+- **Assignee:** Neel
+- **Story Points:** — (inherits, part of the 5)
+- **Description:**
+```
+  Gap found 2026-07-30: today's edit-stop-form (SCRUM-250, merged same day) has no coordinate input at all -- latitude/longitude are carried through from the existing stop unchanged (see the component's own comment: "Coordinates and externalPlaceId are carried through unchanged -- no map-picker UI exists yet"). The backend already fully supports this: UpdateStopRequest requires latitude/longitude and PUT /api/trips/{tripId}/stops/{stopId} already persists whatever's sent -- this is a pure frontend gap, no backend change needed.
+
+  Reuse FB-15a's location-input work (mapbox-search-box + "enter coordinates manually" fallback toggle) in edit-stop-form instead of building a second, separate coordinate-input UI. Land after FB-15a so there's a component to reuse rather than duplicating the search-box + manual-toggle logic.
+```
+- **Acceptance Criteria:**
+```
+  Given a user editing an existing stop
+  When they open the edit form
+  Then they can either re-search for a new place (updating name/coordinates/address/mapboxPlaceId) or toggle to manual entry and adjust latitude/longitude directly
+  And saving sends the updated coordinates via the existing UpdateStopRequest/PUT flow
+  And a stop's coordinates can be corrected without deleting and re-adding the stop
+```
+- **Dependencies:** FB-15a
+
+---
 
 ### FB-16 · Story · Refresh token flow for persistent login — parent
 - **Epic:** SCRUM-83 (AUTH)
@@ -1001,9 +1025,10 @@ If any of the above is inaccurate at ticket-creation time, verify via `getVisibl
 | FB-12 | Sentry error tracking | Tanish | 2 | Medium | — |
 | FB-13 | Offline PWA caching | Neel | 5 | Low | — |
 | FB-14 | Native Capacitor build spike | Neel | 3 | Low | — |
-| FB-15 | Mapbox place search for stop input | — | 5 | High | — |
+| FB-15 | Mapbox place search for stop input | — | 6 | High | — |
 | FB-15a | Frontend Mapbox Search Box | Neel | — | — | — |
 | FB-15b | Backend DTO + Place resolution | Tanish | — | — | REF-20 (soft) |
+| FB-15c | Editable stop coordinates in edit-stop-form | Neel | — | — | FB-15a |
 | FB-16 | Refresh token flow for persistent login | — | 5 | Medium | FB-02 (soft) |
 | FB-16a | Backend refresh issuance/rotation/revocation | Pratham | — | — | — |
 | FB-16b | Frontend silent-refresh interceptor | Neel | — | — | FB-16a |
@@ -1024,7 +1049,7 @@ If any of the above is inaccurate at ticket-creation time, verify via `getVisibl
 | FB-25 | Foreground stop-arrival detection (Trip Tracking MVP) | Neel + Tanish | 5 | Medium | — |
 | FB-26 | Push notification for stop arrival (stretch) | — | 5 | Low | FB-14 |
 
-**Total SP (excluding subtasks):** ~93
+**Total SP (excluding subtasks):** ~94
 
 **Note (2026-07-30):** FB-19/20/21 were briefly removed and then restored — see the correction note in Section 2 above. FB-19c/19d, FB-24, FB-25, and FB-26 are new items added after the social-features traceability audit (`docs/social-features-traceability-audit.md`) surfaced genuine gaps (creator info, ratings, save/bookmark, and the entirely-missing Trip Tracking feature) beyond what FB-19/20/21 already covered.
 
