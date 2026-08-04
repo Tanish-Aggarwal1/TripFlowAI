@@ -33,6 +33,7 @@ import { AiPreferencesFormComponent } from '../components/ai-preferences-form/ai
 import { AiSuggestionCardsComponent } from '../components/ai-suggestion-cards/ai-suggestion-cards.component';
 import { EditStopFormComponent } from '../components/edit-stop-form/edit-stop-form.component';
 import { StopPhotoUploadComponent } from '../components/stop-photo-upload/stop-photo-upload.component';
+import { StopPhotoGalleryComponent } from '../components/stop-photo-gallery/stop-photo-gallery.component';
 
 // SCRUM-244b: consecutive stops sharing a dayNumber, in existing stopOrder — dayNumber
 // is monotonically non-decreasing along stopOrder (ItineraryScheduler never assigns an
@@ -68,6 +69,7 @@ interface DayGroup {
     AiSuggestionCardsComponent,
     EditStopFormComponent,
     StopPhotoUploadComponent,
+    StopPhotoGalleryComponent,
   ],
 })
 export class TripViewPage implements OnInit {

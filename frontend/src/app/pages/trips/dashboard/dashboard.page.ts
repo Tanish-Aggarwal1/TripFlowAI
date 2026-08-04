@@ -3,14 +3,15 @@ import { Router } from '@angular/router';
 import {
   IonHeader, IonToolbar, IonTitle, IonContent, IonButton, IonButtons,
   IonList, IonItem, IonLabel, IonBadge, IonIcon,
-  IonFab, IonFabButton, IonFabList, IonModal, IonSpinner, AlertController, ToastController,
+  IonFab, IonFabButton, IonFabList, IonModal, IonSpinner, AlertController, ToastController,IonThumbnail,
   ViewWillEnter
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { add, lockClosed, globeOutline, trash, create, sparkles } from 'ionicons/icons';
+import { add, lockClosed, globeOutline, trash, create, sparkles, imageOutline  } from 'ionicons/icons';
 import { TripService } from '../../../core/services/trip.service';
 import { TripSummaryResponse, TripResponse } from '../../../core/models/trip.model';
 import { AiTripPromptComponent } from '../components/ai-trip-prompt/ai-trip-prompt.component';
+
 
 @Component({
   selector: 'app-dashboard',
@@ -21,6 +22,7 @@ import { AiTripPromptComponent } from '../components/ai-trip-prompt/ai-trip-prom
     IonList, IonItem, IonLabel, IonBadge, IonIcon,
     IonFab, IonFabButton, IonFabList, IonModal, IonSpinner,
     AiTripPromptComponent,
+    IonThumbnail,
   ],
 })
 export class DashboardPage implements ViewWillEnter {
@@ -41,7 +43,7 @@ export class DashboardPage implements ViewWillEnter {
   aiModalOpen = false;
 
   constructor() {
-    addIcons({ add, lockClosed, globeOutline, trash, create, sparkles });
+    addIcons({ add, lockClosed, globeOutline, trash, create, sparkles, 'image-outline': imageOutline });
   }
 
   ionViewWillEnter(): void {

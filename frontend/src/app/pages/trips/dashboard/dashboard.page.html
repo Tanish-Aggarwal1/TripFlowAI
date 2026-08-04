@@ -8,66 +8,64 @@
 
   <!-- Loading -->
   @if (loading) {
-    <div class="center">
-      <ion-spinner name="crescent" />
-    </div>
+  <div class="center">
+    <ion-spinner name="crescent" />
+  </div>
   }
 
   <!-- Error -->
   @if (!loading && error) {
-    <div class="center error">
-      <p>{{ error }}</p>
-      <ion-button fill="outline" (click)="loadTrips()">Retry</ion-button>
-    </div>
+  <div class="center error">
+    <p>{{ error }}</p>
+    <ion-button fill="outline" (click)="loadTrips()">Retry</ion-button>
+  </div>
   }
 
   <!-- Empty state -->
   @if (!loading && !error && trips.length === 0) {
-    <div class="center">
-      <p>No trips yet. Tap + to create your first trip!</p>
-    </div>
+  <div class="center">
+    <p>No trips yet. Tap + to create your first trip!</p>
+  </div>
   }
 
   <!-- Trip list -->
   @if (!loading && !error && trips.length > 0) {
-    <ion-list>
-      @for (trip of trips; track trip.id) {
-        <ion-item
-          button
-          detail
-          (click)="openTrip(trip)">
-          <ion-label>
-            <h2>{{ trip.title }}</h2>
-            <p>{{ trip.stopCount }} stop{{ trip.stopCount !== 1 ? 's' : '' }}</p>
-          </ion-label>
+  <ion-list>
+    @for (trip of trips; track trip.id) {
+    <ion-item button detail (click)="openTrip(trip)">
+      <ion-thumbnail slot="start">
+        @if (trip.coverPhotoUrl) {
+        <img [src]="trip.coverPhotoUrl" [alt]="trip.title" />
+        } @else {
+        <div class="thumbnail-placeholder">
+          <ion-icon name="image-outline"></ion-icon>
+        </div>
+        }
+      </ion-thumbnail>
 
-          <ion-badge slot="end" [color]="statusColor(trip.status)">
-            {{ trip.status }}
-          </ion-badge>
+      <ion-label>
+        <h2>{{ trip.title }}</h2>
+        <p>{{ trip.stopCount }} stop{{ trip.stopCount !== 1 ? 's' : '' }}</p>
+      </ion-label>
 
-          <ion-icon
-            slot="end"
-            [name]="trip.visibility === 'PUBLIC' ? 'globe-outline' : 'lock-closed'"
-            class="visibility-icon">
-          </ion-icon>
+      <ion-badge slot="end" [color]="statusColor(trip.status)">
+        {{ trip.status }}
+      </ion-badge>
 
-          <ion-button
-            slot="end"
-            fill="clear"
-            (click)="editTrip(trip, $event)">
-            <ion-icon slot="icon-only" name="create"></ion-icon>
-          </ion-button>
+      <ion-icon slot="end" [name]="trip.visibility === 'PUBLIC' ? 'globe-outline' : 'lock-closed'"
+        class="visibility-icon">
+      </ion-icon>
 
-          <ion-button
-            slot="end"
-            fill="clear"
-            color="danger"
-            (click)="confirmDelete(trip, $event)">
-            <ion-icon slot="icon-only" name="trash"></ion-icon>
-          </ion-button>
-        </ion-item>
-      }
-    </ion-list>
+      <ion-button slot="end" fill="clear" (click)="editTrip(trip, $event)">
+        <ion-icon slot="icon-only" name="create"></ion-icon>
+      </ion-button>
+
+      <ion-button slot="end" fill="clear" color="danger" (click)="confirmDelete(trip, $event)">
+        <ion-icon slot="icon-only" name="trash"></ion-icon>
+      </ion-button>
+    </ion-item>
+    }
+  </ion-list>
   }
 
   <!-- FAB create speed-dial -->
@@ -96,10 +94,7 @@
         </ion-toolbar>
       </ion-header>
       <ion-content class="ion-padding">
-        <app-ai-trip-prompt
-          (created)="onAiTripCreated($event)"
-          (cancelled)="closeAiModal()"
-        ></app-ai-trip-prompt>
+        <app-ai-trip-prompt (created)="onAiTripCreated($event)" (cancelled)="closeAiModal()"></app-ai-trip-prompt>
       </ion-content>
     </ng-template>
   </ion-modal>

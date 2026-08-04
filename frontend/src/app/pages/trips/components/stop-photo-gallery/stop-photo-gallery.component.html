@@ -1,0 +1,58 @@
+<div class="gallery-body">
+  @if (loading) {
+    <div class="centered">
+      <ion-spinner></ion-spinner>
+    </div>
+  }
+
+  @if (error && !loading) {
+    <div class="centered error-block">
+      <p>{{ error }}</p>
+      <ion-button (click)="loadPhotos()">Retry</ion-button>
+    </div>
+  }
+
+  @if (!loading && !error) {
+    @if (photos.length === 0 && !showUpload) {
+      <p class="empty-state">No photos yet.</p>
+    }
+
+    <div class="photo-grid">
+      @for (photo of photos; track photo.id) {
+        <div class="photo-card">
+          <img [src]="photo.url" [alt]="photo.caption ?? 'Stop photo'" />
+          @if (photo.caption) {
+            <p class="caption">{{ photo.caption }}</p>
+          }
+          <ion-button
+            fill="clear"
+            color="danger"
+            size="small"
+            [disabled]="deletingId === photo.id"
+            (click)="confirmDelete(photo)"
+            aria-label="Delete photo"
+          >
+            @if (deletingId === photo.id) {
+              <ion-spinner name="dots" slot="icon-only"></ion-spinner>
+            } @else {
+              <ion-icon name="trash" slot="icon-only"></ion-icon>
+            }
+          </ion-button>
+        </div>
+      }
+    </div>
+
+    @if (!showUpload) {
+      <ion-button expand="block" fill="outline" (click)="openUpload()">
+        <ion-icon slot="start" name="add"></ion-icon>
+        Add Photo
+      </ion-button>
+    } @else {
+      <app-stop-photo-upload
+        [stopId]="stopId"
+        (uploaded)="onUploaded($event)"
+        (cancelled)="onUploadCancelled()"
+      ></app-stop-photo-upload>
+    }
+  }
+</div>

@@ -70,9 +70,9 @@
         } @else {
         <ion-icon name="checkmark-circle" color="success" slot="end" aria-label="Visited"></ion-icon>
         }
-        <ion-button fill="clear" slot="end" (click)="openPhotoUpload(stop)" aria-label="Add photo">
-          <ion-icon name="camera" slot="icon-only"></ion-icon>
-        </ion-button>
+        <ion-button fill="clear" slot="end" (click)="openPhotoUpload(stop)" aria-label="Photos">
+           <ion-icon name="camera" slot="icon-only"></ion-icon>
+         </ion-button>
         <ion-button fill="clear" slot="end" (click)="openEditStop(stop)" aria-label="Edit stop">
           <ion-icon name="create" slot="icon-only"></ion-icon>
         </ion-button>
@@ -132,6 +132,7 @@
       <ion-header>
         <ion-toolbar>
           <ion-title>Add Photo</ion-title>
+          <ion-title>Photos</ion-title>
           <ion-buttons slot="end">
             <ion-button (click)="closePhotoUpload()">Close</ion-button>
           </ion-buttons>
@@ -141,6 +142,9 @@
         @if (uploadingPhotoStop) {
         <app-stop-photo-upload [stopId]="uploadingPhotoStop.id" (uploaded)="onPhotoUploaded($event)"
           (cancelled)="closePhotoUpload()"></app-stop-photo-upload>
+          <app-stop-photo-gallery
+[stopId]="uploadingPhotoStop.id"
+></app-stop-photo-gallery>
         }
       </ion-content>
     </ng-template>
