@@ -1,0 +1,61 @@
+.gallery-body {
+  padding: 0 16px 16px;
+
+  .centered {
+    display: flex;
+    justify-content: center;
+    padding: 24px 0;
+  }
+
+  .error-block {
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .empty-state {
+    color: var(--ion-color-medium);
+    text-align: center;
+    padding: 16px 0;
+  }
+
+  .photo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .photo-card {
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--ion-color-light);
+
+    img {
+      width: 100%;
+      height: 120px;
+      object-fit: cover;
+      display: block;
+    }
+
+    .caption {
+      font-size: 0.75rem;
+      padding: 4px 6px;
+      margin: 0;
+      color: var(--ion-color-medium-shade);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    ion-button {
+      position: absolute;
+      top: 2px;
+      right: 2px;
+      --padding-start: 4px;
+      --padding-end: 4px;
+      margin: 0;
+    }
+  }
+}
