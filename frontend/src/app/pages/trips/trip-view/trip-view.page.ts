@@ -18,19 +18,21 @@ import {
   ToastController,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { create, calendarOutline, sparkles, checkmark, checkmarkCircle } from 'ionicons/icons';
+import { create, calendarOutline, sparkles, checkmark, checkmarkCircle, camera } from 'ionicons/icons';
 import { TripService } from '../../../core/services/trip.service';
 import {
   StopResponse,
   TripResponse,
   SuggestedItineraryResponse,
   UpdateStopRequest,
+  StopPhotoResponse,
 } from '../../../core/models/trip.model';
 import { TripMapComponent } from '../components/trip-map/trip-map.component';
 import { IonModal } from '@ionic/angular/standalone';
 import { AiPreferencesFormComponent } from '../components/ai-preferences-form/ai-preferences-form.component';
 import { AiSuggestionCardsComponent } from '../components/ai-suggestion-cards/ai-suggestion-cards.component';
 import { EditStopFormComponent } from '../components/edit-stop-form/edit-stop-form.component';
+import { StopPhotoUploadComponent } from '../components/stop-photo-upload/stop-photo-upload.component';
 
 // SCRUM-244b: consecutive stops sharing a dayNumber, in existing stopOrder — dayNumber
 // is monotonically non-decreasing along stopOrder (ItineraryScheduler never assigns an
@@ -65,6 +67,7 @@ interface DayGroup {
     AiPreferencesFormComponent,
     AiSuggestionCardsComponent,
     EditStopFormComponent,
+    StopPhotoUploadComponent,
   ],
 })
 export class TripViewPage implements OnInit {
@@ -86,6 +89,9 @@ export class TripViewPage implements OnInit {
   // SCRUM-250
   editingStop: StopResponse | null = null;
 
+   // SCRUM-164
+   uploadingPhotoStop: StopResponse | null = null;
+
   // Quick "Visited" action — tracks the in-flight stop id so a fast double-tap
   // can't fire a second PUT before the first one resolves.
   markingVisitedId: number | null = null;
@@ -93,7 +99,7 @@ export class TripViewPage implements OnInit {
   private tripId = 0;
 
   constructor() {
-    addIcons({ create, calendarOutline, sparkles, checkmark, 'checkmark-circle': checkmarkCircle });
+    addIcons({ create, calendarOutline, sparkles, checkmark, 'checkmark-circle': checkmarkCircle, camera });
   }
 
   ngOnInit(): void {
@@ -230,6 +236,26 @@ export class TripViewPage implements OnInit {
         await toast.present();
       },
     });
+  }
+  // SCRUM-164
+  openPhotoUpload(stop: StopResponse): void {
+    this.uploadingPhotoStop = stop;
+  }
+
+  // SCRUM-164
+  closePhotoUpload(): void {
+    this.uploadingPhotoStop = null;
+  }
+
+  // SCRUM-164 — gallery refresh/thumbnail rendering deferred to SCRUM-165.
+  async onPhotoUploaded(_photo: StopPhotoResponse): Promise<void> {
+    this.uploadingPhotoStop = null;
+    const toast = await this.toastCtrl.create({
+      message: 'Photo uploaded.',
+      duration: 2000,
+      color: 'success',
+    });
+    await toast.present();
   }
 
   onOptimizeRequested(): void {

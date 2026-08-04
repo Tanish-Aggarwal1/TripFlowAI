@@ -1,0 +1,43 @@
+<ion-item lines="none">
+  <ion-label>
+    <h2>Add a photo</h2>
+  </ion-label>
+</ion-item>
+
+<div class="upload-body">
+  <input
+    type="file"
+    accept="image/*"
+    capture="environment"
+    (change)="onFileSelected($event)"
+    [disabled]="uploading"
+  />
+
+  <img *ngIf="previewUrl" [src]="previewUrl" class="preview" alt="Selected photo preview" />
+
+  <ion-item>
+    <ion-label position="stacked">Caption / note</ion-label>
+    <ion-textarea
+      [(ngModel)]="caption"
+      [disabled]="uploading"
+      placeholder="Say something about this stop..."
+      autoGrow="true"
+    ></ion-textarea>
+  </ion-item>
+
+  <ion-progress-bar *ngIf="uploading" [value]="progress / 100"></ion-progress-bar>
+
+  <p class="form-error" *ngIf="formError">{{ formError }}</p>
+
+  <div class="actions">
+    <ion-button fill="clear" (click)="cancel()" [disabled]="uploading">
+      <ion-icon slot="start" name="close"></ion-icon>
+      Cancel
+    </ion-button>
+    <ion-button (click)="submit()" [disabled]="uploading || !selectedFile">
+      <ion-spinner *ngIf="uploading" name="crescent" slot="start"></ion-spinner>
+      <ion-icon *ngIf="!uploading" slot="start" name="checkmark"></ion-icon>
+      Upload
+    </ion-button>
+  </div>
+</div>
