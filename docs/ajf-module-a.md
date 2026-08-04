@@ -33,6 +33,11 @@ Takes a user's list of trip stops and turns them into an optimized, AI-assisted 
 - Two new exceptions (`GeminiClientException`, `GeminiParsingException`) mapped to 502 in `GlobalExceptionHandler`.
 - `SuggestedItinerary` schema record with `@JsonIgnoreProperties(ignoreUnknown = false)` — intentionally strict so unexpected Gemini response fields fail loudly rather than being silently dropped.
 
+## Sprint 5 — AI Preferences UI + Regression Coverage
+- **SCRUM-155:** `AiPreferencesFormComponent` — standalone frontend form (interests, budget, pace) that collects the preferences payload sent to `POST /api/trips/{id}/ai-suggest`.
+- **SCRUM-156:** `AiSuggestionCardsComponent` — renders Gemini's suggested stops with reasoning, wired into `trip-view` as a modal; `TripService.addStop` added for the nested stop-create endpoint so an accepted suggestion is persisted as a real stop. Completes the demo-flow loop already described below.
+- **SCRUM-68:** `AiControllerIT` regression coverage — Gemini timeout, empty-candidates, and prompt-too-large cases; `RouteOptimizationControllerIT` and `TripControllerIT` gained a create-to-optimize single-flow IT and a delete-cascade IT.
+
 ## Presentation Notes
 - **Demo flow:** Create a trip → add stops → hit "Optimize" → watch stops reorder and route redraw on the map → open AI preferences form → generate Gemini suggestions → accept a suggestion as a new stop.
 - **Architecture talking points:** The `client/{service}/` pattern (wire DTOs separate from domain DTOs, per-client timeouts, translated exceptions), the strict-vs-lenient ObjectMapper split between Gemini and app-wide JSON, `@ConfigurationProperties` records with validated secrets.
