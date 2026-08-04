@@ -2,7 +2,7 @@
 
 Run against the deployed production environment before the Aug 6 presentation. Fill in **Actual** and **Result** as you go.
 
-Tester: Claude (via curl, on Tanish's behalf)  Date: 2026-08-04  Backend build/commit: main @ 7f55a3c (post-#191)
+Tester: Tanish (scripted via curl)  Date: 2026-08-04  Backend build/commit: main @ 7f55a3c (post-#191)
 
 Prerequisite: a logged-in test account with at least one trip that has ≥2 stops with valid coordinates (`POST /api/trips/{id}/optimize` requires this — fewer than 2 stops returns `422`).
 
