@@ -142,3 +142,53 @@ export interface ApiError {
   timestamp: string;
   fieldErrors: Array<{ field: string; message: string }> | null;
 }
+// ── Stop photos (SCRUM-72/164) ────────────────────────────────────────────────
+// Mirrors backend: PhotoSignatureResponse, StopPhotoResponse, CreateStopPhotoRequest
+
+export interface PhotoSignatureResponse {
+  cloudName: string;
+  apiKey: string;
+  timestamp: number;
+  signature: string;
+  uploadParams: Record<string, unknown>;
+}
+
+export interface StopPhotoResponse {
+  id: number;
+  stopId: number;
+  url: string;
+  cloudinaryPublicId: string | null;
+  caption: string | null;
+  createdAt: string; // ISO-8601 UTC Instant
+}
+
+export interface CreateStopPhotoRequest {
+  url: string;
+  cloudinaryPublicId?: string;
+  caption?: string;
+}
+// ── Stop photos (SCRUM-72/164) ────────────────────────────────────────────────
+// Mirrors backend: PhotoSignatureResponse, StopPhotoResponse, CreateStopPhotoRequest
+
+export interface PhotoSignatureResponse {
+  cloudName: string;
+  apiKey: string;
+  timestamp: number;
+  signature: string;
+  uploadParams: Record<string, unknown>;
+}
+
+export interface StopPhotoResponse {
+  id: number;
+  stopId: number;
+  url: string;
+  cloudinaryPublicId: string | null;
+  caption: string | null;
+  createdAt: string; // ISO-8601 UTC Instant
+}
+
+export interface CreateStopPhotoRequest {
+  url: string;
+  cloudinaryPublicId?: string;
+  caption?: string;
+}

@@ -59,14 +59,8 @@
           }
         </ion-label>
         @if (stop.status !== 'VISITED') {
-        <ion-button
-          fill="clear"
-          slot="end"
-          color="success"
-          [disabled]="markingVisitedId === stop.id"
-          (click)="markVisited(stop)"
-          aria-label="Mark visited"
-        >
+        <ion-button fill="clear" slot="end" color="success" [disabled]="markingVisitedId === stop.id"
+          (click)="markVisited(stop)" aria-label="Mark visited">
           @if (markingVisitedId === stop.id) {
           <ion-spinner name="dots" slot="icon-only"></ion-spinner>
           } @else {
@@ -76,6 +70,9 @@
         } @else {
         <ion-icon name="checkmark-circle" color="success" slot="end" aria-label="Visited"></ion-icon>
         }
+        <ion-button fill="clear" slot="end" (click)="openPhotoUpload(stop)" aria-label="Add photo">
+          <ion-icon name="camera" slot="icon-only"></ion-icon>
+        </ion-button>
         <ion-button fill="clear" slot="end" (click)="openEditStop(stop)" aria-label="Edit stop">
           <ion-icon name="create" slot="icon-only"></ion-icon>
         </ion-button>
@@ -86,59 +83,66 @@
   </ion-list>
   }
   <ion-modal [isOpen]="aiModalOpen" (didDismiss)="closeAiModal()">
-  <ng-template>
-    <ion-header>
-      <ion-toolbar>
-        <ion-title>AI Trip Suggestions</ion-title>
-        <ion-buttons slot="end">
-          <ion-button (click)="closeAiModal()">Close</ion-button>
-        </ion-buttons>
-      </ion-toolbar>
-    </ion-header>
-    <ion-content class="ion-padding">
-      @if (trip) {
+    <ng-template>
+      <ion-header>
+        <ion-toolbar>
+          <ion-title>AI Trip Suggestions</ion-title>
+          <ion-buttons slot="end">
+            <ion-button (click)="closeAiModal()">Close</ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+      <ion-content class="ion-padding">
+        @if (trip) {
         @if (!aiSuggestions) {
-          <app-ai-preferences-form
-            [tripId]="trip.id"
-            (suggested)="onSuggested($event)"
-            (cancelled)="closeAiModal()"
-          ></app-ai-preferences-form>
+        <app-ai-preferences-form [tripId]="trip.id" (suggested)="onSuggested($event)"
+          (cancelled)="closeAiModal()"></app-ai-preferences-form>
         } @else {
-          <app-ai-suggestion-cards
-            [tripId]="trip.id"
-            [summary]="aiSuggestions.summary"
-            [suggestions]="aiSuggestions.stops"
-            (stopAdded)="onStopAdded($event)"
-          ></app-ai-suggestion-cards>
-          <ion-button expand="block" fill="clear" (click)="aiSuggestions = null">
-            Adjust preferences
-          </ion-button>
+        <app-ai-suggestion-cards [tripId]="trip.id" [summary]="aiSuggestions.summary"
+          [suggestions]="aiSuggestions.stops" (stopAdded)="onStopAdded($event)"></app-ai-suggestion-cards>
+        <ion-button expand="block" fill="clear" (click)="aiSuggestions = null">
+          Adjust preferences
+        </ion-button>
         }
-      }
-    </ion-content>
-  </ng-template>
-</ion-modal>
+        }
+      </ion-content>
+    </ng-template>
+  </ion-modal>
 
-<ion-modal [isOpen]="!!editingStop" (didDismiss)="closeEditStop()">
-  <ng-template>
-    <ion-header>
-      <ion-toolbar>
-        <ion-title>Edit Stop</ion-title>
-        <ion-buttons slot="end">
-          <ion-button (click)="closeEditStop()">Close</ion-button>
-        </ion-buttons>
-      </ion-toolbar>
-    </ion-header>
-    <ion-content class="ion-padding">
-      @if (editingStop && trip) {
-        <app-edit-stop-form
-          [tripId]="trip.id"
-          [stop]="editingStop"
-          (updated)="onStopUpdated($event)"
-          (cancelled)="closeEditStop()"
-        ></app-edit-stop-form>
-      }
-    </ion-content>
-  </ng-template>
-</ion-modal>
+  <ion-modal [isOpen]="!!editingStop" (didDismiss)="closeEditStop()">
+    <ng-template>
+      <ion-header>
+        <ion-toolbar>
+          <ion-title>Edit Stop</ion-title>
+          <ion-buttons slot="end">
+            <ion-button (click)="closeEditStop()">Close</ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+      <ion-content class="ion-padding">
+        @if (editingStop && trip) {
+        <app-edit-stop-form [tripId]="trip.id" [stop]="editingStop" (updated)="onStopUpdated($event)"
+          (cancelled)="closeEditStop()"></app-edit-stop-form>
+        }
+      </ion-content>
+    </ng-template>
+  </ion-modal>
+  <ion-modal [isOpen]="!!uploadingPhotoStop" (didDismiss)="closePhotoUpload()">
+    <ng-template>
+      <ion-header>
+        <ion-toolbar>
+          <ion-title>Add Photo</ion-title>
+          <ion-buttons slot="end">
+            <ion-button (click)="closePhotoUpload()">Close</ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+      <ion-content class="ion-padding">
+        @if (uploadingPhotoStop) {
+        <app-stop-photo-upload [stopId]="uploadingPhotoStop.id" (uploaded)="onPhotoUploaded($event)"
+          (cancelled)="closePhotoUpload()"></app-stop-photo-upload>
+        }
+      </ion-content>
+    </ng-template>
+  </ion-modal>
 </ion-content>
