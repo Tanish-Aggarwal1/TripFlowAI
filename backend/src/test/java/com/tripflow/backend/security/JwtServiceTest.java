@@ -50,7 +50,21 @@ class JwtServiceTest {
 	@Test
 	void isValid_rejectsTamperedToken() {
 		String token = jwtService.generateToken(1L, "user@example.com");
-		String tampered = token.substring(0, token.length() - 1) + "X";
+
+		// Flip a character inside the signature segment, not at the very end of
+		// the token. Base64url only guarantees every bit is significant within a
+		// *full* 4-char/3-byte group — the final group of a 32-byte HMAC-SHA256
+		// signature is partial (2 leftover bytes), so its last character carries
+		// unused padding bits. Flipping exactly that last character can, purely
+		// by chance depending on the token's actual bytes, decode to the same
+		// signature and leave the token valid — a flaky false pass. Mutating the
+		// first character of the signature segment is always inside a full
+		// group, so the decoded bytes are guaranteed to change.
+		int lastDot = token.lastIndexOf('.');
+		char[] chars = token.toCharArray();
+		int sigStart = lastDot + 1;
+		chars[sigStart] = chars[sigStart] == 'A' ? 'B' : 'A';
+		String tampered = new String(chars);
 
 		assertThat(jwtService.isValid(tampered)).isFalse();
 	}
