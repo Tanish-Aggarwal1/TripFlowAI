@@ -30,7 +30,7 @@
     "@capacitor/status-bar": "8.0.3",
     "@ionic/angular": "^8.8.16",
     "ionicons": "^8.1.0",
-    "mapbox-gl": "^3.25.0",
+    "mapbox-gl": "^3.27.0",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
     "zone.js": "~0.15.0"
@@ -48,7 +48,7 @@
     "@capacitor/cli": "8.4.2",
     "@ionic/angular-toolkit": "^12.0.0",
     "@types/jasmine": "~6.0.0",
-    "@types/mapbox-gl": "^3.4.1",
+    "@types/mapbox-gl": "^3.5.0",
     "@typescript-eslint/eslint-plugin": "^8.65.0",
     "@typescript-eslint/parser": "^8.65.0",
     "eslint": "^9.16.0",
