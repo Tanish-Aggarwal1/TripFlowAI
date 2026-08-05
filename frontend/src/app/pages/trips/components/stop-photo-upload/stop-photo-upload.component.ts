@@ -1,5 +1,4 @@
 import { Component, EventEmitter, inject, Input, Output } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
   IonItem,
@@ -25,7 +24,6 @@ import { StopPhotoResponse } from '../../../../core/models/trip.model';
   templateUrl: 'stop-photo-upload.component.html',
   styleUrls: ['stop-photo-upload.component.scss'],
   imports: [
-    CommonModule,
     FormsModule,
     IonItem,
     IonLabel,
