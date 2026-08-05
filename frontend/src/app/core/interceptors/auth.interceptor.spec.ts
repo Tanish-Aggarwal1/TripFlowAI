@@ -3,6 +3,7 @@ import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { authInterceptor } from './auth.interceptor';
 import { AuthService } from '../services/auth.service';
+import { environment } from '../../../environments/environment';
 
 describe('authInterceptor', () => {
   let httpClient: HttpClient;
@@ -28,12 +29,12 @@ describe('authInterceptor', () => {
     httpMock.verify();
   });
 
-  it('attaches the bearer token to non-auth requests when a token exists', () => {
+  it('attaches the bearer token to requests targeting the backend API when a token exists', () => {
     authServiceSpy.getToken.and.returnValue('abc-token');
 
-    httpClient.get('/api/trips').subscribe();
+    httpClient.get(`${environment.apiBaseUrl}/trips`).subscribe();
 
-    const req = httpMock.expectOne('/api/trips');
+    const req = httpMock.expectOne(`${environment.apiBaseUrl}/trips`);
     expect(req.request.headers.get('Authorization')).toBe('Bearer abc-token');
     req.flush({});
   });
@@ -41,9 +42,9 @@ describe('authInterceptor', () => {
   it('does not attach an Authorization header when there is no token', () => {
     authServiceSpy.getToken.and.returnValue(null);
 
-    httpClient.get('/api/trips').subscribe();
+    httpClient.get(`${environment.apiBaseUrl}/trips`).subscribe();
 
-    const req = httpMock.expectOne('/api/trips');
+    const req = httpMock.expectOne(`${environment.apiBaseUrl}/trips`);
     expect(req.request.headers.has('Authorization')).toBeFalse();
     req.flush({});
   });
@@ -51,9 +52,29 @@ describe('authInterceptor', () => {
   it('does not attach a token to /api/auth/** requests even when a token exists', () => {
     authServiceSpy.getToken.and.returnValue('abc-token');
 
-    httpClient.post('/api/auth/login', {}).subscribe();
+    httpClient.post(`${environment.apiBaseUrl}/auth/login`, {}).subscribe();
 
-    const req = httpMock.expectOne('/api/auth/login');
+    const req = httpMock.expectOne(`${environment.apiBaseUrl}/auth/login`);
+    expect(req.request.headers.has('Authorization')).toBeFalse();
+    req.flush({});
+  });
+
+  it('does not attach the app JWT to external requests outside the backend API domain', () => {
+    authServiceSpy.getToken.and.returnValue('abc-token');
+
+    httpClient.post('https://api.cloudinary.com/v1_1/demo/image/upload', {}).subscribe();
+
+    const req = httpMock.expectOne('https://api.cloudinary.com/v1_1/demo/image/upload');
+    expect(req.request.headers.has('Authorization')).toBeFalse();
+    req.flush({});
+  });
+
+  it('does not attach the app JWT to relative URLs outside the backend API base path', () => {
+    authServiceSpy.getToken.and.returnValue('abc-token');
+
+    httpClient.get('/assets/config.json').subscribe();
+
+    const req = httpMock.expectOne('/assets/config.json');
     expect(req.request.headers.has('Authorization')).toBeFalse();
     req.flush({});
   });
