@@ -6,6 +6,7 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.tripflow.backend.domain.Place;
 import com.tripflow.backend.domain.Stop;
 import com.tripflow.backend.domain.Trip;
 import com.tripflow.backend.dto.CreateStopRequest;
@@ -91,10 +92,10 @@ public class StopService {
      * {@link #addStop} — the one place stop-ordering + place-lookup logic exists.
      */
     List<Stop> buildStops(List<CreateStopRequest> requests, Trip trip) {
+        List<Place> places = placeResolutionService.resolvePlaces(requests);
         List<Stop> stops = new ArrayList<>();
-        int order = 0;
-        for (CreateStopRequest request : requests) {
-            Stop stop = stopMapper.toEntity(request, placeResolutionService.resolvePlace(request), order++);
+        for (int order = 0; order < requests.size(); order++) {
+            Stop stop = stopMapper.toEntity(requests.get(order), places.get(order), order);
             stop.setTrip(trip);
             stops.add(stop);
         }

@@ -1,5 +1,7 @@
 package com.tripflow.backend.repository;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -10,6 +12,12 @@ import com.tripflow.backend.domain.Place;
 
 public interface PlaceRepository extends JpaRepository<Place, Long> {
 	Optional<Place> findByExternalPlaceId(String externalPlaceId);
+
+	/** Batched form of {@link #findByExternalPlaceId}, used to resolve a whole trip's stops in one query. */
+	List<Place> findByExternalPlaceIdIn(Collection<String> externalPlaceIds);
+
+	/** Batched pre-filter for {@link #findFirstByNameAndLatitudeAndLongitudeOrderById} — coordinate matching still happens in-memory since it's not a simple IN. */
+	List<Place> findByNameIn(Collection<String> names);
 
 	/**
 	 * Dedup fallback lookup by name+coordinates. {@code idx_places_name_lat_lng}

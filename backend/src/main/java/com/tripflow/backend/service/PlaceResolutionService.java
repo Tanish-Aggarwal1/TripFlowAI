@@ -1,6 +1,12 @@
 package com.tripflow.backend.service;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -44,10 +50,67 @@ public class PlaceResolutionService {
         double roundedLatitude = round(latitude);
         double roundedLongitude = round(longitude);
 
-        Optional<Place> existing = findExistingPlace(name, roundedLatitude, roundedLongitude, externalPlaceId);
-        if (existing.isPresent()) {
-            return existing.get();
+        return findExistingPlace(name, roundedLatitude, roundedLongitude, externalPlaceId)
+                .orElseGet(() -> createPlace(name, roundedLatitude, roundedLongitude, address, externalPlaceId));
+    }
+
+    /**
+     * Batched form of {@link #resolvePlace(CreateStopRequest)} for a whole trip's worth of
+     * stops at once (SCRUM-267) — {@link StopService#buildStops} was issuing 1-2 SELECTs
+     * per stop in a loop. Runs at most 2 SELECTs total (one by external id, one by name)
+     * instead of one round trip per request, then matches/creates in memory. Order of the
+     * returned list matches {@code requests}.
+     */
+    public List<Place> resolvePlaces(List<CreateStopRequest> requests) {
+        if (requests.isEmpty()) {
+            return List.of();
         }
+
+        Set<String> externalIds = requests.stream()
+                .map(CreateStopRequest::externalPlaceId)
+                .filter(id -> id != null && !id.isBlank())
+                .collect(Collectors.toSet());
+        Map<String, Place> byExternalId = externalIds.isEmpty() ? new HashMap<>()
+                : placeRepository.findByExternalPlaceIdIn(externalIds).stream()
+                        .collect(Collectors.toMap(Place::getExternalPlaceId, p -> p, (a, b) -> a));
+
+        Set<String> names = requests.stream().map(CreateStopRequest::name).collect(Collectors.toSet());
+        Map<String, List<Place>> byName = placeRepository.findByNameIn(names).stream()
+                .collect(Collectors.groupingBy(Place::getName));
+
+        List<Place> results = new ArrayList<>(requests.size());
+        for (CreateStopRequest request : requests) {
+            double roundedLatitude = round(request.latitude());
+            double roundedLongitude = round(request.longitude());
+            String externalPlaceId = request.externalPlaceId();
+
+            Place match = null;
+            if (externalPlaceId != null && !externalPlaceId.isBlank()) {
+                match = byExternalId.get(externalPlaceId);
+            }
+            if (match == null) {
+                match = byName.getOrDefault(request.name(), List.of()).stream()
+                        .filter(p -> p.getLatitude().equals(roundedLatitude) && p.getLongitude().equals(roundedLongitude))
+                        .findFirst()
+                        .orElse(null);
+            }
+            if (match == null) {
+                match = createPlace(request.name(), roundedLatitude, roundedLongitude,
+                        request.address(), externalPlaceId);
+                // Cache it so a later duplicate request in this same batch (e.g. two AI-generated
+                // stops pointing at the same place) reuses it instead of racing its own insert.
+                if (externalPlaceId != null && !externalPlaceId.isBlank()) {
+                    byExternalId.put(externalPlaceId, match);
+                }
+                byName.computeIfAbsent(request.name(), k -> new ArrayList<>()).add(match);
+            }
+            results.add(match);
+        }
+        return results;
+    }
+
+    private Place createPlace(String name, double roundedLatitude, double roundedLongitude,
+            String address, String externalPlaceId) {
         Place place = new Place();
         place.setName(name);
         place.setLatitude(roundedLatitude);
