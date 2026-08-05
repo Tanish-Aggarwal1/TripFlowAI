@@ -20,6 +20,7 @@ import {
 import { addIcons } from 'ionicons';
 import { create, calendarOutline, sparkles, checkmark, checkmarkCircle, camera } from 'ionicons/icons';
 import { TripService } from '../../../core/services/trip.service';
+import { ToastService } from '../../../core/services/toast.service';
 import {
   StopResponse,
   TripResponse,
@@ -77,13 +78,14 @@ export class TripViewPage implements OnInit {
   private router = inject(Router);
   private tripService = inject(TripService);
   private toastCtrl = inject(ToastController);
+  private toastService = inject(ToastService);
 
   trip: TripResponse | null = null;
   loading = true;
   error: string | null = null;
   optimizing = false;
   exporting = false;
-    // SCRUM-67 wiring: hosts the SCRUM-155 preferences form, then swaps to the
+  // SCRUM-67 wiring: hosts the SCRUM-155 preferences form, then swaps to the
   // SCRUM-156 suggestion cards once a response comes back.
   aiModalOpen = false;
   aiSuggestions: SuggestedItineraryResponse | null = null;
@@ -91,8 +93,8 @@ export class TripViewPage implements OnInit {
   // SCRUM-250
   editingStop: StopResponse | null = null;
 
-   // SCRUM-164
-   uploadingPhotoStop: StopResponse | null = null;
+  // SCRUM-164
+  uploadingPhotoStop: StopResponse | null = null;
 
   // Quick "Visited" action — tracks the in-flight stop id so a fast double-tap
   // can't fire a second PUT before the first one resolves.
@@ -123,7 +125,7 @@ export class TripViewPage implements OnInit {
       },
     });
   }
-  
+
   justOptimized = false;
 
   get sortedStops() {
@@ -228,14 +230,9 @@ export class TripViewPage implements OnInit {
         this.markingVisitedId = null;
         this.onStopUpdated(updated);
       },
-      error: async (err) => {
+      error: (err) => {
         this.markingVisitedId = null;
-        const toast = await this.toastCtrl.create({
-          message: err.message ?? 'Could not mark stop visited.',
-          duration: 2500,
-          color: 'danger',
-        });
-        await toast.present();
+        this.toastService.showError(err, 'Could not mark stop visited.');
       },
     });
   }
@@ -278,14 +275,9 @@ export class TripViewPage implements OnInit {
         });
         await toast.present();
       },
-      error: async (err) => {
+      error: (err) => {
         this.optimizing = false;
-        const toast = await this.toastCtrl.create({
-          message: err.message ?? 'Could not optimize route.',
-          duration: 2500,
-          color: 'danger',
-        });
-        await toast.present();
+        this.toastService.showError(err, 'Could not optimize route.');
       },
     });
   }
@@ -300,14 +292,9 @@ export class TripViewPage implements OnInit {
         this.exporting = false;
         downloadBlob(blob, filename);
       },
-      error: async (err) => {
+      error: (err) => {
         this.exporting = false;
-        const toast = await this.toastCtrl.create({
-          message: err.message ?? 'Could not export calendar.',
-          duration: 2500,
-          color: 'danger',
-        });
-        await toast.present();
+        this.toastService.showError(err, 'Could not export calendar.');
       },
     });
   }
