@@ -13,7 +13,9 @@
     [disabled]="uploading"
   />
 
-  <img *ngIf="previewUrl" [src]="previewUrl" class="preview" alt="Selected photo preview" />
+  @if (previewUrl) {
+    <img [src]="previewUrl" class="preview" alt="Selected photo preview" />
+  }
 
   <ion-item>
     <ion-label position="stacked">Caption / note</ion-label>
@@ -25,9 +27,13 @@
     ></ion-textarea>
   </ion-item>
 
-  <ion-progress-bar *ngIf="uploading" [value]="progress / 100"></ion-progress-bar>
+  @if (uploading) {
+    <ion-progress-bar [value]="progress / 100"></ion-progress-bar>
+  }
 
-  <p class="form-error" *ngIf="formError">{{ formError }}</p>
+  @if (formError) {
+    <p class="form-error">{{ formError }}</p>
+  }
 
   <div class="actions">
     <ion-button fill="clear" (click)="cancel()" [disabled]="uploading">
@@ -35,8 +41,12 @@
       Cancel
     </ion-button>
     <ion-button (click)="submit()" [disabled]="uploading || !selectedFile">
-      <ion-spinner *ngIf="uploading" name="crescent" slot="start"></ion-spinner>
-      <ion-icon *ngIf="!uploading" slot="start" name="checkmark"></ion-icon>
+      @if (uploading) {
+        <ion-spinner name="crescent" slot="start"></ion-spinner>
+      }
+      @if (!uploading) {
+        <ion-icon slot="start" name="checkmark"></ion-icon>
+      }
       Upload
     </ion-button>
   </div>
