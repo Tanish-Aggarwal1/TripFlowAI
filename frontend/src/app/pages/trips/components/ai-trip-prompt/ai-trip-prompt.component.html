@@ -1,16 +1,58 @@
 <div class="ai-trip-prompt">
-  <h3>Describe your trip</h3>
-  <p class="hint">e.g. "3 days in Kyoto, food and temples, moderate budget"</p>
+  <h3>Plan your trip</h3>
 
   <ion-item>
-    <ion-label position="stacked">Prompt</ion-label>
-    <ion-textarea
-      [(ngModel)]="promptText"
-      placeholder="Describe the trip you want"
-      autoGrow="true"
-      rows="3"
-    ></ion-textarea>
+    <ion-label position="stacked">Destination</ion-label>
+    <ion-input [(ngModel)]="location" placeholder="e.g. Kyoto, Japan"></ion-input>
   </ion-item>
+
+  <ion-item>
+    <ion-label position="stacked">Days</ion-label>
+    <ion-select [(ngModel)]="days" interface="popover">
+      @for (n of dayOptions; track n) {
+        <ion-select-option [value]="n">{{ n }}</ion-select-option>
+      }
+    </ion-select>
+  </ion-item>
+
+  <ion-item>
+    <ion-label position="stacked">Budget</ion-label>
+    <ion-select [(ngModel)]="budget" interface="popover">
+      <ion-select-option value="low">Low</ion-select-option>
+      <ion-select-option value="medium">Medium</ion-select-option>
+      <ion-select-option value="high">High</ion-select-option>
+    </ion-select>
+  </ion-item>
+
+  <ion-item>
+    <ion-label position="stacked">Pace</ion-label>
+    <ion-select [(ngModel)]="pace" interface="popover">
+      <ion-select-option value="relaxed">Relaxed</ion-select-option>
+      <ion-select-option value="moderate">Moderate</ion-select-option>
+      <ion-select-option value="packed">Packed</ion-select-option>
+    </ion-select>
+  </ion-item>
+
+  <ion-item>
+    <ion-label position="stacked">Interests (optional)</ion-label>
+    <ion-input
+      [(ngModel)]="interestInput"
+      placeholder="e.g. food, hiking, museums"
+      (keyup.enter)="addInterest()"
+    ></ion-input>
+  </ion-item>
+  <ion-button fill="clear" size="small" (click)="addInterest()">Add interest</ion-button>
+
+  @if (interests.length > 0) {
+    <div class="chip-row">
+      @for (interest of interests; track interest) {
+        <ion-chip (click)="removeInterest(interest)">
+          {{ interest }}
+          <ion-icon name="close-circle"></ion-icon>
+        </ion-chip>
+      }
+    </div>
+  }
 
   <ion-item>
     <ion-label position="stacked">Title (optional)</ion-label>

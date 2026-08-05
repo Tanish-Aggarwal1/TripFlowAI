@@ -50,55 +50,101 @@ describe('AiTripPromptComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  describe('addInterest / removeInterest', () => {
+    it('adds a trimmed interest and clears the input', () => {
+      component.interestInput = '  food  ';
+
+      component.addInterest();
+
+      expect(component.interests).toEqual(['food']);
+      expect(component.interestInput).toBe('');
+    });
+
+    it('rejects an interest over 50 characters', () => {
+      component.interestInput = 'x'.repeat(51);
+
+      component.addInterest();
+
+      expect(component.interests).toEqual([]);
+      expect(component.formError).toBe('Each interest must be at most 50 characters.');
+    });
+
+    it('rejects more than 10 interests', () => {
+      component.interests = Array.from({ length: 10 }, (_, i) => `interest${i}`);
+      component.interestInput = 'one too many';
+
+      component.addInterest();
+
+      expect(component.interests.length).toBe(10);
+      expect(component.formError).toBe('At most 10 interests are allowed.');
+    });
+
+    it('removes an interest', () => {
+      component.interests = ['food', 'hiking'];
+
+      component.removeInterest('food');
+
+      expect(component.interests).toEqual(['hiking']);
+    });
+  });
+
   describe('submit', () => {
-    it('blocks submission with an empty prompt', () => {
-      component.promptText = '   ';
+    it('blocks submission with an empty destination', () => {
+      component.location = '   ';
 
       component.submit();
 
-      expect(component.formError).toBe('Describe the trip you want.');
+      expect(component.formError).toBe('Enter a destination.');
       expect(tripServiceSpy.generateTripWithAi).not.toHaveBeenCalled();
     });
 
-    it('blocks submission when the prompt exceeds 1000 characters', () => {
-      component.promptText = 'x'.repeat(1001);
-
-      component.submit();
-
-      expect(component.formError).toBe('Prompt must be at most 1000 characters.');
-      expect(tripServiceSpy.generateTripWithAi).not.toHaveBeenCalled();
-    });
-
-    it('calls TripService.generateTripWithAi and emits created on success', () => {
-      component.promptText = '3 days in Kyoto, food and temples';
+    it('composes a prompt from the structured fields and calls generateTripWithAi', () => {
+      component.location = 'Kyoto';
+      component.days = 3;
+      component.budget = 'high';
+      component.pace = 'relaxed';
+      component.interests = ['food', 'temples'];
       tripServiceSpy.generateTripWithAi.and.returnValue(of(trip));
       spyOn(component.created, 'emit');
 
       component.submit();
 
       expect(tripServiceSpy.generateTripWithAi).toHaveBeenCalledWith({
-        prompt: '3 days in Kyoto, food and temples',
+        prompt: '3-day trip to Kyoto, interests: food, temples, budget: high, pace: relaxed',
         title: undefined,
       });
       expect(component.created.emit).toHaveBeenCalledWith(trip);
       expect(component.submitting).toBeFalse();
     });
 
+    it('omits the interests segment when none are added', () => {
+      component.location = 'Kyoto';
+      component.days = 5;
+      tripServiceSpy.generateTripWithAi.and.returnValue(of(trip));
+
+      component.submit();
+
+      expect(tripServiceSpy.generateTripWithAi).toHaveBeenCalledWith({
+        prompt: '5-day trip to Kyoto, budget: medium, pace: moderate',
+        title: undefined,
+      });
+    });
+
     it('includes a trimmed title when provided', () => {
-      component.promptText = 'a trip';
+      component.location = 'Kyoto';
       component.title = '  My Custom Title  ';
       tripServiceSpy.generateTripWithAi.and.returnValue(of(trip));
 
       component.submit();
 
       expect(tripServiceSpy.generateTripWithAi).toHaveBeenCalledWith({
-        prompt: 'a trip',
+        prompt: jasmine.any(String),
         title: 'My Custom Title',
       });
     });
 
     it('does not resubmit while a request is already in flight', () => {
-      component.promptText = 'a trip';
+      component.location = 'Kyoto';
       tripServiceSpy.generateTripWithAi.and.returnValue(of(trip));
       component.submitting = true;
 
@@ -108,7 +154,7 @@ describe('AiTripPromptComponent', () => {
     });
 
     it('shows an error toast on failure', async () => {
-      component.promptText = 'a trip';
+      component.location = 'Kyoto';
       tripServiceSpy.generateTripWithAi.and.returnValue(
         throwError(() => ({ message: 'Rate limit exceeded.' })),
       );
