@@ -228,14 +228,9 @@ export class TripViewPage implements OnInit {
         this.markingVisitedId = null;
         this.onStopUpdated(updated);
       },
-      error: async (err) => {
+      error: (err) => {
         this.markingVisitedId = null;
-        const toast = await this.toastCtrl.create({
-          message: err.message ?? 'Could not mark stop visited.',
-          duration: 2500,
-          color: 'danger',
-        });
-        await toast.present();
+        this.showErrorToast(err, 'Could not mark stop visited.');
       },
     });
   }
@@ -278,14 +273,9 @@ export class TripViewPage implements OnInit {
         });
         await toast.present();
       },
-      error: async (err) => {
+      error: (err) => {
         this.optimizing = false;
-        const toast = await this.toastCtrl.create({
-          message: err.message ?? 'Could not optimize route.',
-          duration: 2500,
-          color: 'danger',
-        });
-        await toast.present();
+        this.showErrorToast(err, 'Could not optimize route.');
       },
     });
   }
@@ -300,16 +290,20 @@ export class TripViewPage implements OnInit {
         this.exporting = false;
         downloadBlob(blob, filename);
       },
-      error: async (err) => {
+      error: (err) => {
         this.exporting = false;
-        const toast = await this.toastCtrl.create({
-          message: err.message ?? 'Could not export calendar.',
-          duration: 2500,
-          color: 'danger',
-        });
-        await toast.present();
+        this.showErrorToast(err, 'Could not export calendar.');
       },
     });
+  }
+
+  private async showErrorToast(err: unknown, fallback: string): Promise<void> {
+    const toast = await this.toastCtrl.create({
+      message: (err as { message?: string })?.message ?? fallback,
+      duration: 2500,
+      color: 'danger',
+    });
+    await toast.present();
   }
 }
 
