@@ -125,6 +125,37 @@ class StopPhotoRepositoryIT {
     }
 
     @Test
+    void findByIdAndStopId_matchingStop_returnsPhoto() {
+        Long stopId = createStopId("matching");
+        Stop stop = reloadStop(stopId);
+
+        StopPhoto photo = new StopPhoto();
+        photo.setStop(stop);
+        photo.setUrl("https://res.cloudinary.com/demo/image/upload/matching.jpg");
+        StopPhoto saved = stopPhotoRepository.save(photo);
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThat(stopPhotoRepository.findByIdAndStopId(saved.getId(), stopId)).isPresent();
+    }
+
+    @Test
+    void findByIdAndStopId_photoBelongsToDifferentStop_returnsEmpty() {
+        Long stopAId = createStopId("wrong-a");
+        Long stopBId = createStopId("wrong-b");
+        Stop stopA = reloadStop(stopAId);
+
+        StopPhoto photo = new StopPhoto();
+        photo.setStop(stopA);
+        photo.setUrl("https://res.cloudinary.com/demo/image/upload/wrong.jpg");
+        StopPhoto saved = stopPhotoRepository.save(photo);
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThat(stopPhotoRepository.findByIdAndStopId(saved.getId(), stopBId)).isEmpty();
+    }
+
+    @Test
     void deletingStop_cascadesToItsPhotos() {
         Long stopId = createStopId("cascade");
         Stop stop = reloadStop(stopId);
