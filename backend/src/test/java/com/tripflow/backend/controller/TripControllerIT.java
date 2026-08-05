@@ -4,6 +4,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -118,15 +119,69 @@ class TripControllerIT {
 	}
 
 	@Test
-	void getTrip_privateTripAsNonOwner_returns403() throws Exception {
+	void getTrip_privateTripAsNonOwner_returns404() throws Exception {
+		// SCRUM-71a: 404, not 403 — a 403 would confirm the trip id exists to a
+		// requester who isn't allowed to see it.
 		User owner = createTestUser("privowner");
 		User other = createTestUser("privother");
 
 		CreateTripRequest tripRequest = sampleTripRequest("Private Trip", TripVisibility.PRIVATE);
 		Long tripId = createTrip(owner, tripRequest);
 
-		mockMvc.perform(get("/api/trips/" + tripId).with(csrf()).with(asUser(other))).andExpect(status().isForbidden())
-				.andExpect(jsonPath("$.status").value(403)).andExpect(jsonPath("$.error").value("Forbidden"));
+		mockMvc.perform(get("/api/trips/" + tripId).with(csrf()).with(asUser(other))).andExpect(status().isNotFound())
+				.andExpect(jsonPath("$.status").value(404));
+	}
+
+	@Test
+	void getTrip_publicTripAsNonOwner_returns200WithTripResponse() throws Exception {
+		User owner = createTestUser("pubowner");
+		User other = createTestUser("pubother");
+
+		CreateTripRequest tripRequest = sampleTripRequest("Public Trip", TripVisibility.PUBLIC);
+		Long tripId = createTrip(owner, tripRequest);
+
+		mockMvc.perform(get("/api/trips/" + tripId).with(csrf()).with(asUser(other)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.id").value(tripId))
+				.andExpect(jsonPath("$.title").value("Public Trip"))
+				.andExpect(jsonPath("$.visibility").value("PUBLIC"))
+				.andExpect(jsonPath("$.ownerId").value(owner.getId()));
+	}
+
+	@Test
+	void toggleVisibility_owner_flipsPrivateToPublicAndBack() throws Exception {
+		User owner = createTestUser("toggleowner");
+		Long tripId = createTrip(owner, sampleTripRequest("Toggle Trip", TripVisibility.PRIVATE));
+
+		mockMvc.perform(patch("/api/trips/" + tripId + "/visibility").with(csrf()).with(asUser(owner)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.visibility").value("PUBLIC"));
+
+		mockMvc.perform(patch("/api/trips/" + tripId + "/visibility").with(csrf()).with(asUser(owner)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.visibility").value("PRIVATE"));
+	}
+
+	@Test
+	void toggleVisibility_nonOwner_returns403_andDoesNotChangeVisibility() throws Exception {
+		User owner = createTestUser("toggleowner2");
+		User other = createTestUser("toggleother2");
+		Long tripId = createTrip(owner, sampleTripRequest("Not Yours", TripVisibility.PRIVATE));
+
+		mockMvc.perform(patch("/api/trips/" + tripId + "/visibility").with(csrf()).with(asUser(other)))
+				.andExpect(status().isForbidden());
+
+		mockMvc.perform(get("/api/trips/" + tripId).with(csrf()).with(asUser(owner)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.visibility").value("PRIVATE"));
+	}
+
+	@Test
+	void toggleVisibility_nonExistentTrip_returns404() throws Exception {
+		User user = createTestUser("togglenotfound");
+
+		mockMvc.perform(patch("/api/trips/999999/visibility").with(csrf()).with(asUser(user)))
+				.andExpect(status().isNotFound());
 	}
 
 	@Test
