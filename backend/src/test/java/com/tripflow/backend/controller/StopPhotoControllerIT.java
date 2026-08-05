@@ -197,4 +197,28 @@ class StopPhotoControllerIT {
         mockMvc.perform(delete("/api/stops/" + stopId + "/photos/" + photoId).with(csrf()).with(asUser(owner)))
                 .andExpect(status().isNoContent());
     }
+
+    @Test
+    void deletePhoto_photoBelongsToDifferentStop_returns404() throws Exception {
+        User owner = createUser("crossstopowner");
+        Long stopId = createStop(owner, TripVisibility.PRIVATE);
+        Long otherStopId = createStop(owner, TripVisibility.PRIVATE);
+
+        CreateStopPhotoRequest request = new CreateStopPhotoRequest(
+                "https://res.cloudinary.com/demo/image/upload/v1/crossstop.jpg", null, null);
+        MvcResult createResult = mockMvc.perform(post("/api/stops/" + otherStopId + "/photos").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)).with(asUser(owner)))
+                .andExpect(status().isCreated()).andReturn();
+        Long photoId = objectMapper.readTree(createResult.getResponse().getContentAsString()).get("id").asLong();
+
+        // Photo belongs to otherStopId, requested for deletion via stopId — must not
+        // be findable (and must not delete) through the wrong stop's URL.
+        mockMvc.perform(delete("/api/stops/" + stopId + "/photos/" + photoId).with(csrf()).with(asUser(owner)))
+                .andExpect(status().isNotFound());
+
+        mockMvc.perform(get("/api/stops/" + otherStopId + "/photos").with(asUser(owner)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(photoId));
+    }
 }

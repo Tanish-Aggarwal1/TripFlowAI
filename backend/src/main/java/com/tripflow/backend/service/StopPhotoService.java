@@ -79,14 +79,11 @@ public class StopPhotoService {
     public void deletePhoto(Long stopId, Long photoId, Long requesterId) {
         Stop stop = loadOwnedStop(stopId, requesterId);
 
-        StopPhoto photo = stopPhotoRepository.findById(photoId)
+        StopPhoto photo = stopPhotoRepository.findByIdAndStopId(photoId, stop.getId())
+                // Covers both "doesn't exist" and "belongs to a different stop" — the
+                // latter is treated as not found rather than leaking that the id exists
+                // elsewhere.
                 .orElseThrow(() -> new ResourceNotFoundException("Photo not found: " + photoId));
-
-        if (!photo.getStop().getId().equals(stop.getId())) {
-            // Photo exists but belongs to a different stop — treat as not found
-            // rather than leaking that the id exists elsewhere.
-            throw new ResourceNotFoundException("Photo not found: " + photoId);
-        }
 
         stopPhotoRepository.delete(photo);
         log.info("Photo deleted stopId={} photoId={}", stop.getId(), photoId);
