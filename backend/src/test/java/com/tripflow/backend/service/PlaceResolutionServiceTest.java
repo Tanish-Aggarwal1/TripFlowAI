@@ -7,6 +7,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -155,5 +156,99 @@ class PlaceResolutionServiceTest {
         Place result = placeResolutionService.resolvePlace("Cafe", 45.000000001, -79.0, null, null);
 
         assertThat(result).isSameAs(existing);
+    }
+
+    // ---------- resolvePlaces (batch, SCRUM-267) ----------
+
+    @Test
+    void resolvePlaces_emptyList_returnsEmptyWithoutQuerying() {
+        List<Place> result = placeResolutionService.resolvePlaces(List.of());
+
+        assertThat(result).isEmpty();
+        verify(placeRepository, times(0)).findByExternalPlaceIdIn(any());
+        verify(placeRepository, times(0)).findByNameIn(any());
+    }
+
+    @Test
+    void resolvePlaces_matchesByExternalIdAndByNameCoordinates_inOneQueryEach() {
+        Place byExternal = new Place();
+        byExternal.setId(1L);
+        byExternal.setExternalPlaceId("ext-1");
+        Place byNameCoords = new Place();
+        byNameCoords.setId(2L);
+        byNameCoords.setName("Cafe");
+        byNameCoords.setLatitude(1.0);
+        byNameCoords.setLongitude(2.0);
+
+        when(placeRepository.findByExternalPlaceIdIn(any())).thenReturn(List.of(byExternal));
+        when(placeRepository.findByNameIn(any())).thenReturn(List.of(byNameCoords));
+
+        List<CreateStopRequest> requests = List.of(
+                new CreateStopRequest("Museum", 10.0, 20.0, null, "ext-1", null),
+                new CreateStopRequest("Cafe", 1.0, 2.0, null, null, null));
+
+        List<Place> results = placeResolutionService.resolvePlaces(requests);
+
+        assertThat(results).containsExactly(byExternal, byNameCoords);
+        verify(placeRepository, times(1)).findByExternalPlaceIdIn(any());
+        verify(placeRepository, times(1)).findByNameIn(any());
+        verify(placeRepository, times(0)).save(any());
+    }
+
+    @Test
+    void resolvePlaces_noMatch_createsNewPlacePerRequest() {
+        when(placeRepository.findByNameIn(any())).thenReturn(List.of());
+        when(placeRepository.save(any())).thenAnswer(inv -> inv.getArgument(0, Place.class));
+
+        List<CreateStopRequest> requests = List.of(
+                new CreateStopRequest("A", 1.0, 1.0, null, null, null),
+                new CreateStopRequest("B", 2.0, 2.0, null, null, null));
+
+        List<Place> results = placeResolutionService.resolvePlaces(requests);
+
+        assertThat(results).hasSize(2);
+        assertThat(results.get(0).getName()).isEqualTo("A");
+        assertThat(results.get(1).getName()).isEqualTo("B");
+        verify(placeRepository, times(2)).save(any());
+    }
+
+    @Test
+    void resolvePlaces_duplicateRequestsWithinSameBatch_reuseTheSameNewlyCreatedPlace() {
+        when(placeRepository.findByNameIn(any())).thenReturn(List.of());
+        when(placeRepository.save(any())).thenAnswer(inv -> {
+            Place p = inv.getArgument(0, Place.class);
+            p.setId(99L);
+            return p;
+        });
+
+        List<CreateStopRequest> requests = List.of(
+                new CreateStopRequest("Same Spot", 5.0, 5.0, null, null, null),
+                new CreateStopRequest("Same Spot", 5.0, 5.0, null, null, null));
+
+        List<Place> results = placeResolutionService.resolvePlaces(requests);
+
+        assertThat(results.get(0)).isSameAs(results.get(1));
+        // Only the first duplicate should hit save() — the second must reuse the
+        // in-batch cache instead of racing its own insert.
+        verify(placeRepository, times(1)).save(any());
+    }
+
+    @Test
+    void resolvePlaces_roundsCoordinatesBeforeMatchingByNameCoordinates() {
+        Place existing = new Place();
+        existing.setId(5L);
+        existing.setName("Cafe");
+        existing.setLatitude(45.00001);
+        existing.setLongitude(-79.00001);
+
+        when(placeRepository.findByNameIn(any())).thenReturn(List.of(existing));
+
+        List<CreateStopRequest> requests = List.of(
+                new CreateStopRequest("Cafe", 45.000009, -79.000011, null, null, null));
+
+        List<Place> results = placeResolutionService.resolvePlaces(requests);
+
+        assertThat(results).containsExactly(existing);
+        verify(placeRepository, times(0)).save(any());
     }
 }

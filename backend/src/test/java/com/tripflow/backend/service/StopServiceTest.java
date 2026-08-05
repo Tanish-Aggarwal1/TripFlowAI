@@ -202,12 +202,11 @@ class StopServiceTest {
         place1.setName("A");
         Place place2 = new Place();
         place2.setName("B");
-        when(placeResolutionService.resolvePlace(any(CreateStopRequest.class)))
-                .thenReturn(place1, place2);
 
         List<CreateStopRequest> requests = List.of(
                 new CreateStopRequest("A", 1.0, 1.0, null, null, null),
                 new CreateStopRequest("B", 2.0, 2.0, null, null, null));
+        when(placeResolutionService.resolvePlaces(requests)).thenReturn(List.of(place1, place2));
 
         List<Stop> stops = stopService.buildStops(requests, trip);
 
