@@ -139,7 +139,13 @@ See `docs/ci.md` for the full pipeline. Summary: PR + push to `main` triggers `b
 4. `.\mvnw.cmd test` for unit tests; full `-Pci` suite requires Docker and mainly runs in CI.
 5. Read `docs/auth.md`, `docs/api-contracts.md`, and this document before your first PR.
 
-## 10. Change Log
+## 10. Deployment
+
+Backend and frontend are deployed on Render (SCRUM-73): backend `https://tripflowai.onrender.com`, frontend `https://tripflowai-frontend.onrender.com`. Full environment variable table, deploy process, and rollback procedure are documented in `docs/deployment.md` — that document is authoritative; this section only points to it.
+
+Render free tier spins the backend down when idle — hit `/actuator/health` a few minutes before any live demo to warm it up.
+
+## 11. Change Log
 
 | Date | Change |
 |---|---|
@@ -147,3 +153,4 @@ See `docs/ci.md` for the full pipeline. Summary: PR + push to `main` triggers `b
 | 2026-07-23 | Updated package tree (gemini client landed, ai package added), coverage-floor provenance closed, risk register synced through Sprint 4 pre-work, frontend-standards.md created |
 | 2026-07-26 | REF-21: established the team-wide pagination/sorting convention — repositories accept `Pageable` and return `Page<>`/projection DTOs, controllers accept `?page=&size=&sort=`, responses use Spring Data's `PagedModel` shape (`content` + `page`). `GET /api/trips` is the first endpoint on this convention; see `docs/api-contracts.md` for the full contract. |
 | 2026-07-26 | REF-23: added springdoc-openapi 3.0.3 (`springdoc-openapi-starter-webmvc-ui`) — confirmed against the running app (Testcontainers IT) that the 3.x line supports Spring Boot 4.1 / Spring Framework 7, per its own release notes (2.x targets Boot 3.x only). Swagger UI at `/swagger-ui.html`, raw doc at `/api-docs`, both permit-all in `SecurityConfig`; disabled via `springdoc.*.enabled=false` in the prod profile. |
+| 2026-08-05 | Added §10 Deployment, pointing to `docs/deployment.md` (SCRUM-73/SCRUM-168) — backend and frontend are live on Render. |
