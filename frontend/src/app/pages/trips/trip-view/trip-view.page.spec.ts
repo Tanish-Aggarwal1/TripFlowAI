@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, provideRouter, Router } from '@angular/router';
 import { ToastController } from '@ionic/angular/standalone';
 import { of, throwError, Subject } from 'rxjs';
-import { TripViewPage } from './trip-view.page';
+import { TripViewPage, sanitizeFilename } from './trip-view.page';
 import { TripService } from '../../../core/services/trip.service';
 import { StopResponse, TripResponse } from '../../../core/models/trip.model';
 
@@ -463,5 +463,29 @@ describe('TripViewPage', () => {
         jasmine.objectContaining({ message: 'Network error.', color: 'danger' }),
       );
     });
+  });
+});
+
+// SCRUM-261: matched-pair fixture set with TripExportControllerTest (backend) —
+// same inputs must produce the same outputs on both sides.
+describe('sanitizeFilename', () => {
+  const fixtures: [string, string][] = [
+    ['Trip: "Fun" / Times?', 'Trip Fun  Times'],
+    ['Ottawa Weekend', 'Ottawa Weekend'],
+    ['Café Trip', 'Caf Trip'],
+    ['  ', 'trip'],
+    ['', 'trip'],
+  ];
+
+  for (const [input, expected] of fixtures) {
+    it(`sanitizes ${JSON.stringify(input)} to ${JSON.stringify(expected)}`, () => {
+      expect(sanitizeFilename(input)).toBe(expected);
+    });
+  }
+
+  it('truncates titles over 100 characters', () => {
+    const longTitle = 'a'.repeat(150);
+
+    expect(sanitizeFilename(longTitle)).toBe('a'.repeat(100));
   });
 });

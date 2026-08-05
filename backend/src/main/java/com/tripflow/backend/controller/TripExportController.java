@@ -50,8 +50,17 @@ public class TripExportController {
 	 * Strips everything except letters, digits, spaces, and dashes so the trip title
 	 * can't inject header syntax (CR/LF, quotes) or path-unsafe characters into the
 	 * Content-Disposition filename, and caps length well under filesystem limits.
+	 *
+	 * <p>Matched by a second, independent implementation in the frontend
+	 * ({@code trip-view.page.ts}'s {@code sanitizeFilename}) — Blob downloads lose
+	 * response headers, so the client can't just read this filename back from the
+	 * server and has to compute its own. Keep the character-set and length-cap rules
+	 * identical on both sides; a shared fixture set is asserted against in
+	 * {@code TripExportControllerTest} (backend) and {@code trip-view.page.spec.ts}
+	 * (frontend) to catch future drift. Package-private (not private) so that test
+	 * can call it directly.
 	 */
-	private static String sanitizeFilename(String title) {
+	static String sanitizeFilename(String title) {
 		String sanitized = title.replaceAll("[^a-zA-Z0-9 \\-]", "").trim();
 		if (sanitized.isEmpty()) {
 			sanitized = "trip";

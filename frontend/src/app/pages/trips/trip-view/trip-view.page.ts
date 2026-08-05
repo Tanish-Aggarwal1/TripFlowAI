@@ -322,10 +322,15 @@ function downloadBlob(blob: Blob, filename: string): void {
   window.URL.revokeObjectURL(url);
 }
 
-// Mirrors the backend's TripExportController#sanitizeFilename — the server-set
-// Content-Disposition filename never reaches us here (Blob downloads lose response
-// headers), so the client picks its own name for the `download` attribute.
-function sanitizeFilename(title: string): string {
+// Matched pair with the backend's TripExportController#sanitizeFilename — the
+// server-set Content-Disposition filename never reaches us here (Blob downloads
+// lose response headers), so the client computes its own name for the `download`
+// attribute. Keep the character-set and length-cap rules identical on both sides;
+// a shared fixture set is asserted against in trip-view.page.spec.ts (frontend)
+// and TripExportControllerTest (backend) to catch future drift. Exported so the
+// spec can import it directly.
+export function sanitizeFilename(title: string): string {
   const sanitized = title.replace(/[^a-zA-Z0-9 -]/g, '').trim();
-  return sanitized || 'trip';
+  const withFallback = sanitized || 'trip';
+  return withFallback.length > 100 ? withFallback.slice(0, 100) : withFallback;
 }

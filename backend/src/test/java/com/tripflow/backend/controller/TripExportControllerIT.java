@@ -138,6 +138,18 @@ class TripExportControllerIT {
 						org.hamcrest.Matchers.containsString("filename=\"Trip Fun  Times.ics\"")));
 	}
 
+	@Test
+	void exportIcs_titleOver100Characters_truncatesFilenameTo100() throws Exception {
+		User owner = createTestUser("longtitle");
+		String longTitle = "a".repeat(120); // within CreateTripRequest's 150-char title cap
+		Long tripId = createTrip(owner, longTitle, TripVisibility.PRIVATE);
+
+		mockMvc.perform(get("/api/trips/" + tripId + "/calendar.ics").with(asUser(owner)))
+				.andExpect(status().isOk())
+				.andExpect(header().string("Content-Disposition",
+						org.hamcrest.Matchers.containsString("filename=\"" + "a".repeat(100) + ".ics\"")));
+	}
+
 	private static void assertThatIcsIsValid(String ics) {
 		org.assertj.core.api.Assertions.assertThat(ics).contains("BEGIN:VCALENDAR");
 		org.assertj.core.api.Assertions.assertThat(ics).contains("VERSION:2.0");
