@@ -18,11 +18,11 @@ import {
   IonButtons,
   IonIcon,
   AlertController,
-  ToastController,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import { save, arrowBack, map as mapIcon } from 'ionicons/icons';
 import { TripService } from '../../../core/services/trip.service';
+import { ToastService } from '../../../core/services/toast.service';
 import {
   TripResponse,
   CreateTripRequest,
@@ -61,7 +61,7 @@ export class TripEditPage implements OnInit {
   private router = inject(Router);
   private tripService = inject(TripService);
   private alertCtrl = inject(AlertController);
-  private toastCtrl = inject(ToastController);
+  private toastService = inject(ToastService);
 
   // ── Mode ──────────────────────────────────────────────────────────────────
   isEditMode = false;
@@ -121,11 +121,11 @@ export class TripEditPage implements OnInit {
   // ── Save ──────────────────────────────────────────────────────────────────
   async save(): Promise<void> {
     if (!this.title.trim()) {
-      this.showToast('Title is required.', 'danger');
+      this.toastService.showError(undefined, 'Title is required.');
       return;
     }
     if (this.stops.length === 0) {
-      this.showToast('Add at least one stop.', 'danger');
+      this.toastService.showError(undefined, 'Add at least one stop.');
       return;
     }
 
@@ -147,7 +147,7 @@ export class TripEditPage implements OnInit {
       this.tripService.updateTrip(this.tripId, request).subscribe({
         next: () => {
           this.saving = false;
-          this.showToast('Trip updated!', 'success');
+          this.toastService.showSuccess('Trip updated!');
           this.router.navigate(['/dashboard']);
         },
         error: (err) => {
@@ -166,7 +166,7 @@ export class TripEditPage implements OnInit {
       this.tripService.createTrip(request).subscribe({
         next: () => {
           this.saving = false;
-          this.showToast('Trip created!', 'success');
+          this.toastService.showSuccess('Trip created!');
           this.router.navigate(['/dashboard']);
         },
         error: (err) => {
@@ -204,15 +204,5 @@ export class TripEditPage implements OnInit {
   // ── Stop list callbacks (called from stop-list component) ─────────────────
   onStopsChanged(stops: CreateStopRequest[]): void {
     this.stops = stops;
-  }
-
-  // ── Helpers ───────────────────────────────────────────────────────────────
-  private async showToast(message: string, color: string): Promise<void> {
-    const toast = await this.toastCtrl.create({
-      message,
-      color,
-      duration: 2000,
-    });
-    await toast.present();
   }
 }

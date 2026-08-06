@@ -50,4 +50,21 @@ describe('ToastService', () => {
 
     expect(toastCtrlSpy.create).toHaveBeenCalledWith(jasmine.objectContaining({ duration: 5000 }));
   });
+
+  it('showSuccess presents a success-colored toast with the given message', async () => {
+    await service.showSuccess('Trip created!');
+
+    expect(toastCtrlSpy.create).toHaveBeenCalledWith({
+      message: 'Trip created!',
+      duration: 2000,
+      color: 'success',
+    });
+    expect(presentSpy).toHaveBeenCalled();
+  });
+
+  it('showSuccess accepts a custom duration', async () => {
+    await service.showSuccess('Saved.', 4000);
+
+    expect(toastCtrlSpy.create).toHaveBeenCalledWith(jasmine.objectContaining({ duration: 4000 }));
+  });
 });
