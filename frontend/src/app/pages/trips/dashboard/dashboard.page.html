@@ -83,7 +83,7 @@
     </ion-fab-list>
   </ion-fab>
 
-  <ion-modal [isOpen]="aiModalOpen" (didDismiss)="closeAiModal()">
+  <ion-modal [isOpen]="aiModalOpen" (didDismiss)="onAiModalDismissed()">
     <ng-template>
       <ion-header>
         <ion-toolbar>

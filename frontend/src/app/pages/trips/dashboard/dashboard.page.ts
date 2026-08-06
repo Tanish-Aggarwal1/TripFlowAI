@@ -82,13 +82,30 @@ export class DashboardPage implements ViewWillEnter {
     this.aiModalOpen = true;
   }
 
+  // Set by onAiTripCreated, consumed once the modal has actually finished
+  // dismissing (didDismiss) — navigating on the same tick as isOpen=false
+  // races the modal's dismiss animation and can leave the overlay stuck.
+  private pendingAiTripNavigation: TripResponse | null = null;
+
   closeAiModal(): void {
     this.aiModalOpen = false;
   }
 
-  onAiTripCreated(trip: TripResponse): void {
+  // Bound to (didDismiss), which fires once the modal has fully closed —
+  // including a user swipe/backdrop dismiss, not just our own isOpen=false,
+  // so this also re-syncs aiModalOpen the same way closeAiModal() did.
+  onAiModalDismissed(): void {
     this.aiModalOpen = false;
-    this.router.navigate(['/trips', trip.id]);
+    const trip = this.pendingAiTripNavigation;
+    this.pendingAiTripNavigation = null;
+    if (trip) {
+      this.router.navigate(['/trips', trip.id]);
+    }
+  }
+
+  onAiTripCreated(trip: TripResponse): void {
+    this.pendingAiTripNavigation = trip;
+    this.aiModalOpen = false;
   }
 
   async confirmDelete(trip: TripSummaryResponse, event: Event): Promise<void> {
