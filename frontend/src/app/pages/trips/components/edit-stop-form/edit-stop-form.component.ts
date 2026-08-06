@@ -11,12 +11,12 @@ import {
   IonButton,
   IonIcon,
   IonSpinner,
-  ToastController,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import { checkmark } from 'ionicons/icons';
 import { TripService } from '../../../../core/services/trip.service';
 import { StopResponse, UpdateStopRequest } from '../../../../core/models/trip.model';
+import { ToastService } from '../../../../core/services/toast.service';
 
 // SCRUM-250: edits name/address/notes/status on an existing stop via the
 // already-live PUT /api/trips/{tripId}/stops/{stopId} endpoint. Coordinates and
@@ -46,7 +46,7 @@ export class EditStopFormComponent implements OnInit {
   @Output() cancelled = new EventEmitter<void>();
 
   private tripService = inject(TripService);
-  private toastCtrl = inject(ToastController);
+  private toastService = inject(ToastService);
 
   name = '';
   address = '';
@@ -92,14 +92,9 @@ export class EditStopFormComponent implements OnInit {
         this.submitting = false;
         this.updated.emit(updated);
       },
-      error: async (err) => {
+      error: (err) => {
         this.submitting = false;
-        const toast = await this.toastCtrl.create({
-          message: err.message ?? 'Could not update stop.',
-          duration: 3000,
-          color: 'danger',
-        });
-        await toast.present();
+        this.toastService.showError(err, 'Could not update stop.', 3000);
       },
     });
   }

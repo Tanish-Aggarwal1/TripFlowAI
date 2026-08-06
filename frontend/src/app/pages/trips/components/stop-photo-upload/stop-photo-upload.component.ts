@@ -8,12 +8,12 @@ import {
   IonIcon,
   IonSpinner,
   IonProgressBar,
-  ToastController,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import { camera, checkmark, close } from 'ionicons/icons';
 import { StopPhotoService } from '../../../../core/services/stop-photo.service';
 import { StopPhotoResponse } from '../../../../core/models/trip.model';
+import { ToastService } from '../../../../core/services/toast.service';
 
 // SCRUM-164: picker → signature → direct-to-Cloudinary → persist. File bytes
 // never hit our backend (see StopPhotoService.uploadPhoto). Gallery/thumbnail
@@ -40,7 +40,7 @@ export class StopPhotoUploadComponent {
   @Output() cancelled = new EventEmitter<void>();
 
   private stopPhotoService = inject(StopPhotoService);
-  private toastCtrl = inject(ToastController);
+  private toastService = inject(ToastService);
 
   selectedFile: File | null = null;
   previewUrl: string | null = null;
@@ -97,15 +97,10 @@ export class StopPhotoUploadComponent {
             this.uploaded.emit(event.done);
           }
         },
-        error: async (err) => {
+        error: (err) => {
           this.uploading = false;
           this.progress = 0;
-          const toast = await this.toastCtrl.create({
-            message: err.message ?? 'Could not upload photo.',
-            duration: 3000,
-            color: 'danger',
-          });
-          await toast.present();
+          this.toastService.showError(err, 'Could not upload photo.', 3000);
         },
       });
   }

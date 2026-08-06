@@ -11,7 +11,6 @@ import {
   IonIcon,
   IonSpinner,
   IonChip,
-  ToastController,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import { sparkles, closeCircle } from 'ionicons/icons';
@@ -20,6 +19,7 @@ import {
   ItineraryPreferencesRequest,
   SuggestedItineraryResponse,
 } from '../../../../core/models/trip.model';
+import { ToastService } from '../../../../core/services/toast.service';
 
 // SCRUM-67a / SCRUM-155: collects interests/budget/pace and submits to the
 // existing POST /api/trips/{id}/ai-suggest endpoint (SCRUM-64, already live).
@@ -49,7 +49,7 @@ export class AiPreferencesFormComponent {
   @Output() cancelled = new EventEmitter<void>();
 
   private tripService = inject(TripService);
-  private toastCtrl = inject(ToastController);
+  private toastService = inject(ToastService);
 
   interestInput = '';
   interests: string[] = [];
@@ -107,14 +107,9 @@ export class AiPreferencesFormComponent {
         this.submitting = false;
         this.suggested.emit(response);
       },
-      error: async (err) => {
+      error: (err) => {
         this.submitting = false;
-        const toast = await this.toastCtrl.create({
-          message: err.message ?? 'Could not generate suggestions.',
-          duration: 3000,
-          color: 'danger',
-        });
-        await toast.present();
+        this.toastService.showError(err, 'Could not generate suggestions.', 3000);
       },
     });
   }
