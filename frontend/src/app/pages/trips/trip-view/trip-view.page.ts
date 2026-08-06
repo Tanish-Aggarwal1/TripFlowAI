@@ -149,6 +149,13 @@ export class TripViewPage implements OnInit {
     return groups;
   }
 
+  // First not-yet-visited stop in order — the one the "Next" button highlights.
+  // SKIPPED stops aren't "next" either; only PLANNED counts as still upcoming.
+  get nextStopId(): number | null {
+    const next = this.sortedStops.find((s) => s.status === 'PLANNED');
+    return next ? next.id : null;
+  }
+
   // Manual parsing rather than `new Date(plannedTime)` — a bare "HH:mm:ss" string with
   // no date component is not reliably parsed as a time-of-day across browsers and can
   // silently yield "Invalid Date".
@@ -208,11 +215,12 @@ export class TripViewPage implements OnInit {
     this.editingStop = null;
   }
 
-  // One-tap "Visited" quick action on the stop row. The PUT endpoint requires
-  // name/latitude/longitude on every request and overwrites notes/address
-  // unconditionally (only `status` has real omit-to-leave-unchanged semantics),
-  // so every other field must be echoed back unchanged — same as EditStopFormComponent.
-  markVisited(stop: StopResponse): void {
+  // One-tap "Visited" quick action on the stop row — toggles VISITED <-> PLANNED.
+  // The PUT endpoint requires name/latitude/longitude on every request and
+  // overwrites notes/address unconditionally (only `status` has real
+  // omit-to-leave-unchanged semantics), so every other field must be echoed
+  // back unchanged — same as EditStopFormComponent.
+  toggleVisited(stop: StopResponse): void {
     if (!this.trip || this.markingVisitedId === stop.id) return;
     this.markingVisitedId = stop.id;
 
@@ -222,7 +230,7 @@ export class TripViewPage implements OnInit {
       longitude: stop.longitude,
       address: stop.address ?? undefined,
       notes: stop.notes ?? undefined,
-      status: 'VISITED',
+      status: stop.status === 'VISITED' ? 'PLANNED' : 'VISITED',
     };
 
     this.tripService.updateStop(this.trip.id, stop.id, request).subscribe({
@@ -232,7 +240,7 @@ export class TripViewPage implements OnInit {
       },
       error: (err) => {
         this.markingVisitedId = null;
-        this.toastService.showError(err, 'Could not mark stop visited.');
+        this.toastService.showError(err, 'Could not update stop status.');
       },
     });
   }
