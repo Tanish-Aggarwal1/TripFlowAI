@@ -1,0 +1,36 @@
+package com.tripflow.backend.repository;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+import com.tripflow.backend.domain.TripLike;
+import com.tripflow.backend.domain.TripLikeId;
+
+public interface TripLikeRepository extends JpaRepository<TripLike, TripLikeId> {
+
+    /**
+     * Idempotent, concurrency-safe like: {@code ON CONFLICT DO NOTHING} on the
+     * {@code (user_id, trip_id)} PK means two concurrent likes from the same user race at
+     * the database, not in Java — no need for a separate existsById check first (SCRUM-161).
+     * Returns 1 if a row was actually inserted, 0 if the like already existed. Callers must
+     * only bump {@code Trip.likeCount} when this returns 1, to keep the denormalized count
+     * accurate under concurrency.
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(value = """
+            INSERT INTO trip_likes (user_id, trip_id, created_at)
+            VALUES (:userId, :tripId, NOW())
+            ON CONFLICT (user_id, trip_id) DO NOTHING
+            """, nativeQuery = true)
+    int insertIfAbsent(@Param("userId") Long userId, @Param("tripId") Long tripId);
+
+    /**
+     * Idempotent unlike. Returns 1 if a row was actually deleted, 0 if the trip wasn't
+     * liked. Callers must only decrement {@code Trip.likeCount} when this returns 1.
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("DELETE FROM TripLike tl WHERE tl.id.userId = :userId AND tl.id.tripId = :tripId")
+    int deleteByUserIdAndTripId(@Param("userId") Long userId, @Param("tripId") Long tripId);
+}
