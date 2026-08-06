@@ -120,14 +120,32 @@ describe('DashboardPage', () => {
       expect(component.aiModalOpen).toBeFalse();
     });
 
-    it('onAiTripCreated closes the modal and navigates to the new trip', () => {
+    it('onAiTripCreated closes the modal but does not navigate yet', () => {
       component.aiModalOpen = true;
       const created = { ...summary, id: 42 } as any;
 
       component.onAiTripCreated(created);
 
       expect(component.aiModalOpen).toBeFalse();
+      expect(routerSpy.navigate).not.toHaveBeenCalled();
+    });
+
+    it('onAiModalDismissed navigates to the trip created just before dismissal', () => {
+      const created = { ...summary, id: 42 } as any;
+      component.onAiTripCreated(created);
+
+      component.onAiModalDismissed();
+
       expect(routerSpy.navigate).toHaveBeenCalledWith(['/trips', 42]);
+    });
+
+    it('onAiModalDismissed does not navigate on a plain cancel/swipe dismiss', () => {
+      component.aiModalOpen = true;
+
+      component.onAiModalDismissed();
+
+      expect(component.aiModalOpen).toBeFalse();
+      expect(routerSpy.navigate).not.toHaveBeenCalled();
     });
   });
 
