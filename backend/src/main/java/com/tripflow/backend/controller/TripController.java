@@ -113,6 +113,8 @@ public class TripController {
     public ResponseEntity<TripResponse> cloneTrip(
             @PathVariable Long id, @AuthenticationPrincipal UserPrincipal principal) {
         return new ResponseEntity<>(tripCloneService.cloneTrip(id, principal.userId()), HttpStatus.CREATED);
+    }
+    
     @Operation(summary = "Like a trip", description = "Idempotent: liking an already-liked trip still returns 200. "
             + "PUBLIC trips only, or your own PRIVATE trips.")
     @PostMapping("/{id}/like")
