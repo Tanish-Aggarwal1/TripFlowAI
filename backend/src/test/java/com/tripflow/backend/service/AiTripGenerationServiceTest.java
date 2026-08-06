@@ -16,6 +16,9 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
+
 import com.tripflow.backend.ai.GeminiResponseParser;
 import com.tripflow.backend.ai.GeneratedTripPlan;
 import com.tripflow.backend.ai.GeneratedTripPlan.GeneratedStop;
@@ -38,6 +41,8 @@ class AiTripGenerationServiceTest {
     @Mock private GeminiResponseParser responseParser;
     @Mock private TripService tripService;
 
+    private final Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
+
     private AiTripGenerationService service;
 
     private GeminiGenerateContentResponse geminiResponseWithText(String text) {
@@ -50,7 +55,7 @@ class AiTripGenerationServiceTest {
 
     @org.junit.jupiter.api.BeforeEach
     void setUp() {
-        service = new AiTripGenerationService(promptTemplate, geminiClient, responseParser, tripService);
+        service = new AiTripGenerationService(promptTemplate, geminiClient, responseParser, tripService, validator);
     }
 
     @Test
@@ -151,6 +156,22 @@ class AiTripGenerationServiceTest {
         when(promptTemplate.render(any())).thenReturn("rendered prompt");
         when(geminiClient.generateContent("rendered prompt")).thenReturn(geminiResponseWithText("not json"));
         when(responseParser.parse("not json", GeneratedTripPlan.class)).thenThrow(new GeminiParsingException("bad json"));
+
+        assertThatThrownBy(() -> service.generateTrip(1L, request))
+                .isInstanceOf(GeminiParsingException.class);
+
+        verifyNoInteractions(tripService);
+    }
+
+    @Test
+    void generateTrip_outOfRangeCoordinates_throwsGeminiParsingException_neverCallsTripService() {
+        GenerateTripRequest request = new GenerateTripRequest("a trip", null);
+        GeneratedTripPlan plan = new GeneratedTripPlan("Title", "summary",
+                List.of(new GeneratedStop(0, "Impossible Stop", 999.0, 1.0, "hallucinated coordinates")));
+
+        when(promptTemplate.render(any())).thenReturn("rendered prompt");
+        when(geminiClient.generateContent("rendered prompt")).thenReturn(geminiResponseWithText("{}"));
+        when(responseParser.parse("{}", GeneratedTripPlan.class)).thenReturn(plan);
 
         assertThatThrownBy(() -> service.generateTrip(1L, request))
                 .isInstanceOf(GeminiParsingException.class);

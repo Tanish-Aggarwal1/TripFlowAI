@@ -38,6 +38,22 @@ class ItineraryPromptTemplateTest {
     }
 
     @Test
+    void render_interestContainingPlaceholderSyntax_isNotReSubstitutedByLaterPlaceholders() {
+        // Regression test: chained String.replace() calls used to re-scan the whole
+        // string on each call, so an interest literally containing "{{budget}}" would
+        // get overwritten by the budget substitution that runs after it. A single-pass
+        // substitution must leave user-supplied text exactly as given.
+        ItineraryPromptInput input = new ItineraryPromptInput(
+                List.of("{{budget}}", "{{pace}}"), "luxury", "fast", List.of("Toronto"));
+
+        String rendered = template.render(input);
+
+        assertThat(rendered).contains("{{budget}}, {{pace}}");
+        assertThat(rendered).contains("luxury");
+        assertThat(rendered).contains("fast");
+    }
+
+    @Test
     void render_oversizedDestinationsList_throwsPromptTooLargeException() {
         // Each individual destination is well within any per-field cap, but there are
         // enough of them that the *rendered* prompt exceeds MAX_PROMPT_LENGTH — the

@@ -30,8 +30,13 @@ Set these in the Render/Railway dashboard under the service's Environment settin
 | `JWT_EXPIRY_MS` | Token expiry in milliseconds | `3600000` |
 | `ORS_API_KEY` | OpenRouteService API key (500 req/day free tier) | — |
 | `GEMINI_API_KEY` | Google Gemini API key for AI itinerary generation | — |
+| `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name (photo upload) | — |
+| `CLOUDINARY_API_KEY` | Cloudinary API key (photo upload) | — |
+| `CLOUDINARY_API_SECRET` | Cloudinary API secret (photo upload) | — |
 | `MAPBOX_TOKEN` | Mapbox public token (frontend CI injection only — not used by the backend) | `pk.eyJ1...` |
 | `CORS_ALLOWED_ORIGINS` | Comma-separated list of allowed frontend origins | `https://tripflowai.app` |
+
+**Cloudinary fails fast in prod as of the 2026-08-06 engineering audit:** `application-prod.properties` previously defaulted these three to `dev-*-placeholder` values (unlike every other secret above, which has no default), so a forgotten env var meant the app booted fine and only failed at photo-upload request time with a confusing error instead of a clear startup failure. The prod profile now requires all three with no fallback, matching the fail-fast pattern used everywhere else in this table.
 
 **Frontend tokens:** `MAPBOX_TOKEN` and `API_BASE_URL` are injected at CI build time via `frontend-ci.yml` (see `docs/frontend-standards.md` §Environment Files). Both are GitHub Actions secrets, not backend environment variables — the backend never uses them. `API_BASE_URL` should be set to the real deployed backend URL (e.g. the Render/Railway URL from this same table) once SCRUM-73 provisions it; until then `environment.prod.ts` ships with an `__API_BASE_URL__` placeholder.
 

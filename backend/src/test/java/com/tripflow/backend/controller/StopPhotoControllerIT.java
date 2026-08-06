@@ -119,6 +119,21 @@ class StopPhotoControllerIT {
     }
 
     @Test
+    void addPhoto_nonCloudinaryUrl_returns400() throws Exception {
+        User owner = createUser("badurlowner");
+        Long stopId = createStop(owner, TripVisibility.PRIVATE);
+
+        CreateStopPhotoRequest request = new CreateStopPhotoRequest(
+                "https://evil.example.com/tracking-pixel.jpg", null, null);
+
+        mockMvc.perform(post("/api/stops/" + stopId + "/photos").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)).with(asUser(owner)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400));
+    }
+
+    @Test
     void signature_nonOwner_returns403() throws Exception {
         User owner = createUser("sigowner");
         User other = createUser("sigother");

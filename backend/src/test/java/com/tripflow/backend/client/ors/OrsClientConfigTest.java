@@ -35,6 +35,11 @@ class OrsClientConfigTest {
 		assertThat(orsRestClient).isNotNull();
 	}
 
+	@Test
+	void toString_masksApiKey() {
+		assertThat(orsProperties.toString()).doesNotContain("test-placeholder");
+	}
+
 	@TestConfiguration
 	static class RestClientBuilderTestConfig {
 		@Bean
