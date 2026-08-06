@@ -47,7 +47,7 @@ class IcsExportServiceTest {
 
 	private TripResponse trip(LocalDate startDate, List<StopResponse> stops) {
 		return new TripResponse(TRIP_ID, "Weekend Getaway", null, List.of(), TripVisibility.PRIVATE,
-				TripStatus.DRAFT, REQUESTER_ID, stops, null, null, null, startDate);
+				TripStatus.DRAFT, REQUESTER_ID, stops, null, null, null, startDate, 0);
 	}
 
 	@Test
