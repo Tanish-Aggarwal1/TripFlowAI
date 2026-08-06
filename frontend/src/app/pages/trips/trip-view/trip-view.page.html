@@ -50,7 +50,7 @@
     </ion-item-divider>
     }
     <ion-list [class.just-optimized]="justOptimized">
-      @for (stop of sortedStops; track stop.id) {
+      @for (stop of group.stops; track stop.id) {
       <ion-item>
         <ion-label>
           <h3>{{ stop.stopOrder + 1 }}. {{ stop.name }}</h3>
