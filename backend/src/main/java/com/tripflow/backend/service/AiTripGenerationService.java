@@ -2,6 +2,8 @@ package com.tripflow.backend.service;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
@@ -17,8 +19,11 @@ import com.tripflow.backend.dto.CreateStopRequest;
 import com.tripflow.backend.dto.CreateTripRequest;
 import com.tripflow.backend.dto.GenerateTripRequest;
 import com.tripflow.backend.dto.TripResponse;
+import com.tripflow.backend.exception.GeminiParsingException;
 import com.tripflow.backend.exception.InsufficientStopsException;
 
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -48,6 +53,7 @@ public class AiTripGenerationService {
     private final GeminiClient geminiClient;
     private final GeminiResponseParser responseParser;
     private final TripService tripService;
+    private final Validator validator;
 
     public TripResponse generateTrip(Long ownerId, GenerateTripRequest request) {
         String renderedPrompt = promptTemplate.render(new TripGenerationPromptInput(request.prompt()));
@@ -69,8 +75,28 @@ public class AiTripGenerationService {
         CreateTripRequest createRequest = new CreateTripRequest(
                 title, plan.summary(), null, TripVisibility.PRIVATE, stops, null);
 
+        validateGenerated(createRequest);
+
         TripResponse created = tripService.createTrip(ownerId, createRequest);
         log.info("AI-generated trip created id={} ownerId={} stops={}", created.id(), ownerId, stops.size());
         return created;
+    }
+
+    /**
+     * Bean Validation only fires automatically on {@code @RequestBody} controller
+     * parameters via {@code @Valid} — this path builds the request programmatically
+     * from Gemini's parsed JSON and calls {@link TripService} directly, so the same
+     * constraints (lat/lng ranges, field lengths, etc.) must be checked explicitly
+     * before anything is persisted. A hallucinated out-of-range coordinate should
+     * fail here as a clean 502, not silently reach the database.
+     */
+    private void validateGenerated(CreateTripRequest request) {
+        Set<ConstraintViolation<CreateTripRequest>> violations = validator.validate(request);
+        if (!violations.isEmpty()) {
+            String detail = violations.stream()
+                    .map(v -> v.getPropertyPath() + " " + v.getMessage())
+                    .collect(Collectors.joining("; "));
+            throw new GeminiParsingException("Gemini returned an invalid trip: " + detail);
+        }
     }
 }
