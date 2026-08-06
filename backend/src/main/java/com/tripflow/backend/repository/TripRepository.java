@@ -64,6 +64,8 @@ public interface TripRepository extends JpaRepository<Trip, Long> {
             """)
     Page<TripSummaryResponse> findSummariesByVisibility(
             @Param("visibility") TripVisibility visibility, Pageable pageable);
+
+    /**
      * Atomic counter bump (SCRUM-161) — {@code SET like_count = like_count + 1} at the
      * database, not a Java read-modify-write, so concurrent likes never lose an update.
      * Only call after {@link com.tripflow.backend.repository.TripLikeRepository#insertIfAbsent}
