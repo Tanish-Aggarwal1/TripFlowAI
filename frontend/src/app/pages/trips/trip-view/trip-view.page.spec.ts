@@ -392,8 +392,8 @@ describe('TripViewPage', () => {
     });
   });
 
-  describe('markVisited (quick "Visited" action)', () => {
-    it('sends a full echoed payload with only status changed', () => {
+  describe('toggleVisited (quick "Visited" toggle)', () => {
+    it('sends a full echoed payload with status flipped to VISITED', () => {
       const target = stop({
         id: 2,
         name: 'Casa Loma',
@@ -406,7 +406,7 @@ describe('TripViewPage', () => {
       component.trip = trip({ id: 1, stops: [target] });
       tripServiceSpy.updateStop.and.returnValue(of({ ...target, status: 'VISITED' }));
 
-      component.markVisited(target);
+      component.toggleVisited(target);
 
       expect(tripServiceSpy.updateStop).toHaveBeenCalledWith(1, 2, {
         name: 'Casa Loma',
@@ -418,13 +418,27 @@ describe('TripViewPage', () => {
       });
     });
 
+    it('sends status flipped back to PLANNED when the stop is already VISITED', () => {
+      const target = stop({ id: 2, status: 'VISITED' });
+      component.trip = trip({ id: 1, stops: [target] });
+      tripServiceSpy.updateStop.and.returnValue(of({ ...target, status: 'PLANNED' }));
+
+      component.toggleVisited(target);
+
+      expect(tripServiceSpy.updateStop).toHaveBeenCalledWith(
+        1,
+        2,
+        jasmine.objectContaining({ status: 'PLANNED' }),
+      );
+    });
+
     it('patches the stop in place via onStopUpdated on success and clears the busy flag', () => {
       const target = stop({ id: 2, status: 'PLANNED' });
       component.trip = trip({ id: 1, stops: [target] });
       const updated = { ...target, status: 'VISITED' as const };
       tripServiceSpy.updateStop.and.returnValue(of(updated));
 
-      component.markVisited(target);
+      component.toggleVisited(target);
 
       expect(component.markingVisitedId).toBeNull();
       expect(component.trip!.stops[0].status).toBe('VISITED');
@@ -435,8 +449,8 @@ describe('TripViewPage', () => {
       component.trip = trip({ id: 1, stops: [target] });
       tripServiceSpy.updateStop.and.returnValue(new Subject<StopResponse>());
 
-      component.markVisited(target);
-      component.markVisited(target);
+      component.toggleVisited(target);
+      component.toggleVisited(target);
 
       expect(tripServiceSpy.updateStop).toHaveBeenCalledTimes(1);
     });
@@ -444,7 +458,7 @@ describe('TripViewPage', () => {
     it('does nothing when no trip is loaded', () => {
       component.trip = null;
 
-      component.markVisited(stop({ id: 2 }));
+      component.toggleVisited(stop({ id: 2 }));
 
       expect(tripServiceSpy.updateStop).not.toHaveBeenCalled();
     });
@@ -454,7 +468,7 @@ describe('TripViewPage', () => {
       component.trip = trip({ id: 1, stops: [target] });
       tripServiceSpy.updateStop.and.returnValue(throwError(() => new Error('Network error.')));
 
-      component.markVisited(target);
+      component.toggleVisited(target);
       await Promise.resolve();
 
       expect(component.markingVisitedId).toBeNull();
@@ -462,6 +476,51 @@ describe('TripViewPage', () => {
       expect(toastCtrlSpy.create).toHaveBeenCalledWith(
         jasmine.objectContaining({ message: 'Network error.', color: 'danger' }),
       );
+    });
+  });
+
+  describe('nextStopId', () => {
+    it('returns the first PLANNED stop by stopOrder', () => {
+      component.trip = trip({
+        id: 1,
+        stops: [
+          stop({ id: 1, stopOrder: 0, status: 'VISITED' }),
+          stop({ id: 2, stopOrder: 1, status: 'PLANNED' }),
+          stop({ id: 3, stopOrder: 2, status: 'PLANNED' }),
+        ],
+      });
+
+      expect(component.nextStopId).toBe(2);
+    });
+
+    it('skips SKIPPED stops', () => {
+      component.trip = trip({
+        id: 1,
+        stops: [
+          stop({ id: 1, stopOrder: 0, status: 'SKIPPED' }),
+          stop({ id: 2, stopOrder: 1, status: 'PLANNED' }),
+        ],
+      });
+
+      expect(component.nextStopId).toBe(2);
+    });
+
+    it('returns null when every stop is VISITED or SKIPPED', () => {
+      component.trip = trip({
+        id: 1,
+        stops: [
+          stop({ id: 1, stopOrder: 0, status: 'VISITED' }),
+          stop({ id: 2, stopOrder: 1, status: 'SKIPPED' }),
+        ],
+      });
+
+      expect(component.nextStopId).toBeNull();
+    });
+
+    it('returns null with no trip loaded', () => {
+      component.trip = null;
+
+      expect(component.nextStopId).toBeNull();
     });
   });
 });

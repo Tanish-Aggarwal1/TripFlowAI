@@ -58,17 +58,33 @@
           <p>{{ stop.address }}</p>
           }
         </ion-label>
-        @if (stop.status !== 'VISITED') {
+        @if (stop.status === 'VISITED') {
         <ion-button fill="clear" slot="end" color="success" [disabled]="markingVisitedId === stop.id"
-          (click)="markVisited(stop)" aria-label="Mark visited">
+          (click)="toggleVisited(stop)" aria-label="Visited, tap to unmark">
+          @if (markingVisitedId === stop.id) {
+          <ion-spinner name="dots" slot="icon-only"></ion-spinner>
+          } @else {
+          <ion-icon name="checkmark-circle" slot="icon-only"></ion-icon>
+          }
+        </ion-button>
+        } @else if (stop.id === nextStopId) {
+        <ion-button fill="solid" slot="end" color="success" [disabled]="markingVisitedId === stop.id"
+          (click)="toggleVisited(stop)" aria-label="Mark next stop visited">
+          @if (markingVisitedId === stop.id) {
+          <ion-spinner name="dots"></ion-spinner>
+          } @else {
+          Next
+          }
+        </ion-button>
+        } @else {
+        <ion-button fill="clear" slot="end" color="medium" [disabled]="markingVisitedId === stop.id"
+          (click)="toggleVisited(stop)" aria-label="Mark visited">
           @if (markingVisitedId === stop.id) {
           <ion-spinner name="dots" slot="icon-only"></ion-spinner>
           } @else {
           <ion-icon name="checkmark" slot="icon-only"></ion-icon>
           }
         </ion-button>
-        } @else {
-        <ion-icon name="checkmark-circle" color="success" slot="end" aria-label="Visited"></ion-icon>
         }
         <ion-button fill="clear" slot="end" (click)="openPhotoUpload(stop)" aria-label="Photos">
            <ion-icon name="camera" slot="icon-only"></ion-icon>
