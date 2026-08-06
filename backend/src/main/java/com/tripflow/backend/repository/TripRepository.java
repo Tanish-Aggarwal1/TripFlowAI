@@ -5,6 +5,7 @@ import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -46,4 +47,25 @@ public interface TripRepository extends JpaRepository<Trip, Long> {
             WHERE t.user.id = :userId
             """)
     Page<TripSummaryResponse> findSummariesByUserId(@Param("userId") Long userId, Pageable pageable);
+
+    /**
+     * Atomic counter bump (SCRUM-161) — {@code SET like_count = like_count + 1} at the
+     * database, not a Java read-modify-write, so concurrent likes never lose an update.
+     * Only call after {@link com.tripflow.backend.repository.TripLikeRepository#insertIfAbsent}
+     * returns 1 (i.e. a like row was actually inserted).
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("UPDATE Trip t SET t.likeCount = t.likeCount + 1 WHERE t.id = :tripId")
+    int incrementLikeCount(@Param("tripId") Long tripId);
+
+    /**
+     * Atomic counter bump (SCRUM-161), symmetric with {@link #incrementLikeCount}.
+     * {@code GREATEST(..., 0)} is defensive only — decrements are gated on
+     * {@code TripLikeRepository.deleteByUserIdAndTripId} actually removing a row, so
+     * like_count should never go negative in practice.
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(value = "UPDATE trips SET like_count = GREATEST(like_count - 1, 0) WHERE id = :tripId",
+            nativeQuery = true)
+    int decrementLikeCount(@Param("tripId") Long tripId);
 }

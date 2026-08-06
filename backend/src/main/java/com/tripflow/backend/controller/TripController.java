@@ -25,6 +25,7 @@ import com.tripflow.backend.ratelimit.RateLimitProperties;
 import com.tripflow.backend.ratelimit.RateLimiterService;
 import com.tripflow.backend.security.UserPrincipal;
 import com.tripflow.backend.service.RouteOptimizationService;
+import com.tripflow.backend.service.TripLikeService;
 import com.tripflow.backend.service.TripService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -40,6 +41,7 @@ public class TripController {
 
     private final TripService tripService;
     private final RouteOptimizationService routeOptimizationService;
+    private final TripLikeService tripLikeService;
     private final RateLimiterService rateLimiterService;
     private final RateLimitProperties rateLimitProperties;
 
@@ -91,5 +93,22 @@ public class TripController {
             @PathVariable Long id, @AuthenticationPrincipal UserPrincipal principal) {
         rateLimiterService.checkLimit("optimize:" + principal.userId(), rateLimitProperties.optimize());
         return ResponseEntity.ok(routeOptimizationService.optimize(id, principal.userId()));
+    }
+
+    @Operation(summary = "Like a trip", description = "Idempotent: liking an already-liked trip still returns 200. "
+            + "PUBLIC trips only, or your own PRIVATE trips.")
+    @PostMapping("/{id}/like")
+    public ResponseEntity<Void> likeTrip(
+            @PathVariable Long id, @AuthenticationPrincipal UserPrincipal principal) {
+        tripLikeService.likeTrip(id, principal.userId());
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "Unlike a trip", description = "Idempotent: unliking a trip you haven't liked still returns 200.")
+    @DeleteMapping("/{id}/like")
+    public ResponseEntity<Void> unlikeTrip(
+            @PathVariable Long id, @AuthenticationPrincipal UserPrincipal principal) {
+        tripLikeService.unlikeTrip(id, principal.userId());
+        return ResponseEntity.ok().build();
     }
 }
