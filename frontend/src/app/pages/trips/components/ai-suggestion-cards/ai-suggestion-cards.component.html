@@ -22,7 +22,7 @@
         @if (card.accepted) {
           <span class="accepted-label">Added</span>
         } @else {
-          <ion-button fill="clear" color="medium" size="small" (click)="dismiss(card)" [disabled]="card.accepting">
+          <ion-button fill="clear" color="medium" size="small" (click)="dismiss(card)" [disabled]="card.accepting" aria-label="Dismiss suggestion">
             <ion-icon slot="icon-only" name="close-outline"></ion-icon>
           </ion-button>
           <ion-button fill="solid" size="small" (click)="accept(card)" [disabled]="card.accepting">
