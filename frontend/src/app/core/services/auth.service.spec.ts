@@ -57,27 +57,6 @@ describe('AuthService', () => {
     });
   });
 
-  // ---------- getStoredUsername: initial currentUsername state ----------
-
-  describe('getStoredUsername (initial currentUsername signal value)', () => {
-    it('no stored user -> currentUsername starts null', () => {
-      const service = TestBed.inject(AuthService);
-      expect(service.currentUsername()).toBeNull();
-    });
-
-    it('valid stored user -> currentUsername starts populated', () => {
-      localStorage.setItem(USER_KEY, JSON.stringify({ userId: 1, username: 'tanish' }));
-      const service = TestBed.inject(AuthService);
-      expect(service.currentUsername()).toBe('tanish');
-    });
-
-    it('corrupted stored user JSON -> currentUsername starts null and construction does not throw', () => {
-      localStorage.setItem(USER_KEY, '{not-json');
-      expect(() => TestBed.inject(AuthService)).not.toThrow();
-      expect(TestBed.inject(AuthService).currentUsername()).toBeNull();
-    });
-  });
-
   // ---------- token persistence ----------
 
   describe('token persistence', () => {
@@ -96,7 +75,6 @@ describe('AuthService', () => {
         expect(localStorage.getItem(TOKEN_KEY)).toBe(token);
         expect(JSON.parse(localStorage.getItem(USER_KEY)!)).toEqual({ userId: 1, username: 'tanish' });
         expect(service.isAuthenticated()).toBeTrue();
-        expect(service.currentUsername()).toBe('tanish');
         done();
       });
 
@@ -121,7 +99,6 @@ describe('AuthService', () => {
         .subscribe(() => {
           expect(localStorage.getItem(TOKEN_KEY)).toBe(token);
           expect(service.isAuthenticated()).toBeTrue();
-          expect(service.currentUsername()).toBe('neel');
           done();
         });
 
@@ -130,7 +107,7 @@ describe('AuthService', () => {
       req.flush(response);
     });
 
-    it('logout clears storage, resets signals, and navigates to /login', () => {
+    it('logout clears storage, resets isAuthenticated, and navigates to /login', () => {
       localStorage.setItem(TOKEN_KEY, 'some-token');
       localStorage.setItem(USER_KEY, JSON.stringify({ userId: 1, username: 'tanish' }));
       const service = TestBed.inject(AuthService);
@@ -142,7 +119,6 @@ describe('AuthService', () => {
       expect(localStorage.getItem(TOKEN_KEY)).toBeNull();
       expect(localStorage.getItem(USER_KEY)).toBeNull();
       expect(service.isAuthenticated()).toBeFalse();
-      expect(service.currentUsername()).toBeNull();
       expect(router.navigate).toHaveBeenCalledWith(['/login']);
     });
 

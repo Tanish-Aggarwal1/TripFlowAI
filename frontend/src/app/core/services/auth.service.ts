@@ -17,8 +17,6 @@ export class AuthService {
 
   // Reactive auth state other components/guards can read
   isAuthenticated = signal<boolean>(this.hasValidToken());
-  currentUsername = signal<string | null>(this.getStoredUsername());
-
 
   login(request: LoginRequest): Observable<AuthResponse> {
     return this.http.post<AuthResponse>(`${this.baseUrl}/login`, request).pipe(
@@ -38,7 +36,6 @@ export class AuthService {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
     this.isAuthenticated.set(false);
-    this.currentUsername.set(null);
     this.router.navigate(['/login']);
   }
 
@@ -50,7 +47,6 @@ export class AuthService {
     localStorage.setItem(TOKEN_KEY, res.token);
     localStorage.setItem(USER_KEY, JSON.stringify({ userId: res.userId, username: res.username }));
     this.isAuthenticated.set(true);
-    this.currentUsername.set(res.username);
   }
 
   // Maps backend responses to the generic, non-revealing messages required by UC-01 / UC-02
@@ -75,16 +71,6 @@ export class AuthService {
       return payload.exp * 1000 > Date.now();
     } catch {
       return false;
-    }
-  }
-
-  private getStoredUsername(): string | null {
-    const raw = localStorage.getItem(USER_KEY);
-    if (!raw) return null;
-    try {
-      return JSON.parse(raw).username ?? null;
-    } catch {
-      return null;
     }
   }
 }

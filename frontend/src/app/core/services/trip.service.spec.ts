@@ -24,7 +24,7 @@ describe('TripService', () => {
     expect(service).toBeTruthy();
   });
 
-  it('should list trips and update signal', (done) => {
+  it('should list trips', (done) => {
     const mockSummaries = [
       { id: 1, title: 'Trip 1', visibility: 'PUBLIC' as const, status: 'DRAFT' as const, createdAt: '2026-07-22T00:00:00Z', updatedAt: '2026-07-22T00:00:00Z', stopCount: 0, coverPhotoUrl: null },
     ];
@@ -35,7 +35,6 @@ describe('TripService', () => {
 
     service.listTrips().subscribe((page) => {
       expect(page).toEqual(mockPage);
-      expect(service.trips()).toEqual(mockSummaries);
       done();
     });
 
@@ -127,7 +126,7 @@ describe('TripService', () => {
     req.flush({ message: 'Not found' }, { status: 404, statusText: 'Not Found' });
   });
 
-  it('should create trip and update signal', (done) => {
+  it('should create trip', (done) => {
     const newTrip = {
       id: 2,
       title: 'New Trip',
@@ -143,10 +142,8 @@ describe('TripService', () => {
       startDate: null,
     };
 
-    service.trips.set([]);
     service.createTrip({ title: 'New Trip', description: undefined, tags: undefined, visibility: 'PUBLIC', stops: [] }).subscribe((trip) => {
       expect(trip).toEqual(newTrip);
-      expect(service.trips()).toContain(jasmine.objectContaining({ id: 2, title: 'New Trip', stopCount: 0 }));
       done();
     });
 
@@ -155,7 +152,7 @@ describe('TripService', () => {
     req.flush(newTrip);
   });
 
-  it('should generate a trip with AI and update the signal', (done) => {
+  it('should generate a trip with AI', (done) => {
     const generatedTrip = {
       id: 4,
       title: 'Kyoto Food Tour',
@@ -171,10 +168,8 @@ describe('TripService', () => {
       startDate: null,
     };
 
-    service.trips.set([]);
     service.generateTripWithAi({ prompt: '3 days in Kyoto, food and temples' }).subscribe((trip) => {
       expect(trip).toEqual(generatedTrip);
-      expect(service.trips()).toContain(jasmine.objectContaining({ id: 4, title: 'Kyoto Food Tour' }));
       done();
     });
 
@@ -380,8 +375,7 @@ describe('TripService', () => {
     req.flush(mockTrip);
   });
 
-  it('should update a trip and sync the signal', (done) => {
-    const existingSummary = { id: 3, title: 'Old title', visibility: 'PUBLIC' as const, status: 'DRAFT' as const, createdAt: '2026-07-22T00:00:00Z', updatedAt: '2026-07-22T00:00:00Z', stopCount: 0, coverPhotoUrl: null };
+  it('should update a trip', (done) => {
     const updatedTrip = {
       id: 3,
       title: 'New title',
@@ -397,10 +391,8 @@ describe('TripService', () => {
       startDate: null,
     };
 
-    service.trips.set([existingSummary]);
     service.updateTrip(3, { title: 'New title', visibility: 'PUBLIC', stops: [] }).subscribe((trip) => {
       expect(trip).toEqual(updatedTrip);
-      expect(service.trips()).toEqual([jasmine.objectContaining({ id: 3, title: 'New title' })]);
       done();
     });
 
@@ -409,12 +401,8 @@ describe('TripService', () => {
     req.flush(updatedTrip);
   });
 
-  it('should delete a trip and remove it from the signal', (done) => {
-    const summary = { id: 7, title: 'Trip 7', visibility: 'PUBLIC' as const, status: 'DRAFT' as const, createdAt: '2026-07-22T00:00:00Z', updatedAt: '2026-07-22T00:00:00Z', stopCount: 0, coverPhotoUrl: null };
-
-    service.trips.set([summary]);
+  it('should delete a trip', (done) => {
     service.deleteTrip(7).subscribe(() => {
-      expect(service.trips()).toEqual([]);
       done();
     });
 
@@ -423,8 +411,7 @@ describe('TripService', () => {
     req.flush(null);
   });
 
-  it('should optimize a trip and sync the signal', (done) => {
-    const existingSummary = { id: 9, title: 'Trip 9', visibility: 'PUBLIC' as const, status: 'DRAFT' as const, createdAt: '2026-07-22T00:00:00Z', updatedAt: '2026-07-22T00:00:00Z', stopCount: 0, coverPhotoUrl: null };
+  it('should optimize a trip', (done) => {
     const optimizedTrip = {
       id: 9,
       title: 'Trip 9',
@@ -440,10 +427,8 @@ describe('TripService', () => {
       startDate: null,
     };
 
-    service.trips.set([existingSummary]);
     service.optimizeTrip(9).subscribe((trip) => {
       expect(trip).toEqual(optimizedTrip);
-      expect(service.trips()).toEqual([jasmine.objectContaining({ id: 9 })]);
       done();
     });
 
