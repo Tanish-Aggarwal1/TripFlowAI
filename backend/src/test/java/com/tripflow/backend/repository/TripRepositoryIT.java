@@ -10,6 +10,8 @@ import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.boot.testcontainers.context.ImportTestcontainers;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.ActiveProfiles;
 
 import com.tripflow.backend.config.JpaConfig;
@@ -17,6 +19,8 @@ import com.tripflow.backend.domain.Place;
 import com.tripflow.backend.domain.Stop;
 import com.tripflow.backend.domain.Trip;
 import com.tripflow.backend.domain.User;
+import com.tripflow.backend.domain.enums.TripVisibility;
+import com.tripflow.backend.dto.TripSummaryResponse;
 import com.tripflow.backend.testsupport.PostgresTestcontainersConfiguration;
 
 import jakarta.persistence.EntityManager;
@@ -117,6 +121,67 @@ class TripRepositoryIT {
 		assertThat(statementCount)
 				.as("findWithStopsById should issue a single query for trip+stops+place, "
 						+ "not one per stop (10 stops in this trip)")
+				.isEqualTo(1);
+	}
+
+	@Test
+	void findSummariesByVisibility_multiplePublicTripsWithStops_issuesConstantQueryCount() {
+		User user = new User();
+		user.setUsername("discoveryowner");
+		user.setEmail("discovery@tripflow.com");
+		user.setPasswordHash("hashedpassword123");
+		User savedUser = userRepository.save(user);
+
+		for (int t = 0; t < 5; t++) {
+			Trip trip = new Trip();
+			trip.setUser(savedUser);
+			trip.setTitle("Public Trip " + t);
+			trip.setVisibility(TripVisibility.PUBLIC);
+
+			for (int i = 0; i < 3; i++) {
+				Place place = new Place();
+				place.setName("Place " + t + "-" + i);
+				place.setLatitude(43.0 + i * 0.01);
+				place.setLongitude(-79.0 - i * 0.01);
+				Place savedPlace = placeRepository.save(place);
+
+				Stop stop = new Stop();
+				stop.setTrip(trip);
+				stop.setPlace(savedPlace);
+				stop.setStopOrder(i);
+				trip.getStops().add(stop);
+			}
+			tripRepository.save(trip);
+		}
+
+		Trip privateTrip = new Trip();
+		privateTrip.setUser(savedUser);
+		privateTrip.setTitle("Private Trip");
+		privateTrip.setVisibility(TripVisibility.PRIVATE);
+		tripRepository.save(privateTrip);
+
+		entityManager.flush();
+		entityManager.clear();
+
+		Session session = entityManager.unwrap(Session.class);
+		Statistics stats = session.getSessionFactory().getStatistics();
+		stats.setStatisticsEnabled(true);
+		stats.clear();
+
+		Page<TripSummaryResponse> page = tripRepository.findSummariesByVisibility(
+				TripVisibility.PUBLIC, PageRequest.of(0, 20));
+
+		long statementCount = stats.getPrepareStatementCount();
+
+		assertThat(page.getContent()).hasSize(5);
+		assertThat(page.getContent()).allMatch(summary -> summary.visibility() == TripVisibility.PUBLIC);
+		// The flat TripSummaryResponse projection (no fetch join on stops) means paging
+		// happens in SQL: 1 statement here (Spring Data skips the extra count query
+		// since content size < page size, letting it infer totalElements), never
+		// one-per-trip regardless of how many public trips exist.
+		assertThat(statementCount)
+				.as("findSummariesByVisibility should issue a constant, small number of "
+						+ "queries, not scale with the number of trips")
 				.isEqualTo(1);
 	}
 

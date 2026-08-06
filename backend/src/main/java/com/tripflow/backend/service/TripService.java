@@ -45,6 +45,11 @@ public class TripService {
         return tripRepository.findSummariesByUserId(ownerId, pageable);
     }
 
+    @Transactional(readOnly = true)
+    public Page<TripSummaryResponse> listPublicTrips(Pageable pageable) {
+        return tripRepository.findSummariesByVisibility(TripVisibility.PUBLIC, pageable);
+    }
+
     @Transactional
     public TripResponse createTrip(Long ownerId, CreateTripRequest request) {
         // ownerId always comes from an authenticated JWT principal tied to a real user row,
