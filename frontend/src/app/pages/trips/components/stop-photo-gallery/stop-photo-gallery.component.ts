@@ -1,11 +1,12 @@
 import { Component, EventEmitter, inject, Input, OnInit, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { IonButton, IonIcon, IonSpinner, AlertController, ToastController } from '@ionic/angular/standalone';
+import { IonButton, IonIcon, IonSpinner, AlertController } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import { add, trash } from 'ionicons/icons';
 import { StopPhotoService } from '../../../../core/services/stop-photo.service';
 import { StopPhotoResponse } from '../../../../core/models/trip.model';
 import { StopPhotoUploadComponent } from '../stop-photo-upload/stop-photo-upload.component';
+import { ToastService } from '../../../../core/services/toast.service';
 
 // SCRUM-165: displays a stop's photo gallery (thumbnail + caption/review),
 // supports delete, and hosts StopPhotoUploadComponent (SCRUM-164) inline so
@@ -23,7 +24,7 @@ export class StopPhotoGalleryComponent implements OnInit {
 
   private stopPhotoService = inject(StopPhotoService);
   private alertCtrl = inject(AlertController);
-  private toastCtrl = inject(ToastController);
+  private toastService = inject(ToastService);
 
   photos: StopPhotoResponse[] = [];
   loading = true;
@@ -96,14 +97,9 @@ export class StopPhotoGalleryComponent implements OnInit {
         this.photos = this.photos.filter((p) => p.id !== photo.id);
         this.photosChanged.emit(this.photos);
       },
-      error: async (err) => {
+      error: (err) => {
         this.deletingId = null;
-        const toast = await this.toastCtrl.create({
-          message: err.message ?? 'Could not delete photo.',
-          duration: 2500,
-          color: 'danger',
-        });
-        await toast.present();
+        this.toastService.showError(err, 'Could not delete photo.');
       },
     });
   }

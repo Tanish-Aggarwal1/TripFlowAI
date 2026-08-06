@@ -13,6 +13,7 @@ import { addIcons } from 'ionicons';
 import { addCircleOutline, closeOutline } from 'ionicons/icons';
 import { TripService } from '../../../../core/services/trip.service';
 import { SuggestedStopResponse, StopResponse } from '../../../../core/models/trip.model';
+import { ToastService } from '../../../../core/services/toast.service';
 
 // NOTE (flagged for Tanish): SCRUM-156's AC mentions description/category/duration
 // per card. The backend's SuggestedStopResponse only has order/name/lat/lng/reason
@@ -42,6 +43,7 @@ export class AiSuggestionCardsComponent implements OnChanges {
 
   private tripService = inject(TripService);
   private toastCtrl = inject(ToastController);
+  private toastService = inject(ToastService);
 
   cards: SuggestionCardState[] = [];
 
@@ -86,14 +88,9 @@ export class AiSuggestionCardsComponent implements OnChanges {
           });
           await toast.present();
         },
-        error: async (err) => {
+        error: (err) => {
           card.accepting = false;
-          const toast = await this.toastCtrl.create({
-            message: err.message ?? 'Could not add stop.',
-            duration: 2500,
-            color: 'danger',
-          });
-          await toast.present();
+          this.toastService.showError(err, 'Could not add stop.');
         },
       });
   }

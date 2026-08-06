@@ -11,12 +11,12 @@ import {
   IonIcon,
   IonSpinner,
   IonChip,
-  ToastController,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import { sparkles, closeCircle } from 'ionicons/icons';
 import { TripService } from '../../../../core/services/trip.service';
 import { GenerateTripRequest, TripResponse } from '../../../../core/models/trip.model';
+import { ToastService } from '../../../../core/services/toast.service';
 
 const MAX_PROMPT_LENGTH = 1000;
 const MAX_INTEREST_LENGTH = 50;
@@ -50,7 +50,7 @@ export class AiTripPromptComponent {
   @Output() cancelled = new EventEmitter<void>();
 
   private tripService = inject(TripService);
-  private toastCtrl = inject(ToastController);
+  private toastService = inject(ToastService);
 
   readonly dayOptions = Array.from({ length: 14 }, (_, i) => i + 1);
 
@@ -128,14 +128,9 @@ export class AiTripPromptComponent {
         this.submitting = false;
         this.created.emit(trip);
       },
-      error: async (err) => {
+      error: (err) => {
         this.submitting = false;
-        const toast = await this.toastCtrl.create({
-          message: err.message ?? 'Could not generate trip.',
-          duration: 3000,
-          color: 'danger',
-        });
-        await toast.present();
+        this.toastService.showError(err, 'Could not generate trip.', 3000);
       },
     });
   }
