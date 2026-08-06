@@ -35,34 +35,37 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class TripService {
 
-	private final TripRepository tripRepository;
-	private final UserRepository userRepository;
-	private final TripMapper tripMapper;
-	private final TripOwnershipService tripOwnershipService;
-	private final StopService stopService;
+    private final TripRepository tripRepository;
+    private final UserRepository userRepository;
+    private final TripMapper tripMapper;
+    private final TripOwnershipService tripOwnershipService;
+    private final StopService stopService;
 
-	@Transactional(readOnly = true)
-	public Page<TripSummaryResponse> listTrips(Long ownerId, Pageable pageable) {
-		return tripRepository.findSummariesByUserId(ownerId, pageable);
-	}
+    @Transactional(readOnly = true)
+    public Page<TripSummaryResponse> listTrips(Long ownerId, Pageable pageable) {
+        return tripRepository.findSummariesByUserId(ownerId, pageable);
+    }
 
-	@Transactional
-	public TripResponse createTrip(Long ownerId, CreateTripRequest request) {
-		// ownerId always comes from an authenticated JWT principal tied to a real user
-		// row,
-		// so a lazy reference (no owner SELECT) is safe here — unlike loadOwnedTrip,
-		// which
-		// reads a caller-supplied id that may not exist.
-		User owner = userRepository.getReferenceById(ownerId);
+    @Transactional(readOnly = true)
+    public Page<TripSummaryResponse> listPublicTrips(Pageable pageable) {
+        return tripRepository.findSummariesByVisibility(TripVisibility.PUBLIC, pageable);
+    }
 
-		Trip trip = tripMapper.toEntity(request, owner);
-		trip.getStops().addAll(stopService.buildStops(request.stops(), trip));
+    @Transactional
+    public TripResponse createTrip(Long ownerId, CreateTripRequest request) {
+        // ownerId always comes from an authenticated JWT principal tied to a real user row,
+        // so a lazy reference (no owner SELECT) is safe here — unlike loadOwnedTrip, which
+        // reads a caller-supplied id that may not exist.
+        User owner = userRepository.getReferenceById(ownerId);
 
-		Trip saved = tripRepository.save(trip);
-		log.info("Trip created id={} ownerId={} stops={}", saved.getId(), ownerId, saved.getStops().size());
+        Trip trip = tripMapper.toEntity(request, owner);
+        trip.getStops().addAll(stopService.buildStops(request.stops(), trip));
 
-		return tripMapper.toResponse(saved);
-	}
+        Trip saved = tripRepository.save(trip);
+        log.info("Trip created id={} ownerId={} stops={}", saved.getId(), ownerId, saved.getStops().size());
+
+        return tripMapper.toResponse(saved);
+    }
 
 	// Deliberately not TripOwnershipService.loadOwnedTrip (SCRUM-222/AUDIT-13,
 	// reviewed and

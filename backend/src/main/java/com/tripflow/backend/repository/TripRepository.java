@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import com.tripflow.backend.domain.Trip;
+import com.tripflow.backend.domain.enums.TripVisibility;
 import com.tripflow.backend.dto.TripSummaryResponse;
 
 public interface TripRepository extends JpaRepository<Trip, Long> {
@@ -47,6 +48,22 @@ public interface TripRepository extends JpaRepository<Trip, Long> {
             WHERE t.user.id = :userId
             """)
     Page<TripSummaryResponse> findSummariesByUserId(@Param("userId") Long userId, Pageable pageable);
+
+    /**
+     * Card-projection list read for GET /api/discovery/trips (SCRUM-160). Same flat
+     * projection / no-fetch-join shape as {@link #findSummariesByUserId} and for the
+     * same reason: a collection fetch join paired with Pageable forces Hibernate to
+     * paginate in memory (HHH90003004).
+     */
+    @Query("""
+            SELECT new com.tripflow.backend.dto.TripSummaryResponse(
+                t.id, t.title, t.visibility, t.status, t.createdAt, t.updatedAt,
+                (SELECT COUNT(s) FROM Stop s WHERE s.trip = t), null)
+            FROM Trip t
+            WHERE t.visibility = :visibility
+            """)
+    Page<TripSummaryResponse> findSummariesByVisibility(
+            @Param("visibility") TripVisibility visibility, Pageable pageable);
 
     /**
      * Atomic counter bump (SCRUM-161) — {@code SET like_count = like_count + 1} at the
