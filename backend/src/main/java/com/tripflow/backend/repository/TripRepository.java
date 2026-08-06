@@ -11,7 +11,7 @@ import org.springframework.data.repository.query.Param;
 import com.tripflow.backend.domain.Trip;
 import com.tripflow.backend.dto.TripSummaryResponse;
 
-public interface TripRepository extends JpaRepository<Trip, Long> {
+public interface TripRepository extends JpaRepository<Trip, Long>, TripSearchRepository {
 
     /**
      * Single-trip read with stops and places fetched in one query.

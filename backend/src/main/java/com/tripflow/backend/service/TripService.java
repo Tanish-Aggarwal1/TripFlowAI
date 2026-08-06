@@ -15,6 +15,7 @@ import com.tripflow.backend.dto.TripResponse;
 import com.tripflow.backend.dto.TripSummaryResponse;
 import com.tripflow.backend.dto.UpdateTripRequest;
 import com.tripflow.backend.exception.ForbiddenException;
+import com.tripflow.backend.exception.InvalidRequestException;
 import com.tripflow.backend.exception.ResourceNotFoundException;
 import com.tripflow.backend.mapper.TripMapper;
 import com.tripflow.backend.repository.TripRepository;
@@ -43,6 +44,20 @@ public class TripService {
     @Transactional(readOnly = true)
     public Page<TripSummaryResponse> listTrips(Long ownerId, Pageable pageable) {
         return tripRepository.findSummariesByUserId(ownerId, pageable);
+    }
+
+    /**
+     * SCRUM-163: case-insensitive substring search over PUBLIC trip titles/tags. MVP
+     * only — see {@link com.tripflow.backend.repository.TripSearchRepository} javadoc
+     * for the explicit full-text-search non-goal.
+     */
+    @Transactional(readOnly = true)
+    public Page<TripSummaryResponse> searchPublicTrips(String q, Pageable pageable) {
+        String trimmed = q == null ? "" : q.trim();
+        if (trimmed.isEmpty()) {
+            throw new InvalidRequestException("Query parameter 'q' must not be blank");
+        }
+        return tripRepository.searchPublicTrips(trimmed, pageable);
     }
 
     @Transactional
