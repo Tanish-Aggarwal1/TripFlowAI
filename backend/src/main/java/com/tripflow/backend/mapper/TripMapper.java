@@ -49,7 +49,8 @@ public class TripMapper {
                 trip.getCreatedAt(),
                 trip.getUpdatedAt(),
                 trip.getRouteGeometry(),
-                trip.getStartDate()
+                trip.getStartDate(),
+                trip.getLikeCount()
         );
     }
 }

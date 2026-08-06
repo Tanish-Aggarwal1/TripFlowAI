@@ -62,7 +62,13 @@ public class Trip extends BaseEntity {
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "route_geometry", columnDefinition = "jsonb")
     private String routeGeometry;
-    
+
+    // Denormalized (SCRUM-161): kept in sync via TripRepository's atomic
+    // incrementLikeCount/decrementLikeCount UPDATE queries, never a Java read-modify-write.
+    // Reflects the count of TripLike rows for this trip.
+    @Column(name = "like_count", nullable = false)
+    private long likeCount = 0;
+
     @OneToMany(mappedBy = "trip", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("stopOrder ASC")
     private List<Stop> stops = new ArrayList<>();

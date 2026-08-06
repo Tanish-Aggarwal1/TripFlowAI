@@ -25,10 +25,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Trip CRUD only (SCRUM-215) — stop CRUD lives in {@link StopService}, place resolution in
- * {@link PlaceResolutionService}. {@code createTrip}/{@code updateTrip} still build each
- * trip's initial/replacement stop list, but delegate the actual stop-building (place lookup
- * + ordering) to {@link StopService#buildStops} so that logic exists in exactly one place.
+ * Trip CRUD only (SCRUM-215) — stop CRUD lives in {@link StopService}, place
+ * resolution in {@link PlaceResolutionService}.
+ * {@code createTrip}/{@code updateTrip} still build each trip's
+ * initial/replacement stop list, but delegate the actual stop-building (place
+ * lookup + ordering) to {@link StopService#buildStops} so that logic exists in
+ * exactly one place.
  */
 @Slf4j
 @Service
@@ -59,6 +61,11 @@ public class TripService {
         }
         return tripRepository.searchPublicTrips(trimmed, pageable);
     }
+        
+    @Transactional(readOnly = true)
+    public Page<TripSummaryResponse> listPublicTrips(Pageable pageable) {
+        return tripRepository.findSummariesByVisibility(TripVisibility.PUBLIC, pageable);
+    }
 
     @Transactional
     public TripResponse createTrip(Long ownerId, CreateTripRequest request) {
@@ -76,47 +83,79 @@ public class TripService {
         return tripMapper.toResponse(saved);
     }
 
-    // Deliberately not TripOwnershipService.loadOwnedTrip (SCRUM-222/AUDIT-13, reviewed and
-    // left as-is): that method enforces "owner only", but a PUBLIC trip must also be
-    // readable by non-owners, so this method's own find-or-404 + visibility check can't be
-    // replaced by it without changing behavior.
-    @Transactional(readOnly = true)
-    public TripResponse getTrip(Long tripId, Long requesterId) {
-        Trip trip = tripRepository.findWithStopsById(tripId)
-                .orElseThrow(() -> new ResourceNotFoundException("Trip not found: " + tripId));
+	// Deliberately not TripOwnershipService.loadOwnedTrip (SCRUM-222/AUDIT-13,
+	// reviewed and
+	// left as-is): that method enforces "owner only", but a PUBLIC trip must also
+	// be
+	// readable by non-owners, so this method's own find-or-404 + visibility check
+	// can't be
+	// replaced by it without changing behavior.
+	//
+	// SCRUM-71a: a non-owner hitting a PRIVATE trip gets ResourceNotFoundException
+	// (404),
+	// not ForbiddenException (403) — a 403 would confirm the trip id exists,
+	// leaking its
+	// existence to someone who isn't allowed to know that. 404 is indistinguishable
+	// from
+	// "no trip with this id."
+	@Transactional(readOnly = true)
+	public TripResponse getTrip(Long tripId, Long requesterId) {
+		Trip trip = tripRepository.findWithStopsById(tripId)
+				.orElseThrow(() -> new ResourceNotFoundException("Trip not found: " + tripId));
 
-        boolean isOwner = trip.getUser().getId().equals(requesterId);
-        if (trip.getVisibility() == TripVisibility.PRIVATE && !isOwner) {
-        	log.debug("Private trip access denied tripId={} requesterId={}", tripId, requesterId);
-            throw new ForbiddenException("You do not have access to this trip");
-        }
-        return tripMapper.toResponse(trip);
-    }
+		boolean isOwner = trip.getUser().getId().equals(requesterId);
+		if (trip.getVisibility() == TripVisibility.PRIVATE && !isOwner) {
+			log.debug("Private trip access denied (404, existence not disclosed) tripId={} requesterId={}", tripId,
+					requesterId);
+			throw new ResourceNotFoundException("Trip not found: " + tripId);
+		}
+		return tripMapper.toResponse(trip);
+	}
 
-    @Transactional
-    public TripResponse updateTrip(Long tripId, Long requesterId, UpdateTripRequest request) {
-        Trip trip = tripOwnershipService.loadOwnedTrip(tripId, requesterId);
+	// SCRUM-71a: PATCH /api/trips/{id}/visibility. Owner-only (via
+	// TripOwnershipService,
+	// same 404/403 semantics as updateTrip/deleteTrip) — flips PRIVATE <-> PUBLIC
+	// rather
+	// than accepting an explicit target value, since that's the only operation the
+	// endpoint exposes and it keeps the request bodyless.
+	@Transactional
+	public TripResponse toggleVisibility(Long tripId, Long requesterId) {
+		Trip trip = tripOwnershipService.loadOwnedTrip(tripId, requesterId);
 
-        trip.setTitle(request.title());
-        trip.setDescription(request.description());
-        trip.setTags(request.tags() != null ? request.tags() : new ArrayList<>());
-        trip.setVisibility(request.visibility());
-        trip.setStartDate(request.startDate());
-        // status is server-owned lifecycle state — intentionally not touched here
+		TripVisibility next = trip.getVisibility() == TripVisibility.PRIVATE ? TripVisibility.PUBLIC
+				: TripVisibility.PRIVATE;
+		trip.setVisibility(next);
 
-        // Full itinerary replace. orphanRemoval deletes dropped stops; shared Places survive.
-        trip.getStops().clear();
-        trip.getStops().addAll(stopService.buildStops(request.stops(), trip));
+		Trip saved = tripRepository.save(trip);
+		log.info("Trip visibility toggled id={} ownerId={} visibility={}", saved.getId(), requesterId, next);
+		return tripMapper.toResponse(saved);
+	}
 
-        Trip saved = tripRepository.save(trip);
-        log.info("Trip updated id={} ownerId={} stops={}", saved.getId(), requesterId, saved.getStops().size());
-        return tripMapper.toResponse(saved);
-    }
+	@Transactional
+	public TripResponse updateTrip(Long tripId, Long requesterId, UpdateTripRequest request) {
+		Trip trip = tripOwnershipService.loadOwnedTrip(tripId, requesterId);
 
-    @Transactional
-    public void deleteTrip(Long tripId, Long requesterId) {
-        Trip trip = tripOwnershipService.loadOwnedTrip(tripId, requesterId);
-        tripRepository.delete(trip); // cascade + FK ON DELETE CASCADE remove stops; Places survive
-        log.info("Trip deleted id={} ownerId={}", tripId, requesterId);
-    }
+		trip.setTitle(request.title());
+		trip.setDescription(request.description());
+		trip.setTags(request.tags() != null ? request.tags() : new ArrayList<>());
+		trip.setVisibility(request.visibility());
+		trip.setStartDate(request.startDate());
+		// status is server-owned lifecycle state — intentionally not touched here
+
+		// Full itinerary replace. orphanRemoval deletes dropped stops; shared Places
+		// survive.
+		trip.getStops().clear();
+		trip.getStops().addAll(stopService.buildStops(request.stops(), trip));
+
+		Trip saved = tripRepository.save(trip);
+		log.info("Trip updated id={} ownerId={} stops={}", saved.getId(), requesterId, saved.getStops().size());
+		return tripMapper.toResponse(saved);
+	}
+
+	@Transactional
+	public void deleteTrip(Long tripId, Long requesterId) {
+		Trip trip = tripOwnershipService.loadOwnedTrip(tripId, requesterId);
+		tripRepository.delete(trip); // cascade + FK ON DELETE CASCADE remove stops; Places survive
+		log.info("Trip deleted id={} ownerId={}", tripId, requesterId);
+	}
 }

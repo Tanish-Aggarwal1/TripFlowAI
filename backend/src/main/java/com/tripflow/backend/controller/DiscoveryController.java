@@ -18,7 +18,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 
-@Tag(name = "Discovery", description = "Public trip discovery: search")
+@Tag(name = "Discovery", description = "Public trip discovery feed")
 @RestController
 @RequestMapping("/api/discovery")
 @RequiredArgsConstructor
@@ -33,6 +33,14 @@ public class DiscoveryController {
             @RequestParam(required = false) String q,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         Page<TripSummaryResponse> page = tripService.searchPublicTrips(q, pageable);
+        return ResponseEntity.ok(new PagedModel<>(page));
+    }
+  
+    @Operation(summary = "List public trips", description = "Paginated feed of PUBLIC trips. No authentication required.")
+    @GetMapping("/trips")
+    public ResponseEntity<PagedModel<TripSummaryResponse>> listPublicTrips(
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        Page<TripSummaryResponse> page = tripService.listPublicTrips(pageable);
         return ResponseEntity.ok(new PagedModel<>(page));
     }
 }
