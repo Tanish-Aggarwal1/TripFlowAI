@@ -25,6 +25,7 @@ import com.tripflow.backend.ratelimit.RateLimitProperties;
 import com.tripflow.backend.ratelimit.RateLimiterService;
 import com.tripflow.backend.security.UserPrincipal;
 import com.tripflow.backend.service.RouteOptimizationService;
+import com.tripflow.backend.service.TripCloneService;
 import com.tripflow.backend.service.TripService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -40,6 +41,7 @@ public class TripController {
 
     private final TripService tripService;
     private final RouteOptimizationService routeOptimizationService;
+    private final TripCloneService tripCloneService;
     private final RateLimiterService rateLimiterService;
     private final RateLimitProperties rateLimitProperties;
 
@@ -91,5 +93,13 @@ public class TripController {
             @PathVariable Long id, @AuthenticationPrincipal UserPrincipal principal) {
         rateLimiterService.checkLimit("optimize:" + principal.userId(), rateLimitProperties.optimize());
         return ResponseEntity.ok(routeOptimizationService.optimize(id, principal.userId()));
+    }
+
+    @Operation(summary = "Clone a trip", description = "Deep-copies a PUBLIC trip (or your own) into your account as a "
+            + "new PRIVATE trip. Stops are cloned in order; Places are shared, not duplicated. Photos and likes are not copied.")
+    @PostMapping("/{id}/clone")
+    public ResponseEntity<TripResponse> cloneTrip(
+            @PathVariable Long id, @AuthenticationPrincipal UserPrincipal principal) {
+        return new ResponseEntity<>(tripCloneService.cloneTrip(id, principal.userId()), HttpStatus.CREATED);
     }
 }
