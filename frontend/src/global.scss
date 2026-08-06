@@ -18,6 +18,37 @@
 @import "@ionic/angular/css/typography.css";
 @import "@ionic/angular/css/display.css";
 
+/* Required by Mapbox GL JS for correct canvas/control/popup positioning */
+@import "mapbox-gl/dist/mapbox-gl.css";
+
+/* trip-map-marker / trip-map-popup: Mapbox creates these DOM nodes via
+   document.createElement, outside Angular's view encapsulation, so they
+   must be styled globally — see trip-map.component.scss */
+.trip-map-marker {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--ion-color-primary, #3b82f6);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
+.trip-map-popup {
+  font-size: 13px;
+
+  .popup-address,
+  .popup-notes {
+    margin-top: 4px;
+    color: var(--ion-color-medium, #666);
+  }
+}
+
 /* Optional CSS utils that can be commented out */
 @import "@ionic/angular/css/padding.css";
 @import "@ionic/angular/css/float-elements.css";
