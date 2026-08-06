@@ -71,4 +71,5 @@ Thumbs.db
 
 
 #Environment
-environments/*
+src/environments/*
+!src/environments/*.template

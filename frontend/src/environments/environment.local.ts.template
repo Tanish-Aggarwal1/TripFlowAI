@@ -1,0 +1,10 @@
+// Copy this file to `environment.local.ts` (gitignored via `environments/*` in
+// .gitignore) and fill in a real Mapbox token for local dev. `ng serve` /
+// `ionic serve` (the `development` build configuration) replaces
+// environment.ts with this file at build time — see angular.json
+// fileReplacements. Never commit a real token.
+export const environment = {
+  production: false,
+  apiBaseUrl: 'http://localhost:8080/api',
+  mapboxToken: 'YOUR_MAPBOX_TOKEN_HERE'
+};
