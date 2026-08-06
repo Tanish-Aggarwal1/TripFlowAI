@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -61,11 +62,20 @@ public class TripController {
         return new ResponseEntity<>(tripService.createTrip(principal.userId(), request), HttpStatus.CREATED);
     }
 
-    @Operation(summary = "Get a trip", description = "Owner sees any trip; non-owners only see PUBLIC trips.")
+    @Operation(summary = "Get a trip",
+            description = "Owner sees any trip; non-owners only see PUBLIC trips. A PRIVATE trip "
+                    + "requested by a non-owner returns 404 (not 403) so its existence isn't leaked.")
     @GetMapping("/{id}")
     public ResponseEntity<TripResponse> getTrip(
             @PathVariable Long id, @AuthenticationPrincipal UserPrincipal principal) {
         return ResponseEntity.ok(tripService.getTrip(id, principal.userId()));
+    }
+
+    @Operation(summary = "Toggle trip visibility", description = "Flips PRIVATE <-> PUBLIC. Owner only.")
+    @PatchMapping("/{id}/visibility")
+    public ResponseEntity<TripResponse> toggleVisibility(
+            @PathVariable Long id, @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(tripService.toggleVisibility(id, principal.userId()));
     }
 
     @Operation(summary = "Replace a trip", description = "Full itinerary replace — metadata and stops in one call. Owner only.")
