@@ -19,5 +19,6 @@ public record TripResponse(
         Instant createdAt,
         Instant updatedAt,
         String routeGeometry,
-        LocalDate startDate
+        LocalDate startDate,
+        long likeCount
 ) {}
