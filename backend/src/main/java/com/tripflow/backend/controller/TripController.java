@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -26,6 +27,7 @@ import com.tripflow.backend.ratelimit.RateLimiterService;
 import com.tripflow.backend.security.UserPrincipal;
 import com.tripflow.backend.service.RouteOptimizationService;
 import com.tripflow.backend.service.TripCloneService;
+import com.tripflow.backend.service.TripLikeService;
 import com.tripflow.backend.service.TripService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -42,6 +44,7 @@ public class TripController {
     private final TripService tripService;
     private final RouteOptimizationService routeOptimizationService;
     private final TripCloneService tripCloneService;
+    private final TripLikeService tripLikeService;
     private final RateLimiterService rateLimiterService;
     private final RateLimitProperties rateLimitProperties;
 
@@ -63,11 +66,20 @@ public class TripController {
         return new ResponseEntity<>(tripService.createTrip(principal.userId(), request), HttpStatus.CREATED);
     }
 
-    @Operation(summary = "Get a trip", description = "Owner sees any trip; non-owners only see PUBLIC trips.")
+    @Operation(summary = "Get a trip",
+            description = "Owner sees any trip; non-owners only see PUBLIC trips. A PRIVATE trip "
+                    + "requested by a non-owner returns 404 (not 403) so its existence isn't leaked.")
     @GetMapping("/{id}")
     public ResponseEntity<TripResponse> getTrip(
             @PathVariable Long id, @AuthenticationPrincipal UserPrincipal principal) {
         return ResponseEntity.ok(tripService.getTrip(id, principal.userId()));
+    }
+
+    @Operation(summary = "Toggle trip visibility", description = "Flips PRIVATE <-> PUBLIC. Owner only.")
+    @PatchMapping("/{id}/visibility")
+    public ResponseEntity<TripResponse> toggleVisibility(
+            @PathVariable Long id, @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(tripService.toggleVisibility(id, principal.userId()));
     }
 
     @Operation(summary = "Replace a trip", description = "Full itinerary replace — metadata and stops in one call. Owner only.")
@@ -101,5 +113,20 @@ public class TripController {
     public ResponseEntity<TripResponse> cloneTrip(
             @PathVariable Long id, @AuthenticationPrincipal UserPrincipal principal) {
         return new ResponseEntity<>(tripCloneService.cloneTrip(id, principal.userId()), HttpStatus.CREATED);
+    @Operation(summary = "Like a trip", description = "Idempotent: liking an already-liked trip still returns 200. "
+            + "PUBLIC trips only, or your own PRIVATE trips.")
+    @PostMapping("/{id}/like")
+    public ResponseEntity<Void> likeTrip(
+            @PathVariable Long id, @AuthenticationPrincipal UserPrincipal principal) {
+        tripLikeService.likeTrip(id, principal.userId());
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "Unlike a trip", description = "Idempotent: unliking a trip you haven't liked still returns 200.")
+    @DeleteMapping("/{id}/like")
+    public ResponseEntity<Void> unlikeTrip(
+            @PathVariable Long id, @AuthenticationPrincipal UserPrincipal principal) {
+        tripLikeService.unlikeTrip(id, principal.userId());
+        return ResponseEntity.ok().build();
     }
 }

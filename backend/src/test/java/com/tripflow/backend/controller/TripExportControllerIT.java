@@ -99,13 +99,13 @@ class TripExportControllerIT {
 	}
 
 	@Test
-	void exportIcs_privateTripNonOwner_returns403() throws Exception {
+	void exportIcs_privateTripNonOwner_returns404() throws Exception {
 		User owner = createTestUser("owner2");
 		User other = createTestUser("other2");
 		Long tripId = createTrip(owner, "Private Trip", TripVisibility.PRIVATE);
 
 		mockMvc.perform(get("/api/trips/" + tripId + "/calendar.ics").with(asUser(other)))
-				.andExpect(status().isForbidden());
+				.andExpect(status().isNotFound());
 	}
 
 	@Test

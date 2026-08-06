@@ -125,7 +125,9 @@ public class TripServiceTest {
     }
 
     @Test
-    void getTrip_privateTripNonOwner_throwsForbidden() {
+    void getTrip_privateTripNonOwner_throwsNotFound() {
+        // SCRUM-71a: 404, not 403 — a 403 would confirm the trip id exists to someone
+        // who isn't allowed to see it.
         User owner = new User();
         owner.setId(1L);
 
@@ -137,7 +139,7 @@ public class TripServiceTest {
         when(tripRepository.findWithStopsById(50L)).thenReturn(Optional.of(trip));
 
         assertThatThrownBy(() -> tripService.getTrip(50L, 2L))
-                .isInstanceOf(ForbiddenException.class);
+                .isInstanceOf(ResourceNotFoundException.class);
     }
 
     @Test
@@ -166,6 +168,90 @@ public class TripServiceTest {
         TripResponse response = tripService.getTrip(50L, 1L);
 
         assertThat(response.title()).isEqualTo("My Trip");
+    }
+
+    @Test
+    void getTrip_publicTripNonOwner_succeeds() {
+        User owner = new User();
+        owner.setId(1L);
+
+        Trip trip = new Trip();
+        trip.setId(50L);
+        trip.setUser(owner);
+        trip.setVisibility(TripVisibility.PUBLIC);
+        trip.setTitle("Shared Trip");
+        trip.setStops(List.of());
+
+        when(tripRepository.findWithStopsById(50L)).thenReturn(Optional.of(trip));
+
+        TripResponse response = tripService.getTrip(50L, 2L);
+
+        assertThat(response.title()).isEqualTo("Shared Trip");
+        assertThat(response.visibility()).isEqualTo(TripVisibility.PUBLIC);
+    }
+
+    // ---------- toggleVisibility ----------
+
+    @Test
+    void toggleVisibility_owner_flipsPrivateToPublic() {
+        User owner = new User();
+        owner.setId(1L);
+
+        Trip trip = new Trip();
+        trip.setId(50L);
+        trip.setUser(owner);
+        trip.setVisibility(TripVisibility.PRIVATE);
+
+        when(tripRepository.findWithStopsById(50L)).thenReturn(Optional.of(trip));
+        when(tripRepository.save(any())).thenAnswer(inv -> inv.getArgument(0, Trip.class));
+
+        TripResponse response = tripService.toggleVisibility(50L, 1L);
+
+        assertThat(response.visibility()).isEqualTo(TripVisibility.PUBLIC);
+    }
+
+    @Test
+    void toggleVisibility_owner_flipsPublicToPrivate() {
+        User owner = new User();
+        owner.setId(1L);
+
+        Trip trip = new Trip();
+        trip.setId(50L);
+        trip.setUser(owner);
+        trip.setVisibility(TripVisibility.PUBLIC);
+
+        when(tripRepository.findWithStopsById(50L)).thenReturn(Optional.of(trip));
+        when(tripRepository.save(any())).thenAnswer(inv -> inv.getArgument(0, Trip.class));
+
+        TripResponse response = tripService.toggleVisibility(50L, 1L);
+
+        assertThat(response.visibility()).isEqualTo(TripVisibility.PRIVATE);
+    }
+
+    @Test
+    void toggleVisibility_nonOwner_throwsForbidden_andNeverSaves() {
+        User owner = new User();
+        owner.setId(1L);
+
+        Trip trip = new Trip();
+        trip.setId(50L);
+        trip.setUser(owner);
+        trip.setVisibility(TripVisibility.PRIVATE);
+
+        when(tripRepository.findWithStopsById(50L)).thenReturn(Optional.of(trip));
+
+        assertThatThrownBy(() -> tripService.toggleVisibility(50L, 2L))
+                .isInstanceOf(ForbiddenException.class);
+
+        verify(tripRepository, never()).save(any());
+    }
+
+    @Test
+    void toggleVisibility_missingTrip_throwsNotFound() {
+        when(tripRepository.findWithStopsById(999L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> tripService.toggleVisibility(999L, 1L))
+                .isInstanceOf(ResourceNotFoundException.class);
     }
 
     // ---------- listTrips ----------
