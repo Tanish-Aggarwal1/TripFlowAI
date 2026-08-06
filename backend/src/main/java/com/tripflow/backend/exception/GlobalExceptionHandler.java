@@ -132,6 +132,12 @@ public class GlobalExceptionHandler {
 		return error(HttpStatus.BAD_REQUEST, "Itinerary preferences produced too large a request", req, null);
 	}
 
+	@ExceptionHandler(InvalidPhotoUrlException.class)
+	public ResponseEntity<ApiError> handleInvalidPhotoUrl(InvalidPhotoUrlException ex, HttpServletRequest req) {
+		log.warn("400 Bad Request on {}: {}", req.getRequestURI(), ex.getMessage());
+		return error(HttpStatus.BAD_REQUEST, ex.getMessage(), req, null);
+	}
+
 	@ExceptionHandler(RateLimitExceededException.class)
 	public ResponseEntity<ApiError> handleRateLimitExceeded(RateLimitExceededException ex, HttpServletRequest req) {
 		log.warn("429 Too Many Requests on {}: {}", req.getRequestURI(), ex.getMessage());
