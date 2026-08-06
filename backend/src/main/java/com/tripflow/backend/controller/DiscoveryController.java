@@ -8,6 +8,7 @@ import org.springframework.data.web.PagedModel;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.tripflow.backend.dto.TripSummaryResponse;
@@ -25,6 +26,16 @@ public class DiscoveryController {
 
     private final TripService tripService;
 
+    @Operation(summary = "Search public trips", description = "Case-insensitive substring match on trip title and "
+            + "tags, PUBLIC trips only. 'q' is required and cannot be blank. No authentication required.")
+    @GetMapping("/search")
+    public ResponseEntity<PagedModel<TripSummaryResponse>> searchPublicTrips(
+            @RequestParam(required = false) String q,
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        Page<TripSummaryResponse> page = tripService.searchPublicTrips(q, pageable);
+        return ResponseEntity.ok(new PagedModel<>(page));
+    }
+  
     @Operation(summary = "List public trips", description = "Paginated feed of PUBLIC trips. No authentication required.")
     @GetMapping("/trips")
     public ResponseEntity<PagedModel<TripSummaryResponse>> listPublicTrips(

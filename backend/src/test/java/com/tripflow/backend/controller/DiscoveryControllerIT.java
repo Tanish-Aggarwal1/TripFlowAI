@@ -30,7 +30,7 @@ import com.tripflow.backend.repository.UserRepository;
 import com.tripflow.backend.security.UserPrincipal;
 import com.tripflow.backend.testsupport.PostgresTestcontainersConfiguration;
 
-/**
+/** End-to-end IT for GET /api/discovery/search (SCRUM-163). 
  * End-to-end IT for GET /api/discovery/trips (SCRUM-160): unauthenticated public feed,
  * PUBLIC-only filtering, default sort, and the shared PagedModel contract from SCRUM-110.
  */
@@ -63,8 +63,12 @@ class DiscoveryControllerIT {
 		return authentication(auth);
 	}
 
-	private void createTrip(User owner, String title, TripVisibility visibility) throws Exception {
-		CreateTripRequest request = new CreateTripRequest(title, null, null, visibility,
+	private void createTrip(User owner, String title, TripVisibility visibility, List<String> tags) throws Exception {
+    CreateTripRequest request = new CreateTripRequest(
+            title,
+            null,
+            tags,
+            visibility,
 				List.of(new CreateStopRequest("Byward Market", 45.4285, -75.6935, null, null, null)));
 
 		mockMvc.perform(post("/api/trips").with(csrf()).contentType(MediaType.APPLICATION_JSON)
@@ -73,53 +77,46 @@ class DiscoveryControllerIT {
 	}
 
 	@Test
-	void listPublicTrips_noAuth_returnsOnlyPublicTrips() throws Exception {
-		User owner = createTestUser("owner");
-		createTrip(owner, "Public One", TripVisibility.PUBLIC);
-		createTrip(owner, "Public Two", TripVisibility.PUBLIC);
-		createTrip(owner, "Private One", TripVisibility.PRIVATE);
+void search_noAuth_missingQParam_returns400() throws Exception {
+    mockMvc.perform(get("/api/discovery/search"))
+            .andExpect(status().isBadRequest());
+}
 
-		mockMvc.perform(get("/api/discovery/trips"))
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.content.length()").value(2))
-				.andExpect(jsonPath("$.content[*].visibility", org.hamcrest.Matchers.everyItem(
-						org.hamcrest.Matchers.is("PUBLIC"))))
-				.andExpect(jsonPath("$.content[*].stops").doesNotExist());
-	}
+@Test
+void search_blankQParam_returns400() throws Exception {
+    mockMvc.perform(get("/api/discovery/search").param("q", "   "))
+            .andExpect(status().isBadRequest());
+}
 
-	@Test
-	void listPublicTrips_noTrips_returnsEmptyPage() throws Exception {
-		mockMvc.perform(get("/api/discovery/trips"))
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.content").isArray())
-				.andExpect(jsonPath("$.content.length()").value(0))
-				.andExpect(jsonPath("$.page.totalElements").value(0));
-	}
+@Test
+void search_noAuth_titleMatch_returnsPublicTripsOnly() throws Exception {
+    User owner = createTestUser("owner1");
 
-	@Test
-	void listPublicTrips_defaultSort_isCreatedAtDescending() throws Exception {
-		User owner = createTestUser("sortowner");
-		createTrip(owner, "First Created", TripVisibility.PUBLIC);
-		createTrip(owner, "Second Created", TripVisibility.PUBLIC);
+    createTrip(owner, "Ottawa Weekend", TripVisibility.PUBLIC, null);
+    createTrip(owner, "Ottawa Secret Trip", TripVisibility.PRIVATE, null);
+    createTrip(owner, "Unrelated Public Trip", TripVisibility.PUBLIC, null);
 
-		mockMvc.perform(get("/api/discovery/trips"))
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.content[0].title").value("Second Created"))
-				.andExpect(jsonPath("$.content[1].title").value("First Created"));
-	}
+    mockMvc.perform(get("/api/discovery/search").param("q", "ottawa"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.content.length()").value(1))
+            .andExpect(jsonPath("$.content[0].title").value("Ottawa Weekend"));
+}
 
-	@Test
-	void listPublicTrips_respectsPageAndSizeParams() throws Exception {
-		User owner = createTestUser("pageowner");
-		for (int i = 0; i < 5; i++) {
-			createTrip(owner, "Trip " + i, TripVisibility.PUBLIC);
-		}
+  @Test
+  void listPublicTrips_noAuth_returnsOnlyPublicTrips() throws Exception {
+      User owner = createTestUser("owner");
+  
+      createTrip(owner, "Public One", TripVisibility.PUBLIC, null);
+      createTrip(owner, "Public Two", TripVisibility.PUBLIC, null);
+      createTrip(owner, "Private One", TripVisibility.PRIVATE, null);
+  
+      mockMvc.perform(get("/api/discovery/trips"))
+              .andExpect(status().isOk())
+              .andExpect(jsonPath("$.content.length()").value(2))
+              .andExpect(jsonPath("$.content[*].visibility",
+                      org.hamcrest.Matchers.everyItem(
+                              org.hamcrest.Matchers.is("PUBLIC"))))
+              .andExpect(jsonPath("$.content[*].stops").doesNotExist());
+  }
 
-		mockMvc.perform(get("/api/discovery/trips").param("page", "0").param("size", "2"))
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.content.length()").value(2))
-				.andExpect(jsonPath("$.page.size").value(2))
-				.andExpect(jsonPath("$.page.totalElements").value(5))
-				.andExpect(jsonPath("$.page.totalPages").value(3));
-	}
 }

@@ -36,6 +36,12 @@ public class GlobalExceptionHandler {
 		return error(HttpStatus.FORBIDDEN, ex.getMessage(), req, null);
 	}
 
+	@ExceptionHandler(InvalidRequestException.class)
+	public ResponseEntity<ApiError> handleInvalidRequest(InvalidRequestException ex, HttpServletRequest req) {
+		log.warn("400 Bad Request on {}: {}", req.getRequestURI(), ex.getMessage());
+		return error(HttpStatus.BAD_REQUEST, ex.getMessage(), req, null);
+	}
+
 	@ExceptionHandler(MethodArgumentNotValidException.class)
 	public ResponseEntity<ApiError> handleValidation(MethodArgumentNotValidException ex, HttpServletRequest req) {
 
