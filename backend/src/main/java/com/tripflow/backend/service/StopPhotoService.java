@@ -113,7 +113,7 @@ public class StopPhotoService {
     }
 
     private Stop loadStop(Long stopId) {
-        return stopRepository.findById(stopId)
+        return stopRepository.findWithTripAndOwnerById(stopId)
                 .orElseThrow(() -> new ResourceNotFoundException("Stop not found: " + stopId));
     }
 
