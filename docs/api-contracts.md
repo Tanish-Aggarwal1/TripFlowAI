@@ -17,11 +17,15 @@ Living document. Add a new section per epic as endpoints are built. Update if a 
 ```json
 {
   "token": "string",
+  "tokenType": "Bearer",
+  "userId": 1,
+  "username": "string",
   "expiresAt": "ISO-8601 datetime"
 }
 ```
 **Errors:**
 - 409 — email already registered
+- 409 — username already taken
 - 400 — validation failure (see standard error shape below)
 
 ### POST /api/auth/login
@@ -47,7 +51,7 @@ Missing, malformed, or expired token → `401 Unauthorized` with the standard `A
 ## Trips & Stops (SCRUM-52)
 
 ### GET /api/trips (paginated — REF-21)
-Returns a page of the authenticated user's trips as a card-sized projection — no `stops` array, just `stopCount` — so list reads never need the collection fetch join used by `GET /api/trips/{id}`. This is the canonical paging contract for all future list endpoints: accept Spring `Pageable` (`?page=&size=&sort=`), return this same paged shape.
+Returns a page of the authenticated user's trips as a card-sized projection — no `stops` array, just `stopCount` — so list reads never need the collection fetch join used by `GET /api/trips/{id}`. This is the canonical paging contract for all future top-level list endpoints (see `GET /api/discovery/trips` and `GET /api/discovery/search` below, which follow it): accept Spring `Pageable` (`?page=&size=&sort=`), return this same paged shape. **Exception:** the two nested-collection reads, `GET /api/trips/{tripId}/stops` and `GET /api/stops/{stopId}/photos`, intentionally return plain unbounded arrays instead — see their own sections for why.
 
 **Query params:** `page` (0-indexed, default 0), `size` (default 20), `sort` (default `createdAt,desc`, e.g. `?sort=title,asc`).
 
@@ -74,8 +78,7 @@ Returns a page of the authenticated user's trips as a card-sized projection — 
   }
 }
 ```
-`coverPhotoUrl` is always `null` until the Cloudinary photo feature (SCRUM-66) lands. Use `GET /api/trips/{id}` for the full itinerary including `stops`.
-```
+`coverPhotoUrl` is always `null` — the Cloudinary photo feature (SCRUM-66/152/153) has shipped, but nothing computes a trip's cover photo from its stops' photos yet; `TripRepository.findSummariesByUserId`/`findSummariesByVisibility` both pass a literal `null` for this field. Treat it as reserved for a future feature, not currently wired up. Use `GET /api/trips/{id}` for the full itinerary including `stops`.
 
 ### POST /api/trips
 **Request:**
@@ -99,7 +102,7 @@ Returns a page of the authenticated user's trips as a card-sized projection — 
 ```
 `startDate` is optional (SCRUM-244a) — a `LocalDate` (`YYYY-MM-DD`). Not required for stops to get a `dayNumber`/`plannedTime`; those are trip-relative (day 1, day 2, ...) regardless of whether `startDate` is set. Purely informational until a future feature anchors it to real calendar dates.
 
-**Success (201):** single trip object, same shape as GET list item.
+**Success (201):** single full trip object — **not** the same shape as the `GET /api/trips` list item (`TripSummaryResponse`). This is a full `TripResponse`: `id`, `title`, `description`, `tags`, `visibility`, `status`, `ownerId`, `stops[]`, `createdAt`, `updatedAt`, `routeGeometry`, `startDate`, `likeCount` — see the full example under "Route Optimization" below for the exact shape (same DTO, `routeGeometry` will just be `null` and `likeCount` `0` for a freshly created trip).
 **Errors:**
 - 400 — validation failure
 
@@ -124,6 +127,14 @@ Owner sees any trip; non-owner only sees `PUBLIC` trips.
 - 404 — trip not found
 - 403 — private trip, requester is not the owner
 
+### PATCH /api/trips/{id}/visibility (SCRUM-159)
+Flips `PRIVATE` &lt;-&gt; `PUBLIC`. Owner-only, no request body — there is no way to set an explicit target value, only toggle.
+**Request:** No body.
+**Success (200):** updated trip object (full `TripResponse`, same shape as `GET /api/trips/{id}`).
+**Errors:**
+- 404 — trip not found
+- 403 — requester is not the owner
+
 ### PUT /api/trips/{id}
 Full itinerary replace — metadata + stops in one call. Existing stops not present in the request are deleted; their `Place` rows survive if referenced elsewhere.
 **Request:** same shape as POST.
@@ -140,7 +151,7 @@ Full itinerary replace — metadata + stops in one call. Existing stops not pres
 - 403 — requester is not the owner
 
 ### GET /api/trips/{tripId}/stops
-Owner-only (no public read on this sub-resource — use GET /api/trips/{id} for public itinerary viewing).
+Owner-only (no public read on this sub-resource — use GET /api/trips/{id} for public itinerary viewing). Intentionally **not** paginated (unlike `GET /api/trips` — see REF-21 note above) — stops-per-trip is expected to stay small; there is no application-level cap enforced today.
 **Success (200):**
 ```json
 [
@@ -214,7 +225,7 @@ Reorders the trip's stops for shortest travel time via OpenRouteService VROOM. R
 
 **Request:** No body — the endpoint reads the trip's existing stops.
 
-**Success (200):** Returns the full `TripResponse` with stops reordered by optimized `orderIndex` and `routeGeometry` populated with an encoded polyline string.
+**Success (200):** Returns the full `TripResponse` with stops reordered by optimized `stopOrder` and `routeGeometry` populated with an encoded polyline string. This is the canonical shape of a full trip object, returned by every endpoint documented elsewhere in this file as "single trip object" / "full `TripResponse`" (`POST`/`GET`/`PUT /api/trips[/{id}]`, `PATCH .../visibility`, `POST .../clone`, `POST /api/trips/ai-generate`):
 ```json
 {
   "id": 1,
@@ -230,7 +241,9 @@ Reorders the trip's stops for shortest travel time via OpenRouteService VROOM. R
       "name": "string",
       "latitude": 43.65,
       "longitude": -79.38,
-      "orderIndex": 0,
+      "address": "string",
+      "stopOrder": 0,
+      "status": "PLANNED | VISITED | SKIPPED",
       "notes": "string",
       "dayNumber": 1,
       "plannedTime": "09:00:00",
@@ -239,9 +252,12 @@ Reorders the trip's stops for shortest travel time via OpenRouteService VROOM. R
   ],
   "createdAt": "2026-07-20T15:30:00Z",
   "updatedAt": "2026-07-20T15:31:00Z",
-  "routeGeometry": "encoded_polyline_string"
+  "routeGeometry": "encoded_polyline_string",
+  "startDate": "2026-08-10",
+  "likeCount": 0
 }
 ```
+(`orderIndex` in earlier revisions of this doc was wrong — the field has always been `stopOrder`, see `StopResponse.java`. `likeCount` was added by SCRUM-161, `startDate` by SCRUM-244a.)
 
 **Scheduling (SCRUM-244a):** In addition to reordering stops and computing route geometry, this endpoint runs a heuristic day/time scheduler over the optimized stop order — no Gemini involvement, just a greedy walk assigning each stop a `dayNumber` and `plannedTime`, using the per-leg travel durations from the same ORS directions call already made for route geometry. Each stop is assumed to take `app.schedule.default-visit-duration` (default 1h) to visit; cumulative time rolls to the next day once it would exceed the configured day window (`app.schedule.day-start-time`/`app.schedule.day-end-time`, default `09:00`–`21:00`). This is a foundation for future AI-driven scheduling — see `docs/TripFlow_fall_Break_Plan.md` FB-17/FB-18 for what's planned on top of it.
 
@@ -255,6 +271,72 @@ Reorders the trip's stops for shortest travel time via OpenRouteService VROOM. R
 - 429 — either OpenRouteService's own rate limit was hit (`OrsRateLimitException`, no `Retry-After` header), or the caller exceeded their own per-user limit on this endpoint (`RateLimitExceededException`, includes a `Retry-After` header — see below)
 
 All errors return the standard `ApiError` body.
+
+---
+
+## Trip Cloning & Likes (SCRUM-161 / SCRUM-162)
+
+### POST /api/trips/{id}/clone
+Deep-copies a `PUBLIC` trip (or your own trip, any visibility) into your account as a new `PRIVATE` trip. Stops are cloned in the same order; `Place` rows are shared, not duplicated. Photos and likes are **not** copied — the clone starts with zero of both.
+
+**Auth:** Bearer token required.
+
+**Request:** No body.
+
+**Success (201):** the new trip, full `TripResponse` (same shape as `POST /api/trips`).
+**Errors:**
+- 404 — trip not found, **or** the trip is `PRIVATE` and belongs to someone else (same 404 either way so existence isn't leaked — no 403 path on this endpoint)
+
+### POST /api/trips/{id}/like
+Likes a trip. Idempotent — liking an already-liked trip still returns 200 and does not double-count. Allowed on any `PUBLIC` trip, or your own `PRIVATE` trips.
+
+**Auth:** Bearer token required.
+
+**Request:** No body.
+
+**Success (200):** no body.
+**Errors:**
+- 404 — trip not found, **or** the trip is `PRIVATE` and belongs to someone else (same 404 either way — no 403 path)
+
+### DELETE /api/trips/{id}/like
+Unlikes a trip. Idempotent — unliking a trip you haven't liked still returns 200.
+
+**Auth:** Bearer token required.
+
+**Request:** No body.
+
+**Success (200):** no body.
+**Errors:**
+- 404 — trip not found, **or** the trip is `PRIVATE` and belongs to someone else
+
+**Note:** a trip's current like count is the `likeCount` field on the full `TripResponse` (see the Route Optimization section above for the full shape) — there is no separate "get like count" endpoint.
+
+---
+
+## Discovery (SCRUM-160 / SCRUM-163)
+
+Public, unauthenticated browsing of `PUBLIC` trips — no `Authorization` header required on either endpoint. Both follow the same paged shape as `GET /api/trips` (see REF-21 note above).
+
+### GET /api/discovery/trips
+Paginated feed of all `PUBLIC` trips, newest first by default.
+
+**Auth:** None required.
+
+**Query params:** same as `GET /api/trips` — `page`, `size`, `sort` (default `createdAt,desc`).
+
+**Success (200):** same paged shape as `GET /api/trips` (`content[]` of `TripSummaryResponse` + `page` block).
+**Errors:** none beyond standard validation of `page`/`size`/`sort`.
+
+### GET /api/discovery/search
+Case-insensitive substring search over `PUBLIC` trip titles and tags. `q` is required and must not be blank.
+
+**Auth:** None required.
+
+**Query params:** `q` (required, non-blank), plus `page`/`size`/`sort` as above.
+
+**Success (200):** same paged shape as `GET /api/trips`.
+**Errors:**
+- 400 — `q` missing or blank
 
 ---
 
@@ -424,7 +506,7 @@ Owner-only. Persists a photo reference after the client has uploaded directly to
 **Errors:** 403 (not owner), 404 (stop not found), 400 (validation — `url` required)
 
 ### GET /api/stops/{stopId}/photos
-Owner sees any stop's photos; non-owner only if the stop's parent trip is `PUBLIC`.
+Owner sees any stop's photos; non-owner only if the stop's parent trip is `PUBLIC`. Intentionally **not** paginated (see REF-21 note under `GET /api/trips`) — there is no application-level cap on photos per stop today.
 **Success (200):** array of the photo object shape above.
 **Errors:** 403 (private trip, requester not owner), 404 (stop not found)
 
