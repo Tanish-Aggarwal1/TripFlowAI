@@ -16,6 +16,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.tripflow.backend.client.cloudinary.CloudinaryProperties;
 import com.tripflow.backend.client.cloudinary.CloudinarySigningService;
 import com.tripflow.backend.client.cloudinary.SignedUploadRequest;
 import com.tripflow.backend.domain.Stop;
@@ -44,11 +45,15 @@ class StopPhotoServiceTest {
     @Mock private StopPhotoRepository stopPhotoRepository;
     @Mock private CloudinarySigningService signingService;
 
+    private final CloudinaryProperties cloudinaryProperties =
+            new CloudinaryProperties("demo", "key", "secret");
+
     private StopPhotoService stopPhotoService;
 
     @BeforeEach
     void setUp() {
-        stopPhotoService = new StopPhotoService(stopRepository, stopPhotoRepository, signingService);
+        stopPhotoService = new StopPhotoService(
+                stopRepository, stopPhotoRepository, signingService, cloudinaryProperties);
     }
 
     private Stop stopOwnedBy(Long stopId, Long ownerId, TripVisibility visibility) {
@@ -71,7 +76,7 @@ class StopPhotoServiceTest {
     @Test
     void getUploadSignature_owner_returnsSignature() {
         Stop stop = stopOwnedBy(1L, 10L, TripVisibility.PRIVATE);
-        when(stopRepository.findById(1L)).thenReturn(Optional.of(stop));
+        when(stopRepository.findWithTripAndOwnerById(1L)).thenReturn(Optional.of(stop));
         when(signingService.sign(anyMap())).thenReturn(
                 new SignedUploadRequest("cloud", "key", 123L, "sig", Map.of("folder", "stops/1")));
 
@@ -84,7 +89,7 @@ class StopPhotoServiceTest {
     @Test
     void getUploadSignature_nonOwner_throwsForbidden() {
         Stop stop = stopOwnedBy(1L, 10L, TripVisibility.PRIVATE);
-        when(stopRepository.findById(1L)).thenReturn(Optional.of(stop));
+        when(stopRepository.findWithTripAndOwnerById(1L)).thenReturn(Optional.of(stop));
 
         assertThatThrownBy(() -> stopPhotoService.getUploadSignature(1L, 99L))
                 .isInstanceOf(ForbiddenException.class);
@@ -92,7 +97,7 @@ class StopPhotoServiceTest {
 
     @Test
     void getUploadSignature_missingStop_throwsNotFound() {
-        when(stopRepository.findById(999L)).thenReturn(Optional.empty());
+        when(stopRepository.findWithTripAndOwnerById(999L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> stopPhotoService.getUploadSignature(999L, 10L))
                 .isInstanceOf(ResourceNotFoundException.class);
@@ -103,7 +108,7 @@ class StopPhotoServiceTest {
     @Test
     void addPhoto_owner_persistsAndReturnsResponse() {
         Stop stop = stopOwnedBy(1L, 10L, TripVisibility.PRIVATE);
-        when(stopRepository.findById(1L)).thenReturn(Optional.of(stop));
+        when(stopRepository.findWithTripAndOwnerById(1L)).thenReturn(Optional.of(stop));
         when(stopPhotoRepository.save(any(StopPhoto.class))).thenAnswer(inv -> {
             StopPhoto photo = inv.getArgument(0, StopPhoto.class);
             photo.setId(7L);
@@ -124,7 +129,7 @@ class StopPhotoServiceTest {
     @Test
     void addPhoto_nonOwner_throwsForbidden() {
         Stop stop = stopOwnedBy(1L, 10L, TripVisibility.PRIVATE);
-        when(stopRepository.findById(1L)).thenReturn(Optional.of(stop));
+        when(stopRepository.findWithTripAndOwnerById(1L)).thenReturn(Optional.of(stop));
 
         CreateStopPhotoRequest request = new CreateStopPhotoRequest(
                 "https://res.cloudinary.com/demo/image/upload/v1/mock.jpg", null, null);
@@ -138,7 +143,7 @@ class StopPhotoServiceTest {
     @Test
     void listPhotos_owner_returnsPhotos() {
         Stop stop = stopOwnedBy(1L, 10L, TripVisibility.PRIVATE);
-        when(stopRepository.findById(1L)).thenReturn(Optional.of(stop));
+        when(stopRepository.findWithTripAndOwnerById(1L)).thenReturn(Optional.of(stop));
         StopPhoto photo = new StopPhoto();
         photo.setId(5L);
         photo.setStop(stop);
@@ -154,7 +159,7 @@ class StopPhotoServiceTest {
     @Test
     void listPhotos_nonOwnerOnPublicTrip_returnsPhotos() {
         Stop stop = stopOwnedBy(1L, 10L, TripVisibility.PUBLIC);
-        when(stopRepository.findById(1L)).thenReturn(Optional.of(stop));
+        when(stopRepository.findWithTripAndOwnerById(1L)).thenReturn(Optional.of(stop));
         when(stopPhotoRepository.findByStopId(1L)).thenReturn(List.of());
 
         List<StopPhotoResponse> photos = stopPhotoService.listPhotos(1L, 99L);
@@ -165,7 +170,7 @@ class StopPhotoServiceTest {
     @Test
     void listPhotos_nonOwnerOnPrivateTrip_throwsForbidden() {
         Stop stop = stopOwnedBy(1L, 10L, TripVisibility.PRIVATE);
-        when(stopRepository.findById(1L)).thenReturn(Optional.of(stop));
+        when(stopRepository.findWithTripAndOwnerById(1L)).thenReturn(Optional.of(stop));
 
         assertThatThrownBy(() -> stopPhotoService.listPhotos(1L, 99L))
                 .isInstanceOf(ForbiddenException.class);
@@ -173,7 +178,7 @@ class StopPhotoServiceTest {
 
     @Test
     void listPhotos_missingStop_throwsNotFound() {
-        when(stopRepository.findById(999L)).thenReturn(Optional.empty());
+        when(stopRepository.findWithTripAndOwnerById(999L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> stopPhotoService.listPhotos(999L, 10L))
                 .isInstanceOf(ResourceNotFoundException.class);
@@ -184,7 +189,7 @@ class StopPhotoServiceTest {
     @Test
     void deletePhoto_owner_deletes() {
         Stop stop = stopOwnedBy(1L, 10L, TripVisibility.PRIVATE);
-        when(stopRepository.findById(1L)).thenReturn(Optional.of(stop));
+        when(stopRepository.findWithTripAndOwnerById(1L)).thenReturn(Optional.of(stop));
         StopPhoto photo = new StopPhoto();
         photo.setId(5L);
         photo.setStop(stop);
@@ -198,7 +203,7 @@ class StopPhotoServiceTest {
     @Test
     void deletePhoto_nonOwner_throwsForbidden() {
         Stop stop = stopOwnedBy(1L, 10L, TripVisibility.PRIVATE);
-        when(stopRepository.findById(1L)).thenReturn(Optional.of(stop));
+        when(stopRepository.findWithTripAndOwnerById(1L)).thenReturn(Optional.of(stop));
 
         assertThatThrownBy(() -> stopPhotoService.deletePhoto(1L, 5L, 99L))
                 .isInstanceOf(ForbiddenException.class);
@@ -206,7 +211,7 @@ class StopPhotoServiceTest {
 
     @Test
     void deletePhoto_missingStop_throwsNotFound() {
-        when(stopRepository.findById(999L)).thenReturn(Optional.empty());
+        when(stopRepository.findWithTripAndOwnerById(999L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> stopPhotoService.deletePhoto(999L, 5L, 10L))
                 .isInstanceOf(ResourceNotFoundException.class);
@@ -218,7 +223,7 @@ class StopPhotoServiceTest {
         // at the unit level: the photo exists but under a different stop id, so the
         // findByIdAndStopId lookup (not a separate "wrong stop" check) is what must 404 it.
         Stop stop = stopOwnedBy(1L, 10L, TripVisibility.PRIVATE);
-        when(stopRepository.findById(1L)).thenReturn(Optional.of(stop));
+        when(stopRepository.findWithTripAndOwnerById(1L)).thenReturn(Optional.of(stop));
         when(stopPhotoRepository.findByIdAndStopId(5L, 1L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> stopPhotoService.deletePhoto(1L, 5L, 10L))
