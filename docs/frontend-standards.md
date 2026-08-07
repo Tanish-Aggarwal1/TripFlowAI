@@ -53,7 +53,7 @@ constructor(private router: Router, private tripService: TripService) {}
 - `environment.ts` and `environment.prod.ts` are committed with **placeholder values** (e.g. `__MAPBOX_TOKEN__`, `__API_BASE_URL__` in `environment.prod.ts`).
 - Real values injected at CI build time via GitHub Actions secrets (`sed` substitution in `frontend-ci.yml`).
 - For local dev, each developer replaces placeholders with their own values locally (gitignored by the placeholder pattern, since the committed file has no real secret).
-- `environment.prod.ts`'s `apiBaseUrl` (`__API_BASE_URL__`) is injected from the `API_BASE_URL` repo secret once SCRUM-73 provisions a real deployed backend URL. Until that secret is set, `frontend-ci.yml` logs a warning and leaves the placeholder in place — harmless for CI verification builds (`ng build` there is never deployed), but **must** be set as a repo secret before an actual production build/deploy of the frontend.
+- `environment.prod.ts`'s `apiBaseUrl` (`__API_BASE_URL__`) is injected from the `API_BASE_URL` repo secret when set. SCRUM-73's backend is live (`https://tripflowai.onrender.com`), but the actual production frontend build runs through Render's own build-time env vars (see `docs/deployment/frontend-setup.md`), not this repo secret — so `API_BASE_URL` is currently unset here and `frontend-ci.yml` logs a warning and leaves the placeholder in place. Harmless for CI verification builds (`ng build` there is never deployed); set the secret here too if `frontend-ci.yml`'s build output is ever wired up to ship directly.
 
 ## Testing
 
