@@ -19,9 +19,12 @@ import com.tripflow.backend.dto.StopPhotoResponse;
 import com.tripflow.backend.security.UserPrincipal;
 import com.tripflow.backend.service.StopPhotoService;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 
+@Tag(name = "Stop Photos", description = "Direct-to-Cloudinary photo upload — signature issuance and photo reference CRUD")
 @RestController
 @RequestMapping("/api/stops/{stopId}")
 @AllArgsConstructor
@@ -29,12 +32,14 @@ public class StopPhotoController {
 
     private final StopPhotoService stopPhotoService;
 
+    @Operation(summary = "Get a Cloudinary upload signature", description = "Owner-only. Issues signed upload parameters for the client to upload directly to Cloudinary.")
     @PostMapping("/photo-signature")
     public ResponseEntity<PhotoSignatureResponse> getUploadSignature(
             @PathVariable Long stopId, @AuthenticationPrincipal UserPrincipal principal) {
         return ResponseEntity.ok(stopPhotoService.getUploadSignature(stopId, principal.userId()));
     }
 
+    @Operation(summary = "Add a photo", description = "Owner-only. Persists a photo reference after the client has uploaded directly to Cloudinary using the signature above.")
     @PostMapping("/photos")
     public ResponseEntity<StopPhotoResponse> addPhoto(
             @PathVariable Long stopId,
@@ -44,12 +49,14 @@ public class StopPhotoController {
                 stopPhotoService.addPhoto(stopId, principal.userId(), request), HttpStatus.CREATED);
     }
 
+    @Operation(summary = "List a stop's photos", description = "Owner sees any stop's photos; non-owner only if the stop's parent trip is PUBLIC.")
     @GetMapping("/photos")
     public ResponseEntity<List<StopPhotoResponse>> listPhotos(
             @PathVariable Long stopId, @AuthenticationPrincipal UserPrincipal principal) {
         return ResponseEntity.ok(stopPhotoService.listPhotos(stopId, principal.userId()));
     }
 
+    @Operation(summary = "Delete a photo", description = "Owner-only.")
     @DeleteMapping("/photos/{photoId}")
     public ResponseEntity<Void> deletePhoto(
             @PathVariable Long stopId, @PathVariable Long photoId,

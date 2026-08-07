@@ -21,6 +21,8 @@ import com.tripflow.backend.dto.LoginRequest;
 import com.tripflow.backend.dto.RegisterRequest;
 import com.tripflow.backend.exception.DuplicateEmailException;
 import com.tripflow.backend.exception.InvalidCredentialsException;
+import com.tripflow.backend.ratelimit.RateLimitProperties;
+import com.tripflow.backend.ratelimit.RateLimiterService;
 import com.tripflow.backend.security.JwtService;
 import com.tripflow.backend.service.AuthService;
 
@@ -42,6 +44,12 @@ class AuthControllerTest {
 	// since addFilters = false above disables filter execution entirely.
 	@MockitoBean
 	private JwtService jwtService;
+
+	@MockitoBean
+	private RateLimiterService rateLimiterService;
+
+	@MockitoBean
+	private RateLimitProperties rateLimitProperties;
 
 	private static final String REGISTER_JSON =
 			"{\"username\":\"tanish\",\"email\":\"tanish@example.com\",\"password\":\"password123\"}";

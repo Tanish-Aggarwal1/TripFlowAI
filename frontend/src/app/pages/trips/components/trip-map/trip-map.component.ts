@@ -7,6 +7,7 @@ import { IonButton, IonSpinner, IonIcon } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import { navigate } from 'ionicons/icons';
 import mapboxgl from 'mapbox-gl';
+import MapboxGlCspWorker from 'mapbox-gl/dist/mapbox-gl-csp-worker.js?worker';
 import type { Geometry } from 'geojson';
 import { environment } from '../../../../../environments/environment';
 import { TripResponse, StopResponse } from '../../../../core/models/trip.model';
@@ -77,6 +78,16 @@ export class TripMapComponent implements AfterViewInit, OnChanges, OnDestroy {
     if (!this.viewInitialized || this.map) return;
 
     mapboxgl.accessToken = environment.mapboxToken;
+    // mapbox-gl normally builds its worker by Function.prototype.toString()-ing
+    // its own internal chunks into a Blob; once a bundler transforms/wraps that
+    // code (as ours does), the stringified source references helpers (e.g.
+    // esbuild's __async) that don't exist in the resulting classic-Worker scope,
+    // producing "ReferenceError: __async is not defined" and a map that never
+    // paints. Point at Mapbox's pre-built CSP worker instead (via Vite's native
+    // ?worker import, so it's bundled correctly for both dev and prod), which
+    // sidesteps that self-bundling entirely.
+    // See https://docs.mapbox.com/mapbox-gl-js/guides/install/#transpiling
+    mapboxgl.workerClass = MapboxGlCspWorker;
 
     try {
       this.map = new mapboxgl.Map({

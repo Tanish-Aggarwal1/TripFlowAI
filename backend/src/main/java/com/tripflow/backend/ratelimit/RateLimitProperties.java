@@ -10,7 +10,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * so limits can be tuned without a redeploy.
  */
 @ConfigurationProperties(prefix = "app.ratelimit")
-public record RateLimitProperties(Limit aiSuggest, Limit optimize, Limit aiGenerate) {
+public record RateLimitProperties(Limit aiSuggest, Limit optimize, Limit aiGenerate, Limit login, Limit register) {
 
 	public record Limit(int capacity, Duration window) {
 	}

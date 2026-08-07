@@ -6,6 +6,7 @@ import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.tripflow.backend.client.cloudinary.CloudinaryProperties;
 import com.tripflow.backend.client.cloudinary.CloudinarySigningService;
 import com.tripflow.backend.client.cloudinary.SignedUploadRequest;
 import com.tripflow.backend.domain.Stop;
@@ -15,6 +16,7 @@ import com.tripflow.backend.domain.enums.TripVisibility;
 import com.tripflow.backend.dto.CreateStopPhotoRequest;
 import com.tripflow.backend.dto.StopPhotoResponse;
 import com.tripflow.backend.exception.ForbiddenException;
+import com.tripflow.backend.exception.InvalidPhotoUrlException;
 import com.tripflow.backend.exception.ResourceNotFoundException;
 import com.tripflow.backend.repository.StopPhotoRepository;
 import com.tripflow.backend.repository.StopRepository;
@@ -37,6 +39,7 @@ public class StopPhotoService {
     private final StopRepository stopRepository;
     private final StopPhotoRepository stopPhotoRepository;
     private final CloudinarySigningService signingService;
+    private final CloudinaryProperties cloudinaryProperties;
 
     @Transactional(readOnly = true)
     public PhotoSignatureResponse getUploadSignature(Long stopId, Long requesterId) {
@@ -55,6 +58,7 @@ public class StopPhotoService {
     @Transactional
     public StopPhotoResponse addPhoto(Long stopId, Long requesterId, CreateStopPhotoRequest request) {
         Stop stop = loadOwnedStop(stopId, requesterId);
+        validateCloudinaryUrl(request.url());
 
         StopPhoto photo = new StopPhoto();
         photo.setStop(stop);
@@ -91,8 +95,25 @@ public class StopPhotoService {
 
     // ---------- helpers ----------
 
+    /**
+     * The signed-upload flow (getUploadSignature -> direct-to-Cloudinary) exists
+     * specifically so the backend never has to trust an arbitrary client-supplied
+     * URL — but nothing previously verified the persisted URL actually came from
+     * that flow. Require it to at least point at the configured Cloudinary cloud,
+     * so a caller can't attach an arbitrary hotlinked/tracking URL to a photo that
+     * gets rendered to any viewer of a public trip.
+     */
+    private void validateCloudinaryUrl(String url) {
+        String expectedHost = "res.cloudinary.com";
+        String expectedPrefix = "https://" + expectedHost + "/" + cloudinaryProperties.cloudName() + "/";
+        if (!url.startsWith(expectedPrefix)) {
+            throw new InvalidPhotoUrlException(
+                    "Photo url must be a Cloudinary-hosted URL under the configured cloud");
+        }
+    }
+
     private Stop loadStop(Long stopId) {
-        return stopRepository.findById(stopId)
+        return stopRepository.findWithTripAndOwnerById(stopId)
                 .orElseThrow(() -> new ResourceNotFoundException("Stop not found: " + stopId));
     }
 
