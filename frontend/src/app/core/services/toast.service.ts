@@ -19,4 +19,13 @@ export class ToastService {
     });
     await toast.present();
   }
+
+  async showSuccess(message: string, duration = 2000): Promise<void> {
+    const toast = await this.toastCtrl.create({
+      message,
+      duration,
+      color: 'success',
+    });
+    await toast.present();
+  }
 }

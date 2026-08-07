@@ -1,6 +1,6 @@
-import { inject, Injectable, signal } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
-import { Observable, tap, catchError, throwError } from 'rxjs';
+import { Observable, catchError, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { mapApiError } from '../http/api-error.mapper';
 import {
@@ -22,17 +22,13 @@ export class TripService {
   private baseUrl = `${environment.apiBaseUrl}/trips`;
   private http = inject(HttpClient);
 
-  // Reactive list — dashboard subscribes to this
-  trips = signal<TripSummaryResponse[]>([]);
-
   // ── READ ────────────────────────────────────────────────────────────────────
 
   listTrips(page = 0, size = 20): Observable<PagedResponse<TripSummaryResponse>> {
     const params = new HttpParams().set('page', page).set('size', size);
-    return this.http.get<PagedResponse<TripSummaryResponse>>(this.baseUrl, { params }).pipe(
-      tap((result) => this.trips.set(result.content)),
-      catchError((err: HttpErrorResponse) => this.handleError(err)),
-    );
+    return this.http
+      .get<PagedResponse<TripSummaryResponse>>(this.baseUrl, { params })
+      .pipe(catchError((err: HttpErrorResponse) => this.handleError(err)));
   }
 
   getTrip(id: number): Observable<TripResponse> {
@@ -44,52 +40,37 @@ export class TripService {
   // ── WRITE ───────────────────────────────────────────────────────────────────
 
   createTrip(request: CreateTripRequest): Observable<TripResponse> {
-    return this.http.post<TripResponse>(this.baseUrl, request).pipe(
-      tap((created) => this.trips.update((list) => [this.toSummary(created), ...list])),
-      catchError((err: HttpErrorResponse) => this.handleError(err)),
-    );
+    return this.http
+      .post<TripResponse>(this.baseUrl, request)
+      .pipe(catchError((err: HttpErrorResponse) => this.handleError(err)));
   }
 
   // SCRUM-ai-generate: sends a free-text prompt to Gemini and creates a whole
   // new trip in one call — distinct from suggestItinerary/addStop, which only
   // add suggestions onto a trip that already exists.
   generateTripWithAi(request: GenerateTripRequest): Observable<TripResponse> {
-    return this.http.post<TripResponse>(`${this.baseUrl}/ai-generate`, request).pipe(
-      tap((created) => this.trips.update((list) => [this.toSummary(created), ...list])),
-      catchError((err: HttpErrorResponse) => this.handleError(err)),
-    );
+    return this.http
+      .post<TripResponse>(`${this.baseUrl}/ai-generate`, request)
+      .pipe(catchError((err: HttpErrorResponse) => this.handleError(err)));
   }
 
   updateTrip(id: number, request: UpdateTripRequest): Observable<TripResponse> {
-    return this.http.put<TripResponse>(`${this.baseUrl}/${id}`, request).pipe(
-      tap((updated) => {
-        const summary = this.toSummary(updated);
-        this.trips.update((list) =>
-          list.map((t) => (t.id === summary.id ? summary : t)),
-        );
-      }),
-      catchError((err: HttpErrorResponse) => this.handleError(err)),
-    );
+    return this.http
+      .put<TripResponse>(`${this.baseUrl}/${id}`, request)
+      .pipe(catchError((err: HttpErrorResponse) => this.handleError(err)));
   }
 
   deleteTrip(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.baseUrl}/${id}`).pipe(
-      tap(() => this.trips.update((list) => list.filter((t) => t.id !== id))),
-      catchError((err: HttpErrorResponse) => this.handleError(err)),
-    );
+    return this.http
+      .delete<void>(`${this.baseUrl}/${id}`)
+      .pipe(catchError((err: HttpErrorResponse) => this.handleError(err)));
   }
 
   optimizeTrip(id: number): Observable<TripResponse> {
-  return this.http.post<TripResponse>(`${this.baseUrl}/${id}/optimize`, {}).pipe(
-    tap((updated) => {
-      const summary = this.toSummary(updated);
-      this.trips.update((list) =>
-        list.map((t) => (t.id === summary.id ? summary : t))
-      );
-    }),
-    catchError((err: HttpErrorResponse) => this.handleError(err))
-  );
-}
+    return this.http
+      .post<TripResponse>(`${this.baseUrl}/${id}/optimize`, {})
+      .pipe(catchError((err: HttpErrorResponse) => this.handleError(err)));
+  }
 
   suggestItinerary(
     tripId: number,
@@ -127,21 +108,6 @@ export class TripService {
     return this.http
       .get(`${this.baseUrl}/${tripId}/calendar.ics`, { responseType: 'blob' })
       .pipe(catchError((err: HttpErrorResponse) => this.handleError(err)));
-  }
-
-  // ── MAPPING ──────────────────────────────────────────────────────────────────
-
-  private toSummary(trip: TripResponse): TripSummaryResponse {
-    return {
-      id: trip.id,
-      title: trip.title,
-      visibility: trip.visibility,
-      status: trip.status,
-      createdAt: trip.createdAt,
-      updatedAt: trip.updatedAt,
-      stopCount: trip.stops.length,
-      coverPhotoUrl: null,
-    };
   }
 
   // ── ERROR HANDLING ───────────────────────────────────────────────────────────

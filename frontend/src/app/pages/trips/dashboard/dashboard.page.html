@@ -56,11 +56,11 @@
         class="visibility-icon">
       </ion-icon>
 
-      <ion-button slot="end" fill="clear" (click)="editTrip(trip, $event)">
+      <ion-button slot="end" fill="clear" (click)="editTrip(trip, $event)" aria-label="Edit trip">
         <ion-icon slot="icon-only" name="create"></ion-icon>
       </ion-button>
 
-      <ion-button slot="end" fill="clear" color="danger" (click)="confirmDelete(trip, $event)">
+      <ion-button slot="end" fill="clear" color="danger" (click)="confirmDelete(trip, $event)" aria-label="Delete trip">
         <ion-icon slot="icon-only" name="trash"></ion-icon>
       </ion-button>
     </ion-item>

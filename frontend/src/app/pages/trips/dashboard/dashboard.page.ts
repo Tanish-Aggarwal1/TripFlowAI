@@ -3,12 +3,13 @@ import { Router } from '@angular/router';
 import {
   IonHeader, IonToolbar, IonTitle, IonContent, IonButton, IonButtons,
   IonList, IonItem, IonLabel, IonBadge, IonIcon,
-  IonFab, IonFabButton, IonFabList, IonModal, IonSpinner, AlertController, ToastController,IonThumbnail,
+  IonFab, IonFabButton, IonFabList, IonModal, IonSpinner, AlertController,IonThumbnail,
   ViewWillEnter
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import { add, lockClosed, globeOutline, trash, create, sparkles, imageOutline  } from 'ionicons/icons';
 import { TripService } from '../../../core/services/trip.service';
+import { ToastService } from '../../../core/services/toast.service';
 import { TripSummaryResponse, TripResponse } from '../../../core/models/trip.model';
 import { AiTripPromptComponent } from '../components/ai-trip-prompt/ai-trip-prompt.component';
 
@@ -31,7 +32,7 @@ export class DashboardPage implements ViewWillEnter {
     private tripService = inject(TripService);
     private router = inject(Router);
     private alertCtrl = inject(AlertController);
-    private toastCtrl = inject(ToastController);
+    private toastService = inject(ToastService);
 
   trips: TripSummaryResponse[] = [];
   loading = true;
@@ -124,7 +125,7 @@ export class DashboardPage implements ViewWillEnter {
                 this.trips = this.trips.filter((t) => t.id !== trip.id);
               },
               error: (err) => {
-                this.showToast(err.message, 'danger');
+                this.toastService.showError(err, 'Could not delete trip.');
               },
             });
           },
@@ -132,15 +133,6 @@ export class DashboardPage implements ViewWillEnter {
       ],
     });
     await alert.present();
-  }
-
-  private async showToast(message: string, color: string): Promise<void> {
-    const toast = await this.toastCtrl.create({
-      message,
-      color,
-      duration: 2000,
-    });
-    await toast.present();
   }
 
   statusColor(status: string): string {

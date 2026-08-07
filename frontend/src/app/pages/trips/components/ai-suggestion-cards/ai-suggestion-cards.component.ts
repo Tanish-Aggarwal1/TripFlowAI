@@ -8,7 +8,7 @@ import {
   SimpleChanges,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { IonButton, IonIcon, IonSpinner, ToastController } from '@ionic/angular/standalone';
+import { IonButton, IonIcon, IonSpinner } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import { addCircleOutline, closeOutline } from 'ionicons/icons';
 import { TripService } from '../../../../core/services/trip.service';
@@ -42,7 +42,6 @@ export class AiSuggestionCardsComponent implements OnChanges {
   @Output() stopAdded = new EventEmitter<StopResponse>();
 
   private tripService = inject(TripService);
-  private toastCtrl = inject(ToastController);
   private toastService = inject(ToastService);
 
   cards: SuggestionCardState[] = [];
@@ -81,12 +80,7 @@ export class AiSuggestionCardsComponent implements OnChanges {
           card.accepting = false;
           card.accepted = true;
           this.stopAdded.emit(stop);
-          const toast = await this.toastCtrl.create({
-            message: `${stop.name} added to your trip.`,
-            duration: 2000,
-            color: 'success',
-          });
-          await toast.present();
+          await this.toastService.showSuccess(`${stop.name} added to your trip.`);
         },
         error: (err) => {
           card.accepting = false;

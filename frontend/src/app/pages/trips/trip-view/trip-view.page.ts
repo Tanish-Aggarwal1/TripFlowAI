@@ -15,7 +15,6 @@ import {
   IonItem,
   IonItemDivider,
   IonLabel,
-  ToastController,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import { create, calendarOutline, sparkles, checkmark, checkmarkCircle, camera } from 'ionicons/icons';
@@ -77,7 +76,6 @@ export class TripViewPage implements OnInit {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private tripService = inject(TripService);
-  private toastCtrl = inject(ToastController);
   private toastService = inject(ToastService);
 
   trip: TripResponse | null = null;
@@ -257,12 +255,7 @@ export class TripViewPage implements OnInit {
   // SCRUM-164 — gallery refresh/thumbnail rendering deferred to SCRUM-165.
   async onPhotoUploaded(_photo: StopPhotoResponse): Promise<void> {
     this.uploadingPhotoStop = null;
-    const toast = await this.toastCtrl.create({
-      message: 'Photo uploaded.',
-      duration: 2000,
-      color: 'success',
-    });
-    await toast.present();
+    await this.toastService.showSuccess('Photo uploaded.');
   }
 
   onOptimizeRequested(): void {
@@ -276,12 +269,7 @@ export class TripViewPage implements OnInit {
         this.justOptimized = true;
         setTimeout(() => (this.justOptimized = false), 1200);
 
-        const toast = await this.toastCtrl.create({
-          message: 'Route optimized.',
-          duration: 2000,
-          color: 'success',
-        });
-        await toast.present();
+        await this.toastService.showSuccess('Route optimized.');
       },
       error: (err) => {
         this.optimizing = false;
