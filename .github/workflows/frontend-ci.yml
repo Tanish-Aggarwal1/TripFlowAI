@@ -46,11 +46,13 @@ jobs:
           sed -i "s|__MAPBOX_TOKEN__|${{ secrets.MAPBOX_TOKEN }}|g" src/environments/environment.prod.ts
 
       - name: Inject prod API base URL
-        # Not a hard requirement (unlike Mapbox) — SCRUM-73 hasn't provisioned a real
-        # backend URL yet, so API_BASE_URL isn't set as a repo secret. Once it is,
-        # this substitutes it automatically; until then the placeholder is left as-is,
-        # which is harmless here since this workflow only builds for verification and
-        # never ships the artifact.
+        # Not a hard requirement (unlike Mapbox) — SCRUM-73's backend is live
+        # (https://tripflowai.onrender.com, see docs/deployment/frontend-setup.md),
+        # but the actual production frontend build/deploy runs through Render's own
+        # build env vars, not this workflow, so the API_BASE_URL repo secret was
+        # never provisioned here. If it is set, this substitutes it automatically;
+        # until then the placeholder is left as-is, which is harmless here since
+        # this workflow only builds for verification and never ships the artifact.
         run: |
           if [ -n "${{ secrets.API_BASE_URL }}" ]; then
             sed -i "s|__API_BASE_URL__|${{ secrets.API_BASE_URL }}|g" src/environments/environment.prod.ts
