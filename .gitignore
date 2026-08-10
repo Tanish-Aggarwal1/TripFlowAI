@@ -32,3 +32,13 @@ Thumbs.db
 
 .settings/
 .project
+
+.claude-flow/
+.claude/
+.mcp.json
+.planning/
+.swarm/
+CLAUDE.md
+graphify-out/
+ruvector.db
+skills-lock.json
