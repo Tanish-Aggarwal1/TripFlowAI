@@ -167,13 +167,20 @@ class StopPhotoServiceTest {
         assertThat(photos).isEmpty();
     }
 
+    /**
+     * Not-found, not forbidden: a 403 would confirm the stop id exists, leaking the existence
+     * of stops on other people's private trips. Same SCRUM-71a rule as TripService#getTrip.
+     * The owner-only paths above/below keep throwing ForbiddenException.
+     */
     @Test
-    void listPhotos_nonOwnerOnPrivateTrip_throwsForbidden() {
+    void listPhotos_nonOwnerOnPrivateTrip_throwsNotFoundNotForbidden() {
         Stop stop = stopOwnedBy(1L, 10L, TripVisibility.PRIVATE);
         when(stopRepository.findWithTripAndOwnerById(1L)).thenReturn(Optional.of(stop));
 
         assertThatThrownBy(() -> stopPhotoService.listPhotos(1L, 99L))
-                .isInstanceOf(ForbiddenException.class);
+                .isInstanceOf(ResourceNotFoundException.class)
+                .isNotInstanceOf(ForbiddenException.class)
+                .hasMessage("Stop not found: 1");
     }
 
     @Test

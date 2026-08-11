@@ -1,6 +1,6 @@
 # Architecture
 
-Layered backend: `controller/ → service/ → repository/ → domain/`, plus `dto/`, `mapper/`, `security/`, `config/`, `client/`, `exception/`, `ai/`. Chosen over feature-slicing for a small team on Spring Boot conventions — see `README.md` "Architecture rationale" for the full reasoning.
+Layered backend: `controller/ → service/ → repository/ → domain/`, plus `dto/`, `mapper/`, `security/`, `config/`, `client/`, `exception/`, `ai/`, `ratelimit/`, `schedule/`. Chosen over feature-slicing for a small team on Spring Boot conventions — see `README.md` "Architecture rationale" for the full reasoning.
 
 ## Enforced layer-boundary rules (SCRUM-219 / AUDIT-10)
 

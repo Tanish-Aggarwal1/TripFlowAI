@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- Route line between two stops. Brand blue matches index.html's theme-color
+       and manifest.webmanifest. An <img>-referenced SVG is its own document, so
+       currentColor cannot reach it — the dark variant is handled in here instead. -->
+  <style>
+    .mark { stroke: #0054e9; fill: none; stroke-width: 5; stroke-linecap: round; }
+    .stop { fill: #0054e9; }
+    @media (prefers-color-scheme: dark) {
+      .mark { stroke: #6c9cff; }
+      .stop { fill: #6c9cff; }
+    }
+  </style>
+  <path class="mark" d="M14 50 C 14 28, 50 36, 50 14" />
+  <circle class="stop" cx="14" cy="50" r="5" />
+  <circle class="mark" cx="50" cy="14" r="7" />
+</svg>

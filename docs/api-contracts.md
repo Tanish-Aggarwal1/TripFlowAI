@@ -27,6 +27,7 @@ Living document. Add a new section per epic as endpoints are built. Update if a 
 - 409 — email already registered
 - 409 — username already taken
 - 400 — validation failure (see standard error shape below)
+- 429 — rate limit exceeded (per-IP, `app.ratelimit.register.*` — see Rate Limiting below; `Retry-After` header included)
 
 ### POST /api/auth/login
 **Request:**
@@ -39,6 +40,7 @@ Living document. Add a new section per epic as endpoints are built. Update if a 
 **Success (200):** same shape as register
 **Errors:**
 - 401 — invalid credentials
+- 429 — rate limit exceeded (per-IP, `app.ratelimit.login.*` — see Rate Limiting below; `Retry-After` header included)
 
 
 ## Auth Header
@@ -112,20 +114,20 @@ Returns a page of the authenticated user's trips as a card-sized projection — 
 | --- | --- |
 | `title` | max 150 chars |
 | `tags` | max 20 elements, each max 50 chars |
+| `stops` | max 50 elements (`UpdateTripRequest.MAX_STOPS`) — each stop costs a VROOM job on `/optimize` plus a waypoint on the follow-up directions call, both against a 500 req/day ORS quota |
 | `stops[].name` | max 200 chars |
 | `stops[].address` | max 300 chars |
 | `stops[].externalPlaceId` | max 150 chars |
 | `stops[].latitude` | -90.0 to 90.0 |
 | `stops[].longitude` | -180.0 to 180.0 |
 
-Same limits apply to `PUT /api/trips/{id}` and the nested stop endpoints (`POST`/`PUT /api/trips/{tripId}/stops[/{stopId}]`), which share `CreateStopRequest`/`UpdateStopRequest`.
+Same per-field limits apply to `PUT /api/trips/{id}` (via `UpsertStopRequest` — see that endpoint's section for how it differs from `CreateStopRequest`) and the nested stop endpoints (`POST`/`PUT /api/trips/{tripId}/stops[/{stopId}]`, which share `CreateStopRequest`/`UpdateStopRequest`).
 
 ### GET /api/trips/{id}
 Owner sees any trip; non-owner only sees `PUBLIC` trips.
 **Success (200):** single trip object.
 **Errors:**
-- 404 — trip not found
-- 403 — private trip, requester is not the owner
+- 404 — trip not found, **or** the trip is `PRIVATE` and requester is not the owner (same 404 either way so existence isn't leaked — no 403 path on this endpoint; this line previously said 403, which did not match `TripService.getTrip`)
 
 ### PATCH /api/trips/{id}/visibility (SCRUM-159)
 Flips `PRIVATE` &lt;-&gt; `PUBLIC`. Owner-only, no request body — there is no way to set an explicit target value, only toggle.
@@ -136,13 +138,42 @@ Flips `PRIVATE` &lt;-&gt; `PUBLIC`. Owner-only, no request body — there is no 
 - 403 — requester is not the owner
 
 ### PUT /api/trips/{id}
-Full itinerary replace — metadata + stops in one call. Existing stops not present in the request are deleted; their `Place` rows survive if referenced elsewhere.
-**Request:** same shape as POST.
+Full itinerary update — metadata + stops in one call, merged by stop identity rather than a blind replace (fixed in the SCRUM-274 review; previously any edit — even a title-only change — silently wiped every stop's `status`/`dayNumber`/`plannedTime`/`stopType` and cascade-deleted its photos, since the old behavior deleted and recreated every stop on every call).
+
+**Request:** mostly the same shape as POST, except each entry in `stops[]` is an `UpsertStopRequest` — `CreateStopRequest`'s fields (`name`, `latitude`, `longitude`, `address`, `externalPlaceId`, `notes`) plus a leading, optional `id`:
+```json
+{
+  "title": "string",
+  "description": "string",
+  "tags": ["string"],
+  "visibility": "PRIVATE | PUBLIC",
+  "stops": [
+    {
+      "id": 1,
+      "name": "string",
+      "latitude": 0.0,
+      "longitude": 0.0,
+      "address": "string",
+      "externalPlaceId": "string",
+      "notes": "string"
+    }
+  ],
+  "startDate": "2026-08-10"
+}
+```
+Merge semantics, by each stop's `id`:
+- `id` matches a stop already on this trip → updated in place; its server-owned `status`, `dayNumber`, `plannedTime`, `stopType`, and its `stop_photos` rows survive.
+- `id` omitted/`null` → inserted as a new stop.
+- an existing stop whose `id` is absent from the payload → deleted (its `Place` row survives if referenced elsewhere) — the one intentional deletion path.
+- `id` belongs to a **different** trip (or was already claimed earlier in the same payload) → the whole request fails with 404, both trips left untouched; never silently re-parented.
+
+`startDate` absent or `null` means **leave unchanged**, not clear — a JSON body can't distinguish an omitted field from an explicit `null`, so treating `null` as "clear" would silently wipe the date on every update that didn't restate it. There's currently no way to clear an already-set `startDate` through this endpoint.
+
 **Success (200):** updated trip object.
 **Errors:**
-- 404 — trip not found
+- 404 — trip not found, **or** a `stops[].id` in the payload doesn't belong to this trip
 - 403 — requester is not the owner
-- 400 — validation failure
+- 400 — validation failure (including `stops` exceeding the 50-element cap)
 
 ### DELETE /api/trips/{id}
 **Success (204):** no body.
@@ -225,7 +256,7 @@ Reorders the trip's stops for shortest travel time via OpenRouteService VROOM. R
 
 **Request:** No body — the endpoint reads the trip's existing stops.
 
-**Success (200):** Returns the full `TripResponse` with stops reordered by optimized `stopOrder` and `routeGeometry` populated with an encoded polyline string. This is the canonical shape of a full trip object, returned by every endpoint documented elsewhere in this file as "single trip object" / "full `TripResponse`" (`POST`/`GET`/`PUT /api/trips[/{id}]`, `PATCH .../visibility`, `POST .../clone`, `POST /api/trips/ai-generate`):
+**Success (200):** Returns the full `TripResponse` with stops reordered by optimized `stopOrder` and `routeGeometry` populated. This is the canonical shape of a full trip object, returned by every endpoint documented elsewhere in this file as "single trip object" / "full `TripResponse`" (`POST`/`GET`/`PUT /api/trips[/{id}]`, `PATCH .../visibility`, `POST .../clone`, `POST /api/trips/ai-generate`):
 ```json
 {
   "id": 1,
@@ -252,11 +283,13 @@ Reorders the trip's stops for shortest travel time via OpenRouteService VROOM. R
   ],
   "createdAt": "2026-07-20T15:30:00Z",
   "updatedAt": "2026-07-20T15:31:00Z",
-  "routeGeometry": "encoded_polyline_string",
+  "routeGeometry": "{\"type\":\"LineString\",\"coordinates\":[[-79.38,43.65],[-79.40,43.66]]}",
   "startDate": "2026-08-10",
   "likeCount": 0
 }
 ```
+`routeGeometry` is a **JSON-encoded GeoJSON `LineString` geometry** (`{"type": "LineString", "coordinates": [[lng, lat], ...]}`), stored and returned as a JSON string (`TripResponse.routeGeometry` is typed `String` — the client must `JSON.parse()` it, it is not pre-parsed) — **not an encoded polyline**, despite what earlier revisions of this doc said. Source: `RouteOptimizationService` does `objectMapper.writeValueAsString(geometry)` where `geometry` is ORS's own GeoJSON `Feature.geometry` from the directions response.
+
 (`orderIndex` in earlier revisions of this doc was wrong — the field has always been `stopOrder`, see `StopResponse.java`. `likeCount` was added by SCRUM-161, `startDate` by SCRUM-244a.)
 
 **Scheduling (SCRUM-244a):** In addition to reordering stops and computing route geometry, this endpoint runs a heuristic day/time scheduler over the optimized stop order — no Gemini involvement, just a greedy walk assigning each stop a `dayNumber` and `plannedTime`, using the per-leg travel durations from the same ORS directions call already made for route geometry. Each stop is assumed to take `app.schedule.default-visit-duration` (default 1h) to visit; cumulative time rolls to the next day once it would exceed the configured day window (`app.schedule.day-start-time`/`app.schedule.day-end-time`, default `09:00`–`21:00`). This is a foundation for future AI-driven scheduling — see `docs/TripFlow_fall_Break_Plan.md` FB-17/FB-18 for what's planned on top of it.
@@ -437,8 +470,7 @@ Generates a standard `.ics` (RFC 5545 iCalendar) file from a trip's ordered stop
   - All date-times are written **floating** (no `Z`, no `TZID`) — a stop's `plannedTime` is a destination-local wall-clock time with no known timezone (no lat/lng-to-timezone lookup), so converting it through the server's own timezone would silently produce the wrong hour depending on where the backend happens to be deployed.
 
 **Errors:**
-- 403 — private trip, requester is not the owner
-- 404 — trip not found
+- 404 — trip not found, **or** the trip is `PRIVATE` and requester is not the owner (same 404 either way — `IcsExportService` delegates its ownership/visibility check to `TripService.getTrip`, so it inherits that endpoint's no-403 existence-hiding behavior; this line previously said 403)
 
 All errors return the standard `ApiError` body.
 
@@ -448,6 +480,8 @@ All errors return the standard `ApiError` body.
 
 `POST /api/trips/{id}/ai-suggest`, `POST /api/trips/ai-generate`, and `POST /api/trips/{id}/optimize` all call paid/quota-limited external APIs (Gemini, OpenRouteService), so each is capped per authenticated user via an in-memory token bucket (Bucket4j), keyed on the JWT-derived user id — not IP, since multiple users can share an IP (NAT, campus wifi).
 
+`POST /api/auth/login` and `POST /api/auth/register` are also capped, via the same Bucket4j mechanism, but keyed on `HttpServletRequest.getRemoteAddr()` instead — there's no JWT yet at that point. See `docs/auth.md`'s "Auth rate limiting trust chain" note for how the client IP is derived behind Render's proxy and what's verified vs. assumed about it.
+
 **Limits** (externalized in `application.properties`, tunable without a redeploy):
 
 | Property | Default | Endpoint |
@@ -455,6 +489,8 @@ All errors return the standard `ApiError` body.
 | `app.ratelimit.ai-suggest.capacity` / `.window` | 10 / `1h` | `POST /api/trips/{id}/ai-suggest` |
 | `app.ratelimit.ai-generate.capacity` / `.window` | 5 / `1h` | `POST /api/trips/ai-generate` |
 | `app.ratelimit.optimize.capacity` / `.window` | 20 / `1h` | `POST /api/trips/{id}/optimize` |
+| `app.ratelimit.login.capacity` / `.window` | 10 / `1h` | `POST /api/auth/login` |
+| `app.ratelimit.register.capacity` / `.window` | 5 / `1h` | `POST /api/auth/register` |
 
 Exceeding the limit returns `429 Too Many Requests` with the standard `ApiError` body and a `Retry-After` header (seconds until the next token is available). The counter resets in full once the configured window elapses (Bucket4j "intervally" refill — tokens jump back to full capacity at the window boundary, not a continuous trickle).
 
@@ -508,7 +544,7 @@ Owner-only. Persists a photo reference after the client has uploaded directly to
 ### GET /api/stops/{stopId}/photos
 Owner sees any stop's photos; non-owner only if the stop's parent trip is `PUBLIC`. Intentionally **not** paginated (see REF-21 note under `GET /api/trips`) — there is no application-level cap on photos per stop today.
 **Success (200):** array of the photo object shape above.
-**Errors:** 403 (private trip, requester not owner), 404 (stop not found)
+**Errors:** 404 (stop not found, **or** the parent trip is `PRIVATE` and requester is not the owner — same 404 either way, fixed under SCRUM-274: a 403 here would have confirmed the stop id exists, making this an existence oracle for stops on other people's private trips, same convention as `GET /api/trips/{id}` and the clone/like endpoints above. The other stop-photo endpoints below are owner-only writes, a different case, and keep 403.)
 
 ### DELETE /api/stops/{stopId}/photos/{photoId}
 Owner-only.

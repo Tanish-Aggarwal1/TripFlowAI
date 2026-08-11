@@ -27,8 +27,9 @@ import {
   TripResponse,
   CreateTripRequest,
   UpdateTripRequest,
-  CreateStopRequest,
+  UpsertStopRequest,
   TripVisibility,
+  MAX_STOPS,
 } from '../../../core/models/trip.model';
 import { StopListComponent } from '../components/stop-list/stop-list.component';
 
@@ -75,9 +76,12 @@ export class TripEditPage implements OnInit {
   description = '';
   tagsInput = ''; // comma-separated string → string[] on save
   visibility: TripVisibility = 'PRIVATE';
+  // No UI edits this yet; it is loaded and echoed back so an edit can never clear it,
+  // independently of the backend treating an absent startDate as "leave unchanged".
+  startDate: string | undefined;
 
   // ── Stops (managed by stop-list child — passed via binding) ───────────────
-  stops: CreateStopRequest[] = [];
+  stops: UpsertStopRequest[] = [];
 
   constructor() {
     addIcons({ save, arrowBack, map: mapIcon });
@@ -101,12 +105,17 @@ export class TripEditPage implements OnInit {
         this.description = trip.description ?? '';
         this.tagsInput = (trip.tags ?? []).join(', ');
         this.visibility = trip.visibility;
+        this.startDate = trip.startDate ?? undefined;
+        // s.id is the load-bearing field: it merges this stop in place on save, preserving
+        // its status/dayNumber/plannedTime/stopType and photos. Drop it and save() deletes
+        // the stop and re-inserts a bare copy. StopResponse carries no externalPlaceId, so
+        // that one genuinely cannot be round-tripped — the backend re-resolves by lat/lng.
         this.stops = trip.stops.map((s) => ({
+          id: s.id,
           name: s.name,
           latitude: s.latitude,
           longitude: s.longitude,
           address: s.address ?? undefined,
-          externalPlaceId: undefined,
           notes: s.notes ?? undefined,
         }));
         this.loading = false;
@@ -128,6 +137,11 @@ export class TripEditPage implements OnInit {
       this.toastService.showError(undefined, 'Add at least one stop.');
       return;
     }
+    // Backend @Size(max = MAX_STOPS) would reject this as a bare 400.
+    if (this.stops.length > MAX_STOPS) {
+      this.toastService.showError(undefined, `A trip can have at most ${MAX_STOPS} stops.`);
+      return;
+    }
 
     const tags = this.tagsInput
       .split(',')
@@ -143,6 +157,7 @@ export class TripEditPage implements OnInit {
         tags,
         visibility: this.visibility,
         stops: this.stops,
+        startDate: this.startDate,
       };
       this.tripService.updateTrip(this.tripId, request).subscribe({
         next: () => {
@@ -161,7 +176,9 @@ export class TripEditPage implements OnInit {
         description: this.description.trim() || undefined,
         tags,
         visibility: this.visibility,
-        stops: this.stops,
+        // Create takes CreateStopRequest, which has no id by design — every stop here is
+        // new, so strip the always-null id rather than sending a meaningless field.
+        stops: this.stops.map(({ id: _id, ...stop }) => stop),
       };
       this.tripService.createTrip(request).subscribe({
         next: () => {
@@ -202,7 +219,7 @@ export class TripEditPage implements OnInit {
   }
 
   // ── Stop list callbacks (called from stop-list component) ─────────────────
-  onStopsChanged(stops: CreateStopRequest[]): void {
+  onStopsChanged(stops: UpsertStopRequest[]): void {
     this.stops = stops;
   }
 }

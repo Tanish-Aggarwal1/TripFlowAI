@@ -50,9 +50,9 @@ constructor(private router: Router, private tripService: TripService) {}
 
 ## Environment Files
 
-- `environment.ts` and `environment.prod.ts` are committed with **placeholder values** (e.g. `__MAPBOX_TOKEN__`, `__API_BASE_URL__` in `environment.prod.ts`).
-- Real values injected at CI build time via GitHub Actions secrets (`sed` substitution in `frontend-ci.yml`).
-- For local dev, each developer replaces placeholders with their own values locally (gitignored by the placeholder pattern, since the committed file has no real secret).
+- `environment.ts` and `environment.prod.ts` are **committed, tracked files** with placeholder values (e.g. `__MAPBOX_TOKEN__`, `__API_BASE_URL__` in `environment.prod.ts`). Never put a real token in either — anything written there is in git history permanently.
+- Prod values are injected at CI build time via GitHub Actions secrets (`sed` substitution in `frontend-ci.yml`).
+- **Local dev never touches `environment.ts`.** Copy `src/environments/environment.local.ts.template` to `src/environments/environment.local.ts` and fill in a real `mapboxToken` there instead (added SCRUM-283). `environment.local.ts` is gitignored (`frontend/.gitignore`: `src/environments/*` ignored, `!src/environments/*.template` excepted — the template is tracked, the real file never is). `ng serve`/`ionic serve` use the `development` build configuration, which swaps it in via `angular.json`'s `fileReplacements` (`environment.ts` → `environment.local.ts`) — the committed `environment.ts` is never edited or read at runtime for local dev.
 - `environment.prod.ts`'s `apiBaseUrl` (`__API_BASE_URL__`) is injected from the `API_BASE_URL` repo secret when set. SCRUM-73's backend is live (`https://tripflowai.onrender.com`), but the actual production frontend build runs through Render's own build-time env vars (see `docs/deployment/frontend-setup.md`), not this repo secret — so `API_BASE_URL` is currently unset here and `frontend-ci.yml` logs a warning and leaves the placeholder in place. Harmless for CI verification builds (`ng build` there is never deployed); set the secret here too if `frontend-ci.yml`'s build output is ever wired up to ship directly.
 
 ## Testing

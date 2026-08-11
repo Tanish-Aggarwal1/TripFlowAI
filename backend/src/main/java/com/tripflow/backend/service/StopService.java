@@ -1,7 +1,11 @@
 package com.tripflow.backend.service;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -12,6 +16,7 @@ import com.tripflow.backend.domain.Trip;
 import com.tripflow.backend.dto.CreateStopRequest;
 import com.tripflow.backend.dto.StopResponse;
 import com.tripflow.backend.dto.UpdateStopRequest;
+import com.tripflow.backend.dto.UpsertStopRequest;
 import com.tripflow.backend.exception.ResourceNotFoundException;
 import com.tripflow.backend.mapper.StopMapper;
 import com.tripflow.backend.repository.TripRepository;
@@ -100,6 +105,75 @@ public class StopService {
             stops.add(stop);
         }
         return stops;
+    }
+
+    /**
+     * Reconciles a trip's stops against a full-replacement payload <em>by identity</em>, and is
+     * the update-path counterpart to {@link #buildStops}.
+     *
+     * <p>This exists because the previous implementation (clear the collection, rebuild every
+     * stop from scratch) was silent data loss: {@code Trip.stops} is {@code orphanRemoval = true}
+     * and {@code stop_photos.stop_id} is {@code ON DELETE CASCADE} (V8), so replacing the stops
+     * deleted every photo on the trip — and reset each stop's server-owned {@code status},
+     * {@code dayNumber}, {@code plannedTime} and {@code stopType} — even for an edit that only
+     * changed the trip title.
+     *
+     * <p>A request item carrying the id of a stop already on this trip updates that stop in
+     * place; a null id inserts; an existing stop absent from the payload is dropped and
+     * orphan-removed. Only genuinely dropped stops are deleted, so survivors keep their ids,
+     * their scheduling, and their photos.
+     *
+     * <p>{@code stopOrder} follows payload order. Reassigning indices across surviving stops can
+     * transiently collide on {@code uq_stops_trip_id_stop_order}, which is why V6 declares that
+     * constraint {@code DEFERRABLE INITIALLY DEFERRED} — it is checked at commit, by which point
+     * the whole payload has been applied.
+     */
+    void mergeStops(List<UpsertStopRequest> requests, Trip trip) {
+        // Consumed by remove() below, so what remains after the loop is exactly the set the
+        // payload dropped, and an id can't be claimed twice by one payload.
+        Map<Long, Stop> unclaimed = trip.getStops().stream()
+                .collect(Collectors.toMap(Stop::getId, Function.identity()));
+
+        List<Place> places = placeResolutionService.resolvePlaces(
+                requests.stream().map(UpsertStopRequest::toCreateRequest).toList());
+
+        List<Stop> inserted = new ArrayList<>();
+        for (int order = 0; order < requests.size(); order++) {
+            UpsertStopRequest request = requests.get(order);
+            Place place = places.get(order);
+
+            if (request.id() == null) {
+                Stop stop = stopMapper.toEntity(request.toCreateRequest(), place, order);
+                stop.setTrip(trip);
+                inserted.add(stop);
+                continue;
+            }
+
+            // Not on this trip (or already claimed earlier in this payload). Never adopt it —
+            // silently re-parenting another trip's stop would be a cross-tenant write. Reported
+            // as not-found rather than forbidden so the id's existence elsewhere isn't disclosed.
+            Stop existing = unclaimed.remove(request.id());
+            if (existing == null) {
+                throw new ResourceNotFoundException(
+                        "Stop not found: " + request.id() + " in trip " + trip.getId());
+            }
+            existing.setPlace(place);
+            existing.setNotes(request.notes());
+            existing.setStopOrder(order);
+            // status/dayNumber/plannedTime/stopType deliberately untouched — server-owned.
+        }
+
+        // Mutate in place rather than clear()+addAll(): only the stops the payload actually
+        // dropped should reach orphanRemoval.
+        if (!unclaimed.isEmpty()) {
+            // Implicit deletion is the one remaining destructive path here — a client that omits
+            // an id (a frontend bug, say) deletes that stop and cascades to its stop_photos.
+            // Correct PUT semantics, but leave an audit trail so it isn't silent.
+            log.info("Trip update dropping stops tripId={} stopIds={}", trip.getId(), unclaimed.keySet());
+        }
+        trip.getStops().removeAll(unclaimed.values());
+        trip.getStops().addAll(inserted);
+        trip.getStops().sort(Comparator.comparingInt(Stop::getStopOrder));
     }
 
     private Stop findStop(Trip trip, Long stopId) {

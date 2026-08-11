@@ -4,10 +4,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -32,6 +34,7 @@ import com.tripflow.backend.dto.CreateTripRequest;
 import com.tripflow.backend.dto.TripResponse;
 import com.tripflow.backend.dto.TripSummaryResponse;
 import com.tripflow.backend.dto.UpdateTripRequest;
+import com.tripflow.backend.dto.UpsertStopRequest;
 import com.tripflow.backend.exception.ForbiddenException;
 import com.tripflow.backend.exception.ResourceNotFoundException;
 import com.tripflow.backend.mapper.StopMapper;
@@ -60,6 +63,36 @@ public class TripServiceTest {
         // drives the ownership check unchanged.
         TripOwnershipService tripOwnershipService = new TripOwnershipService(tripRepository);
         tripService = new TripService(tripRepository, userRepository, tripMapper, tripOwnershipService, stopService);
+    }
+
+    /** A PRIVATE trip with no stops, owned by {@code ownerId}, matching the id every stub below uses. */
+    private Trip ownedTrip(Long ownerId) {
+        User owner = new User();
+        owner.setId(ownerId);
+
+        Trip trip = new Trip();
+        trip.setId(50L);
+        trip.setUser(owner);
+        trip.setVisibility(TripVisibility.PRIVATE);
+        trip.setStops(new ArrayList<>());
+        return trip;
+    }
+
+    /**
+     * Emulates the real {@link StopService#mergeStops} against the mock: it mutates the trip's
+     * stop list in place rather than returning one. The merge's own behaviour (identity
+     * matching, preserved photos/scheduling, cross-trip id rejection) is tested for real in
+     * {@link StopServiceTest}.
+     */
+    private void stubMergeStops() {
+        doAnswer(inv -> {
+            List<UpsertStopRequest> requests = inv.getArgument(0);
+            Trip trip = inv.getArgument(1);
+            trip.getStops().clear();
+            trip.getStops().addAll(stubbedStops(
+                    requests.stream().map(UpsertStopRequest::toCreateRequest).toList(), trip));
+            return null;
+        }).when(stopService).mergeStops(anyList(), any(Trip.class));
     }
 
     /** Builds the Stop list {@code stopService.buildStops(...)} would return for the given requests. */
@@ -287,12 +320,11 @@ public class TripServiceTest {
         trip.setStops(new ArrayList<>());
 
         when(tripRepository.findWithStopsById(50L)).thenReturn(Optional.of(trip));
-        when(stopService.buildStops(anyList(), any(Trip.class)))
-                .thenAnswer(inv -> stubbedStops(inv.getArgument(0), inv.getArgument(1)));
+        stubMergeStops();
         when(tripRepository.save(any())).thenAnswer(inv -> inv.getArgument(0, Trip.class));
 
-        CreateStopRequest newStop = new CreateStopRequest(
-                "Niagara Falls", 43.0962, -79.0377, null, null, null);
+        UpsertStopRequest newStop = new UpsertStopRequest(
+                null, "Niagara Falls", 43.0962, -79.0377, null, null, null);
         UpdateTripRequest request = new UpdateTripRequest(
                 "New Title", null, null, TripVisibility.PUBLIC, List.of(newStop));
 
@@ -316,7 +348,6 @@ public class TripServiceTest {
         trip.setStops(new ArrayList<>());
 
         when(tripRepository.findWithStopsById(50L)).thenReturn(Optional.of(trip));
-        when(stopService.buildStops(anyList(), any(Trip.class))).thenReturn(new ArrayList<>());
         when(tripRepository.save(any())).thenAnswer(inv -> inv.getArgument(0, Trip.class));
 
         UpdateTripRequest request = new UpdateTripRequest(
@@ -325,6 +356,39 @@ public class TripServiceTest {
         TripResponse response = tripService.updateTrip(50L, 1L, request);
 
         assertThat(response.tags()).isNotNull().isEmpty();
+    }
+
+    /**
+     * A record can't distinguish an omitted JSON field from an explicit null, and the 5-arg
+     * convenience constructor passes startDate = null — so treating null as "clear it" wiped
+     * the trip's date on every update that didn't restate it. Absent means unchanged.
+     */
+    @Test
+    void updateTrip_absentStartDate_leavesExistingDateUnchanged() {
+        Trip trip = ownedTrip(1L);
+        trip.setStartDate(LocalDate.of(2026, 6, 1));
+
+        when(tripRepository.findWithStopsById(50L)).thenReturn(Optional.of(trip));
+        when(tripRepository.save(any())).thenAnswer(inv -> inv.getArgument(0, Trip.class));
+
+        TripResponse response = tripService.updateTrip(50L, 1L,
+                new UpdateTripRequest("Retitled", null, null, TripVisibility.PRIVATE, List.of()));
+
+        assertThat(response.startDate()).isEqualTo(LocalDate.of(2026, 6, 1));
+    }
+
+    @Test
+    void updateTrip_suppliedStartDate_overwritesExistingDate() {
+        Trip trip = ownedTrip(1L);
+        trip.setStartDate(LocalDate.of(2026, 6, 1));
+
+        when(tripRepository.findWithStopsById(50L)).thenReturn(Optional.of(trip));
+        when(tripRepository.save(any())).thenAnswer(inv -> inv.getArgument(0, Trip.class));
+
+        TripResponse response = tripService.updateTrip(50L, 1L, new UpdateTripRequest(
+                "Retitled", null, null, TripVisibility.PRIVATE, List.of(), LocalDate.of(2027, 1, 15)));
+
+        assertThat(response.startDate()).isEqualTo(LocalDate.of(2027, 1, 15));
     }
 
     @Test

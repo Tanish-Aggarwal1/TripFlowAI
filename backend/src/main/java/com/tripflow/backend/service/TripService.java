@@ -139,13 +139,19 @@ public class TripService {
 		trip.setDescription(request.description());
 		trip.setTags(request.tags() != null ? request.tags() : new ArrayList<>());
 		trip.setVisibility(request.visibility());
-		trip.setStartDate(request.startDate());
+		// Absent startDate means "leave unchanged", not "clear". A record can't tell an
+		// omitted JSON field from an explicit null, and the 5-arg convenience constructor
+		// passes null, so treating null as a clear silently wiped the date on every update
+		// that didn't restate it. The trade-off is that startDate can't be cleared through
+		// this endpoint; nothing exposes that today.
+		if (request.startDate() != null) {
+			trip.setStartDate(request.startDate());
+		}
 		// status is server-owned lifecycle state — intentionally not touched here
 
-		// Full itinerary replace. orphanRemoval deletes dropped stops; shared Places
-		// survive.
-		trip.getStops().clear();
-		trip.getStops().addAll(stopService.buildStops(request.stops(), trip));
+		// Merge by stop id rather than replace: surviving stops keep their photos and their
+		// status/dayNumber/plannedTime/stopType. See StopService#mergeStops.
+		stopService.mergeStops(request.stops(), trip);
 
 		Trip saved = tripRepository.save(trip);
 		log.info("Trip updated id={} ownerId={} stops={}", saved.getId(), requesterId, saved.getStops().size());

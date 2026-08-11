@@ -129,14 +129,23 @@ public class StopPhotoService {
         return stop;
     }
 
-    /** Owner or public-trip access — used for listing only. */
+    /**
+     * Owner or public-trip access — used for listing only.
+     *
+     * <p>A private trip requested by a non-owner is reported as 404, not 403, matching the
+     * SCRUM-71a convention in {@code TripService#getTrip} / {@code TripCloneService} /
+     * {@code TripLikeService}. A 403 here confirmed that the stop id exists, turning this
+     * endpoint into an existence oracle for stops on other people's private trips.
+     * {@link #loadOwnedStop} keeps its 403 — those are owner-only writes, a different case.
+     */
     private Stop loadVisibleStop(Long stopId, Long requesterId) {
         Stop stop = loadStop(stopId);
         Trip trip = stop.getTrip();
         boolean isOwner = trip.getUser().getId().equals(requesterId);
         if (trip.getVisibility() == TripVisibility.PRIVATE && !isOwner) {
-            log.debug("Private stop-photo list denied stopId={} requesterId={}", stopId, requesterId);
-            throw new ForbiddenException("You do not have access to this stop");
+            log.debug("Private stop-photo list denied (404, existence not disclosed) stopId={} requesterId={}",
+                    stopId, requesterId);
+            throw new ResourceNotFoundException("Stop not found: " + stopId);
         }
         return stop;
     }
