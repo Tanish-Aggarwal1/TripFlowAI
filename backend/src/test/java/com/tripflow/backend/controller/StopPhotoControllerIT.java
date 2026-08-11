@@ -1,5 +1,6 @@
 package com.tripflow.backend.controller;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -168,14 +169,36 @@ class StopPhotoControllerIT {
                 .andExpect(jsonPath("$").isArray());
     }
 
+    /**
+     * 404, not 403: a 403 would confirm the stop id exists, making this an existence oracle
+     * for stops on other people's private trips. Matches the SCRUM-71a convention already
+     * used by GET /api/trips/{id}. The owner-only endpoints below still return 403.
+     */
     @Test
-    void listPhotos_nonOwnerOnPrivateTrip_returns403() throws Exception {
+    void listPhotos_nonOwnerOnPrivateTrip_returns404() throws Exception {
         User owner = createUser("privowner");
         User other = createUser("privother");
         Long stopId = createStop(owner, TripVisibility.PRIVATE);
 
         mockMvc.perform(get("/api/stops/" + stopId + "/photos").with(asUser(other)))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404));
+    }
+
+    @Test
+    void listPhotos_nonOwnerOnPrivateTrip_isIndistinguishableFromMissingStop() throws Exception {
+        User owner = createUser("oracleowner");
+        User other = createUser("oracleother");
+        Long stopId = createStop(owner, TripVisibility.PRIVATE);
+
+        String privateStop = mockMvc.perform(get("/api/stops/" + stopId + "/photos").with(asUser(other)))
+                .andExpect(status().isNotFound()).andReturn().getResponse().getContentAsString();
+        String missingStop = mockMvc.perform(get("/api/stops/999999/photos").with(asUser(other)))
+                .andExpect(status().isNotFound()).andReturn().getResponse().getContentAsString();
+
+        assertThat(objectMapper.readTree(privateStop).get("message").asText())
+                .isEqualTo(objectMapper.readTree(missingStop).get("message").asText()
+                        .replace("999999", String.valueOf(stopId)));
     }
 
     @Test
