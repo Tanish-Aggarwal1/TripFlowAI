@@ -42,16 +42,16 @@
     </app-trip-map>
   </div>
 
-  <ion-list>
+  <ion-list class="stop-list">
     @for (group of dayGroups; track group.dayNumber ?? 'unscheduled') {
     @if (group.dayNumber !== null) {
-    <ion-item-divider>
+    <ion-item-divider class="day-divider">
       <ion-label>Day {{ group.dayNumber }}</ion-label>
     </ion-item-divider>
     }
-    <ion-list [class.just-optimized]="justOptimized">
+    <ion-list [class.just-optimized]="justOptimized" lines="none">
       @for (stop of group.stops; track stop.id) {
-      <ion-item>
+      <ion-item class="stop-card">
         <ion-label>
           <h3>{{ stop.stopOrder + 1 }}. {{ stop.name }}</h3>
           @if (stop.address) {
@@ -147,7 +147,6 @@
     <ng-template>
       <ion-header>
         <ion-toolbar>
-          <ion-title>Add Photo</ion-title>
           <ion-title>Photos</ion-title>
           <ion-buttons slot="end">
             <ion-button (click)="closePhotoUpload()">Close</ion-button>
