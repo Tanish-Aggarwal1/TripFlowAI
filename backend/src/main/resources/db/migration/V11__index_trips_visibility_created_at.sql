@@ -1,0 +1,34 @@
+-- DB-2: the public discovery feed filters on visibility and sorts on created_at, and
+-- until now the only index on trips was idx_trips_user_id (V2) — so every page of
+-- GET /api/discovery/trips seq-scanned and sorted the whole table. That endpoint is
+-- unauthenticated and deliberately not rate-limited, so its cost grew with total table
+-- size rather than page size.
+--
+-- Serves two live queries:
+--   TripRepository.findSummariesByVisibility  — WHERE t.visibility = :visibility,
+--       ordered by the Pageable bound at DiscoveryController (sort=createdAt, DESC).
+--   TripSearchRepositoryImpl.matchingIds      — WHERE t.visibility = 'PUBLIC' ...
+--       ORDER BY t.created_at DESC, t.id DESC LIMIT/OFFSET.
+--
+-- Column order: equality predicate first (visibility), then the sort key (created_at),
+-- then id. Leading with created_at would force a filter on every row instead of letting
+-- the scan start at the right place. id is last because the search query already orders
+-- by it as a tiebreaker, and it lets the feed adopt the same tiebreaker without a new
+-- index.
+--
+-- Deliberately ASC, not DESC: Postgres scans a btree backwards at no cost, so an
+-- ascending index satisfies ORDER BY created_at DESC and created_at DESC, id DESC alike.
+-- Explicit DESC would only matter for a mixed-direction sort, and neither query has one.
+--
+-- Deliberately NOT a partial index on WHERE visibility = 'PUBLIC': findSummariesByVisibility
+-- passes visibility as a bind parameter, and Postgres cannot prove a bound $1 satisfies a
+-- partial index predicate once it switches that statement to a generic plan — the index
+-- would silently stop being used after the first few executions. The full index also
+-- covers the owner-facing PRIVATE case.
+--
+-- Deliberately NOT CONCURRENTLY: Flyway runs each migration in a transaction and
+-- CREATE INDEX CONCURRENTLY cannot run inside one, so it would need
+-- executeInTransaction=false on this script, and a failed run leaves an INVALID index
+-- behind to clean up by hand. trips is small, so the plain form's brief write lock is
+-- the cheaper trade. Revisit if this table ever gets large enough for that lock to matter.
+CREATE INDEX idx_trips_visibility_created_at ON trips (visibility, created_at, id);
