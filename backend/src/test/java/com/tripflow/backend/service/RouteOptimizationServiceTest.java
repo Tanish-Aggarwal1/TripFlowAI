@@ -230,7 +230,7 @@ class RouteOptimizationServiceTest {
             given(orsClient.getDirections(any())).willReturn(directionsResponse());
             given(tripRepository.save(any(Trip.class))).willAnswer(inv -> inv.getArgument(0));
 
-            service.optimize(TRIP_ID, OWNER_ID);
+            TripResponse result = service.optimize(TRIP_ID, OWNER_ID);
 
             ArgumentCaptor<Trip> captor = ArgumentCaptor.forClass(Trip.class);
             verify(tripRepository).save(captor.capture());
@@ -238,6 +238,13 @@ class RouteOptimizationServiceTest {
             assertThat(geometry).isNotNull();
             assertThat(geometry).contains("LineString");
             assertThat(geometry).contains("-79.38");
+
+            // SCRUM-59 unblock: the persisted geometry must also come back out through
+            // the mapper on the response, not just sit on the entity. The frontend draws
+            // the map polyline from this field (trip-map.component.ts), so an entity-only
+            // assertion would not notice TripMapper dropping it.
+            assertThat(result.routeGeometry()).isNotNull();
+            assertThat(result.routeGeometry()).isEqualTo(geometry);
         }
 
         @Test
@@ -465,25 +472,5 @@ class RouteOptimizationServiceTest {
                     .isInstanceOf(OrsClientException.class)
                     .hasMessageContaining("2 of 3");
         }
-    void optimize_persistsRouteGeometry() {
-        Trip trip = tripWith3Stops();
-        given(tripRepository.findWithStopsById(TRIP_ID)).willReturn(Optional.of(trip));
-        given(orsClient.optimize(any())).willReturn(optimizationResponse_reordered());
-        given(orsClient.getDirections(any())).willReturn(directionsResponse());
-        given(tripRepository.save(any(Trip.class))).willAnswer(inv -> inv.getArgument(0));
-
-        TripResponse result = service.optimize(TRIP_ID, OWNER_ID);
-
-        ArgumentCaptor<Trip> captor = ArgumentCaptor.forClass(Trip.class);
-        verify(tripRepository).save(captor.capture());
-        String geometry = captor.getValue().getRouteGeometry();
-        assertThat(geometry).isNotNull();
-        assertThat(geometry).contains("LineString");
-        assertThat(geometry).contains("-79.38");
-
-        // SCRUM-59 unblock: the persisted geometry must also come back out through
-        // the mapper on the response, not just sit on the entity.
-        assertThat(result.routeGeometry()).isNotNull();
-        assertThat(result.routeGeometry()).isEqualTo(geometry);
     }
-}}
+}

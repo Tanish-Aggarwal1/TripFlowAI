@@ -248,7 +248,15 @@ public class RouteOptimizationControllerIT {
 				.andExpect(jsonPath("$.stops[1].dayNumber").value(1))
 				.andExpect(jsonPath("$.stops[1].plannedTime").value("10:30:00"))
 				.andExpect(jsonPath("$.stops[2].dayNumber").value(1))
-				.andExpect(jsonPath("$.stops[2].plannedTime").value("12:00:00"));
+				.andExpect(jsonPath("$.stops[2].plannedTime").value("12:00:00"))
+				// The route geometry this test is named for: serialized from the LineString
+				// in CANNED_DIRECTIONS_RESPONSE and returned on the response, not just stored
+				// on the entity — trip-map.component.ts JSON.parses this field to draw the
+				// polyline, so a mapper that dropped it would break the map silently.
+				.andExpect(jsonPath("$.routeGeometry").value(
+						org.hamcrest.Matchers.containsString("LineString")))
+				.andExpect(jsonPath("$.routeGeometry").value(
+						org.hamcrest.Matchers.containsString("-79.38")));
 
 		orsMockServer.verify();
 	}
