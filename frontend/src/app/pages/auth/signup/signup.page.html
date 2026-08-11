@@ -5,8 +5,12 @@
 
     <form [formGroup]="form" (ngSubmit)="onSubmit()">
       <ion-item>
-        <ion-label position="floating">Display Name</ion-label>
-        <ion-input formControlName="username" type="text"></ion-input>
+        <ion-input
+          formControlName="username"
+          type="text"
+          label="Display Name"
+          labelPlacement="floating"
+          autocomplete="nickname"></ion-input>
       </ion-item>
       @if (fieldError('username')) {
         <ion-text color="danger">
@@ -15,8 +19,12 @@
       }
 
       <ion-item>
-        <ion-label position="floating">Email</ion-label>
-        <ion-input formControlName="email" type="email"></ion-input>
+        <ion-input
+          formControlName="email"
+          type="email"
+          label="Email"
+          labelPlacement="floating"
+          autocomplete="email"></ion-input>
       </ion-item>
       @if (fieldError('email')) {
         <ion-text color="danger">
@@ -25,8 +33,12 @@
       }
 
       <ion-item>
-        <ion-label position="floating">Password</ion-label>
-        <ion-input formControlName="password" type="password"></ion-input>
+        <ion-input
+          formControlName="password"
+          type="password"
+          label="Password"
+          labelPlacement="floating"
+          autocomplete="new-password"></ion-input>
       </ion-item>
       @if (fieldError('password')) {
         <ion-text color="danger">
@@ -35,8 +47,12 @@
       }
 
       <ion-item>
-        <ion-label position="floating">Confirm Password</ion-label>
-        <ion-input formControlName="confirmPassword" type="password"></ion-input>
+        <ion-input
+          formControlName="confirmPassword"
+          type="password"
+          label="Confirm Password"
+          labelPlacement="floating"
+          autocomplete="new-password"></ion-input>
       </ion-item>
       @if (passwordMismatch) {
         <ion-text color="danger">

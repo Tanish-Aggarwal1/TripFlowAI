@@ -1,14 +1,14 @@
 import { Component, inject } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { IonContent, IonItem, IonLabel, IonInput, IonButton, IonText } from '@ionic/angular/standalone';
+import { IonContent, IonItem, IonInput, IonButton, IonText } from '@ionic/angular/standalone';
 import { AuthService } from '../../../core/services/auth.service';
 import { FieldError } from '../../../core/models/auth.model';
 
 @Component({
   selector: 'app-signup',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink, IonContent, IonItem, IonLabel, IonInput, IonButton, IonText],
+  imports: [ReactiveFormsModule, RouterLink, IonContent, IonItem, IonInput, IonButton, IonText],
   templateUrl: './signup.page.html',
   styleUrls: ['./signup.page.scss'],
 })

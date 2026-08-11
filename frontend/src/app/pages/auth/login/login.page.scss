@@ -1,0 +1,37 @@
+.login-card {
+  max-width: 400px;
+  margin: 0 auto;
+  padding: 32px 0 16px;
+  text-align: center;
+
+  .logo {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 16px;
+  }
+
+  h1 {
+    margin: 0 0 24px;
+    font-size: 1.5rem;
+    font-weight: 600;
+  }
+
+  form {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    text-align: start;
+    margin-bottom: 24px;
+  }
+
+  // Validation messages sit outside their ion-item, so keep them tight to the
+  // field above rather than inheriting the form's gap on both sides.
+  ion-text p {
+    margin: 4px 0 0;
+    font-size: 0.8rem;
+  }
+
+  ion-button {
+    margin-top: 20px;
+  }
+}
