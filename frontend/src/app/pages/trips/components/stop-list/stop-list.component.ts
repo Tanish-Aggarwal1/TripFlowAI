@@ -7,7 +7,7 @@ import {
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import { add, trash, reorderTwo } from 'ionicons/icons';
-import { CreateStopRequest } from '../../../../core/models/trip.model';
+import { UpsertStopRequest } from '../../../../core/models/trip.model';
 
 @Component({
   selector: 'app-stop-list',
@@ -21,8 +21,10 @@ import { CreateStopRequest } from '../../../../core/models/trip.model';
 })
 export class StopListComponent {
   // ── Inputs / Outputs ──────────────────────────────────────────────────────
-  @Input() stops: CreateStopRequest[] = [];
-  @Output() stopsChanged = new EventEmitter<CreateStopRequest[]>();
+  // Carries UpsertStopRequest, not CreateStopRequest, so an existing stop's id survives
+  // add/remove/reorder. Dropping an id here would delete that stop on save.
+  @Input() stops: UpsertStopRequest[] = [];
+  @Output() stopsChanged = new EventEmitter<UpsertStopRequest[]>();
 
   // ── New stop form fields ──────────────────────────────────────────────────
   newName    = '';
@@ -59,7 +61,10 @@ export class StopListComponent {
       return;
     }
 
-    const stop: CreateStopRequest = {
+    // id null = insert. This is the only place a brand-new stop is built; existing stops
+    // come from trip-edit's loadTrip with their real id, and the two never share a path.
+    const stop: UpsertStopRequest = {
+      id:      null,
       name:    this.newName.trim(),
       latitude:  lat,
       longitude: lng,

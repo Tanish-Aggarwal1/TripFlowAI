@@ -21,6 +21,18 @@ export interface CreateStopRequest {
   notes?: string;
 }
 
+// A stop inside a full-itinerary replace (PUT /api/trips/{id}). Mirrors backend
+// UpsertStopRequest — CreateStopRequest plus a leading `id` that drives merge-by-identity:
+//   id matching a stop on this trip -> updated in place; its server-owned state
+//     (status, dayNumber, plannedTime, stopType) and its photos survive.
+//   id null -> inserted as a new stop.
+//   an existing stop omitted from the list -> deleted. The only intentional delete path.
+// `id` is deliberately required, not optional: forgetting it on an existing stop would
+// silently delete that stop and its photos, so it must be a compile error, not a default.
+export interface UpsertStopRequest extends CreateStopRequest {
+  id: number | null;
+}
+
 export interface UpdateStopRequest {
   name: string;
   latitude: number;
@@ -62,9 +74,14 @@ export interface UpdateTripRequest {
   description?: string;
   tags?: string[];
   visibility: TripVisibility;
-  stops: CreateStopRequest[];
+  stops: UpsertStopRequest[];
+  // Absent/null means "leave unchanged" — this endpoint cannot clear a startDate.
   startDate?: string;
 }
+
+// Mirrors backend UpdateTripRequest.MAX_STOPS, enforced by @Size on both create and update.
+// Exceeding it is a 400, so the editor blocks the save rather than surfacing a raw error.
+export const MAX_STOPS = 50;
 
 export interface GenerateTripRequest {
   prompt: string;

@@ -16,7 +16,7 @@ public record CreateTripRequest(
         String description,
         @Size(max = 20) List<@Size(max = 50) String> tags,
         @NotNull TripVisibility visibility,
-        @NotEmpty List<@Valid CreateStopRequest> stops,
+        @NotEmpty @Size(max = UpdateTripRequest.MAX_STOPS) List<@Valid CreateStopRequest> stops,
         LocalDate startDate
 ) {
     // SCRUM-244a: startDate is new and optional — this overload keeps every existing

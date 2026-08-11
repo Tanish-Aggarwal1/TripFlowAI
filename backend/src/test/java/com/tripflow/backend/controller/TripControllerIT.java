@@ -1,5 +1,6 @@
 package com.tripflow.backend.controller;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -35,6 +36,7 @@ import com.tripflow.backend.domain.enums.TripVisibility;
 import com.tripflow.backend.dto.CreateStopRequest;
 import com.tripflow.backend.dto.CreateTripRequest;
 import com.tripflow.backend.dto.UpdateTripRequest;
+import com.tripflow.backend.dto.UpsertStopRequest;
 import com.tripflow.backend.repository.UserRepository;
 import com.tripflow.backend.security.UserPrincipal;
 import com.tripflow.backend.testsupport.PostgresTestcontainersConfiguration;
@@ -211,6 +213,95 @@ class TripControllerIT {
 				.andExpect(jsonPath("$.page.totalPages").value(2));
 	}
 
+	/**
+	 * The regression that motivated merge-by-id. {@code Trip.stops} is orphanRemoval and
+	 * {@code stop_photos.stop_id} is ON DELETE CASCADE (V8), so the old clear()+rebuild
+	 * implementation deleted every photo on the trip — and reset the stop's schedule — for an
+	 * edit that only changed the title. Asserted against real Postgres because the cascade is
+	 * a schema behaviour no mock can reproduce.
+	 */
+	@Test
+	void updateTrip_restatingStopById_preservesPhotosAndSchedule() throws Exception {
+		User user = createTestUser("mergeowner");
+		Long tripId = createTrip(user, sampleTripRequest("Original", TripVisibility.PRIVATE));
+		Long stopId = firstStopId(tripId, user);
+
+		jdbcTemplate.update("UPDATE stops SET status = 'VISITED', day_number = 3, planned_time = '14:30', "
+				+ "stop_type = 'LODGING' WHERE id = ?", stopId);
+		jdbcTemplate.update("INSERT INTO stop_photos (stop_id, url) VALUES (?, ?)",
+				stopId, "https://res.cloudinary.com/demo/image/upload/v1/keep-me.jpg");
+		entityManager.flush();
+		entityManager.clear();
+
+		UpdateTripRequest titleOnlyEdit = new UpdateTripRequest("Renamed", null, null, TripVisibility.PRIVATE,
+				List.of(new UpsertStopRequest(stopId, "Cottage", 45.0, -79.9, null, null, null)));
+
+		mockMvc.perform(put("/api/trips/" + tripId).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(titleOnlyEdit)).with(asUser(user)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.title").value("Renamed"))
+				.andExpect(jsonPath("$.stops[0].id").value(stopId))
+				.andExpect(jsonPath("$.stops[0].status").value("VISITED"))
+				.andExpect(jsonPath("$.stops[0].dayNumber").value(3))
+				.andExpect(jsonPath("$.stops[0].plannedTime").value("14:30:00"))
+				.andExpect(jsonPath("$.stops[0].stopType").value("LODGING"));
+
+		Integer photos = jdbcTemplate.queryForObject(
+				"SELECT COUNT(*) FROM stop_photos WHERE stop_id = ?", Integer.class, stopId);
+		assertThat(photos).isEqualTo(1);
+	}
+
+	@Test
+	void updateTrip_omittingAnExistingStop_deletesOnlyThatStop() throws Exception {
+		User user = createTestUser("dropowner");
+		CreateTripRequest twoStops = new CreateTripRequest("Two Stops", null, null, TripVisibility.PRIVATE,
+				List.of(new CreateStopRequest("Keep", 45.0, -79.9, null, null, null),
+						new CreateStopRequest("Drop", 46.0, -78.9, null, null, null)));
+		Long tripId = createTrip(user, twoStops);
+		Long keptStopId = firstStopId(tripId, user);
+		entityManager.flush();
+		entityManager.clear();
+
+		UpdateTripRequest dropSecond = new UpdateTripRequest("Two Stops", null, null, TripVisibility.PRIVATE,
+				List.of(new UpsertStopRequest(keptStopId, "Keep", 45.0, -79.9, null, null, null)));
+
+		mockMvc.perform(put("/api/trips/" + tripId).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(dropSecond)).with(asUser(user)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.stops.length()").value(1))
+				.andExpect(jsonPath("$.stops[0].id").value(keptStopId));
+	}
+
+	/** A stop id from someone else's trip must not be re-parented onto this one. */
+	@Test
+	void updateTrip_stopIdFromAnotherTrip_returns404AndLeavesBothTripsIntact() throws Exception {
+		User attacker = createTestUser("stealer");
+		User victim = createTestUser("victim");
+		Long attackerTripId = createTrip(attacker, sampleTripRequest("Mine", TripVisibility.PRIVATE));
+		Long victimTripId = createTrip(victim, sampleTripRequest("Theirs", TripVisibility.PRIVATE));
+		Long victimStopId = firstStopId(victimTripId, victim);
+		entityManager.flush();
+		entityManager.clear();
+
+		UpdateTripRequest steal = new UpdateTripRequest("Mine", null, null, TripVisibility.PRIVATE,
+				List.of(new UpsertStopRequest(victimStopId, "Stolen", 1.0, 1.0, null, null, null)));
+
+		mockMvc.perform(put("/api/trips/" + attackerTripId).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(steal)).with(asUser(attacker)))
+				.andExpect(status().isNotFound());
+
+		Long stillOwned = jdbcTemplate.queryForObject(
+				"SELECT trip_id FROM stops WHERE id = ?", Long.class, victimStopId);
+		assertThat(stillOwned).isEqualTo(victimTripId);
+	}
+
+	private Long firstStopId(Long tripId, User user) throws Exception {
+		MvcResult result = mockMvc.perform(get("/api/trips/" + tripId).with(csrf()).with(asUser(user)))
+				.andExpect(status().isOk()).andReturn();
+		return objectMapper.readTree(result.getResponse().getContentAsString())
+				.get("stops").get(0).get("id").asLong();
+	}
+
 	@Test
 	void updateTrip_nonOwner_returns403() throws Exception {
 		User owner = createTestUser("updateowner");
@@ -219,7 +310,7 @@ class TripControllerIT {
 		CreateTripRequest tripRequest = sampleTripRequest("Original", TripVisibility.PRIVATE);
 		Long tripId = createTrip(owner, tripRequest);
 
-		CreateStopRequest stop = new CreateStopRequest("Cottage", 45.0, -79.9, null, null, null);
+		UpsertStopRequest stop = new UpsertStopRequest(null, "Cottage", 45.0, -79.9, null, null, null);
 		UpdateTripRequest updateRequest = new UpdateTripRequest("Hijacked", null, null, TripVisibility.PRIVATE,
 				List.of(stop));
 

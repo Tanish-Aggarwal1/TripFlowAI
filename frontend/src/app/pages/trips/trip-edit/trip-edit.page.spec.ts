@@ -4,7 +4,7 @@ import { AlertController, ToastController } from '@ionic/angular/standalone';
 import { of, throwError } from 'rxjs';
 import { TripEditPage } from './trip-edit.page';
 import { TripService } from '../../../core/services/trip.service';
-import { TripResponse } from '../../../core/models/trip.model';
+import { MAX_STOPS, TripResponse } from '../../../core/models/trip.model';
 
 describe('TripEditPage', () => {
   let component: TripEditPage;
@@ -36,11 +36,24 @@ describe('TripEditPage', () => {
         plannedTime: null,
         stopType: 'SIGHTSEEING',
       },
+      {
+        id: 2,
+        name: 'Stop B',
+        latitude: 2,
+        longitude: 2,
+        address: '2 Main St',
+        stopOrder: 1,
+        status: 'VISITED',
+        notes: 'been here',
+        dayNumber: 1,
+        plannedTime: '09:00:00',
+        stopType: 'MEAL',
+      },
     ],
     createdAt: '2026-01-01T00:00:00Z',
     updatedAt: '2026-01-01T00:00:00Z',
     routeGeometry: null,
-    startDate: null,
+    startDate: '2026-06-01',
   };
 
   function configure(id: string | null): void {
@@ -82,7 +95,7 @@ describe('TripEditPage', () => {
     it('save() rejects a blank title without calling the service', async () => {
       component.ngOnInit();
       component.title = '   ';
-      component.stops = [{ name: 'A', latitude: 1, longitude: 1 }];
+      component.stops = [{ id: null, name: 'A', latitude: 1, longitude: 1 }];
 
       await component.save();
 
@@ -103,7 +116,7 @@ describe('TripEditPage', () => {
       component.ngOnInit();
       component.title = 'New Trip';
       component.tagsInput = 'a, b';
-      component.stops = [{ name: 'A', latitude: 1, longitude: 1 }];
+      component.stops = [{ id: null, name: 'A', latitude: 1, longitude: 1 }];
       tripServiceSpy.createTrip.and.returnValue(of(existingTrip));
 
       await component.save();
@@ -115,10 +128,23 @@ describe('TripEditPage', () => {
       expect(component.saving).toBeFalse();
     });
 
+    // CreateStopRequest has no id by design, so the always-null id must not be sent.
+    it('save() strips the null id on create', async () => {
+      component.ngOnInit();
+      component.title = 'New Trip';
+      component.stops = [{ id: null, name: 'A', latitude: 1, longitude: 1 }];
+      tripServiceSpy.createTrip.and.returnValue(of(existingTrip));
+
+      await component.save();
+
+      const [request] = tripServiceSpy.createTrip.calls.mostRecent().args;
+      expect(Object.keys(request.stops[0])).not.toContain('id');
+    });
+
     it('save() surfaces the error message and stops saving on failure', async () => {
       component.ngOnInit();
       component.title = 'New Trip';
-      component.stops = [{ name: 'A', latitude: 1, longitude: 1 }];
+      component.stops = [{ id: null, name: 'A', latitude: 1, longitude: 1 }];
       tripServiceSpy.createTrip.and.returnValue(throwError(() => new Error('Something went wrong.')));
 
       await component.save();
@@ -142,7 +168,7 @@ describe('TripEditPage', () => {
       expect(component.title).toBe('Existing Trip');
       expect(component.tagsInput).toBe('fun, road-trip');
       expect(component.visibility).toBe('PUBLIC');
-      expect(component.stops.length).toBe(1);
+      expect(component.stops.length).toBe(2);
       expect(component.stops[0].name).toBe('Stop A');
       expect(component.loading).toBeFalse();
     });
@@ -170,6 +196,61 @@ describe('TripEditPage', () => {
       expect(router.navigate).toHaveBeenCalledWith(['/dashboard']);
     });
 
+    // The stop ids loaded from the server must reach the outgoing request unchanged.
+    // The backend merges by id: a stop whose id arrives is updated in place and keeps its
+    // status/dayNumber/plannedTime/stopType and photos, while an existing stop whose id is
+    // missing from the payload is DELETED. So a dropped id here is silent data loss, not a
+    // cosmetic mapping slip — this asserts the whole load -> state -> request round trip.
+    it('save() round-trips every loaded stop id so the backend merges instead of deleting', async () => {
+      tripServiceSpy.getTrip.and.returnValue(of(existingTrip));
+      component.ngOnInit();
+      tripServiceSpy.updateTrip.and.returnValue(of(existingTrip));
+
+      await component.save();
+
+      const [, request] = tripServiceSpy.updateTrip.calls.mostRecent().args;
+      expect(request.stops.map((s) => s.id)).toEqual([1, 2]);
+      expect(request.stops.map((s) => s.name)).toEqual(['Stop A', 'Stop B']);
+    });
+
+    it('save() preserves a startDate it never offered the user a way to edit', async () => {
+      tripServiceSpy.getTrip.and.returnValue(of(existingTrip));
+      component.ngOnInit();
+      tripServiceSpy.updateTrip.and.returnValue(of(existingTrip));
+
+      await component.save();
+
+      const [, request] = tripServiceSpy.updateTrip.calls.mostRecent().args;
+      expect(request.startDate).toBe('2026-06-01');
+    });
+
+    it('save() sends a null id for a stop added to an existing trip, so it inserts', async () => {
+      tripServiceSpy.getTrip.and.returnValue(of(existingTrip));
+      component.ngOnInit();
+      component.stops = [...component.stops, { id: null, name: 'Stop C', latitude: 3, longitude: 3 }];
+      tripServiceSpy.updateTrip.and.returnValue(of(existingTrip));
+
+      await component.save();
+
+      const [, request] = tripServiceSpy.updateTrip.calls.mostRecent().args;
+      expect(request.stops.map((s) => s.id)).toEqual([1, 2, null]);
+    });
+
+    it('save() blocks past MAX_STOPS instead of letting the backend 400', async () => {
+      tripServiceSpy.getTrip.and.returnValue(of(existingTrip));
+      component.ngOnInit();
+      component.stops = Array.from({ length: MAX_STOPS + 1 }, (_, i) => ({
+        id: null,
+        name: `Stop ${i}`,
+        latitude: 1,
+        longitude: 1,
+      }));
+
+      await component.save();
+
+      expect(tripServiceSpy.updateTrip).not.toHaveBeenCalled();
+    });
+
     it('viewOnMap navigates to the trip detail route', () => {
       tripServiceSpy.getTrip.and.returnValue(of(existingTrip));
       component.ngOnInit();
@@ -185,7 +266,7 @@ describe('TripEditPage', () => {
 
     it('updates the stops array', () => {
       component.ngOnInit();
-      const newStops = [{ name: 'X', latitude: 1, longitude: 1 }];
+      const newStops = [{ id: null, name: 'X', latitude: 1, longitude: 1 }];
 
       component.onStopsChanged(newStops);
 
