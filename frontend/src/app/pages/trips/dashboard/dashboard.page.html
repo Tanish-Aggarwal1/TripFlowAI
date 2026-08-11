@@ -23,16 +23,17 @@
 
   <!-- Empty state -->
   @if (!loading && !error && trips.length === 0) {
-  <div class="center">
+  <div class="center empty-state">
+    <ion-icon name="map-outline"></ion-icon>
     <p>No trips yet. Tap + to create your first trip!</p>
   </div>
   }
 
   <!-- Trip list -->
   @if (!loading && !error && trips.length > 0) {
-  <ion-list>
+  <ion-list class="trip-list" lines="none">
     @for (trip of trips; track trip.id) {
-    <ion-item button detail (click)="openTrip(trip)">
+    <ion-item button detail class="trip-card" (click)="openTrip(trip)">
       <ion-thumbnail slot="start">
         @if (trip.coverPhotoUrl) {
         <img [src]="trip.coverPhotoUrl" [alt]="trip.title" />
