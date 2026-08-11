@@ -18,6 +18,11 @@ permissions:
 jobs:
   backend:
     runs-on: ubuntu-latest
+    # Testcontainers starts a real Postgres here. A container that never becomes
+    # healthy, or a stalled image pull, hangs rather than fails — without this the
+    # job inherits GitHub's 6-hour default and leaves the required check pending,
+    # so the PR can neither merge nor report a failure.
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: backend

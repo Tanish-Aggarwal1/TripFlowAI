@@ -11,6 +11,7 @@ permissions:
 jobs:
   check-title:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       # Automated dependency bumps (Dependabot) aren't tied to a Jira ticket,
       # so they're exempt from the [SCRUM-XXX] tag requirement below.
