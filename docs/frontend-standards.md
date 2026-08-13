@@ -2,7 +2,7 @@
 
 Owner: Neel. Applies to all code under `frontend/src/`.
 
-**Last updated:** 2026-07-23
+**Last updated:** 2026-08-13
 
 ## Framework & Version
 

@@ -4,12 +4,12 @@ This is a 4-person Sheridan College capstone team project — not open to extern
 
 ## Before you start
 
-Read `SDP.md` first — it's the source of truth for branching, commits, PR process, and testing strategy. This file is a quick-reference summary; `SDP.md` is authoritative.
+Read `docs/SDP/SDP.md` first — it's the source of truth for branching, commits, PR process, and testing strategy. This file is a quick-reference summary; `docs/SDP/SDP.md` is authoritative.
 
 ## Workflow
 
 1. Pick up a ticket from the Jira board (`SCRUM` project, "Wanderlust").
-2. Branch from `main`: `type/SCRUM-XXX-slug` (see `SDP.md` §5 for the type prefixes).
+2. Branch from `main`: `type/SCRUM-XXX-slug` (see `docs/SDP/SDP.md` §5 for the type prefixes).
 3. Commit using Conventional Commits + Jira Smart Commits: `[SCRUM-XXX] type(scope): message #transition #time <duration>`
 4. Push and open a PR. Title must match `[SCRUM-XXX] type(scope): message` — a GitHub Action checks this automatically.
 5. Fill out the PR template completely, including the serialize-point checklist.
@@ -25,4 +25,4 @@ Read `SDP.md` first — it's the source of truth for branching, commits, PR proc
 
 ## Questions
 
-Ask in the team channel, or check `SDP.md` and the `docs/` folder first — most process questions are already answered there.
+Ask in the team channel, or check `docs/SDP/SDP.md` and the rest of the `docs/` folder first — most process questions are already answered there.

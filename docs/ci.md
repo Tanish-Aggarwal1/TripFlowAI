@@ -8,17 +8,23 @@ GitHub Actions runs on every PR targeting main. A failing pipeline blocks merge 
 
 ## Triggers
 - Pull request opened/updated targeting `main`
-- Push to `main` (added SCRUM-135) — cancels any in-flight run for the same ref via a `concurrency` group, so a rapid sequence of merges doesn't queue up  redundant runs
+- Push to `main` (added SCRUM-135)
 - `frontend-ci.yml` triggers separately, path-scoped to `frontend/**` only (SCRUM-137)
+
+The `concurrency` group is keyed on `github.workflow`-`github.ref`, but `cancel-in-progress` (SCRUM-467) only applies on `pull_request` events — a rapid sequence of pushes to the same PR branch cancels the stale run, but two quick merges to `main` do not cancel each other, so every merged commit keeps a recorded CI verdict for the post-merge audit trail (Render auto-deploys from `main` independently of this check).
 
 ## Stages
 1. Checkout code
 2. Set up JDK 21
 3. Cache Maven dependencies
-4. Run `mvn -B verify -Pci` (unit tests + Testcontainers integration tests)
+4. Run `.\mvnw.cmd -B verify -Pci` (unit tests + Testcontainers integration tests)
 5. Merge JaCoCo unit + integration coverage data and generate the HTML/XML report
 6. Upload JaCoCo HTML report as a build artifact
 7. Post JaCoCo coverage summary as a PR comment
+
+Each job sets `timeout-minutes: 20` (backend) / `10` (frontend). Without it, a Testcontainers pull that never becomes healthy — or any other hang — inherits GitHub's 6-hour default and leaves the required check pending forever, blocking every PR from merging with no visible failure to point at.
+
+`frontend-ci.yml` also gates on a "Verify Mapbox secret is set" step before injecting `secrets.MAPBOX_TOKEN` — it fails fast with an explicit error if the repo secret is missing, rather than letting the build silently ship a placeholder token.
 
 ## Coverage Measurement
 
@@ -39,8 +45,8 @@ Before this fix, `report` only ever read `jacoco.exec`, so any line covered excl
 
 | Command | When to use |
 |---------|-------------|
-| `mvn verify` | Fast feedback — unit tests only, no Docker |
-| `mvn verify -Pci` | Full suite — unit + `*IT` integration tests via Testcontainers |
+| `.\mvnw.cmd verify` (PowerShell) / `./mvnw verify` (bash) | Fast feedback — unit tests only, no Docker |
+| `.\mvnw.cmd verify -Pci` (PowerShell) / `./mvnw verify -Pci` (bash) | Full suite — unit + `*IT` integration tests via Testcontainers |
 
 ## What Blocks a Merge
 - Any failing test

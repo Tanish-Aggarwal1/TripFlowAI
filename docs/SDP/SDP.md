@@ -2,8 +2,7 @@
 
 Living document. Reflects actual current practice, not aspirational process — update this whenever a real convention changes, not just at sprint boundaries. This is the practical/ technical counterpart to the formal academic SDP deliverable (SYST38634); this one is the one the team actually follows day to day.
 
-**Last updated:** 2026-07-19
-**Last updated:** 2026-07-23
+**Last updated:** 2026-08-05
 
 ---
 
@@ -61,13 +60,19 @@ com.tripflow.backend
 
 ├── config/                   ONLY cross-cutting @Configuration (JacksonConfig, etc.)
 
-└── client/
+├── client/
 
 │   ├── ors/                   OpenRouteService client, config, properties, wire DTOs
 
-│   └── gemini/                GeminiClient, config, properties, wire DTOs
+│   ├── gemini/                GeminiClient, config, properties, wire DTOs
 
-├── ai/                     SuggestedItinerary, GeminiResponseParser, ItineraryPromptTemplate
+│   └── cloudinary/            CloudinarySigningService, config, properties
+
+├── ratelimit/                RateLimiterService and its supporting config/properties
+
+├── schedule/                  OrphanPlaceCleanupJob and other @Scheduled beans
+
+└── ai/                     SuggestedItinerary, GeminiResponseParser, ItineraryPromptTemplate
 
 **Rule for adding a new top-level package:** only when a cross-cutting concern has ≥3 related classes (e.g. `security/` earned its own package; `exception/` stays flat until it crosses ~15 files or gains a genuinely separate domain family).
 
@@ -152,5 +157,5 @@ Render free tier spins the backend down when idle — hit `/actuator/health` a f
 | 2026-07-19 | Initial SDP.md created, consolidating conventions established across Sprint 3 |
 | 2026-07-23 | Updated package tree (gemini client landed, ai package added), coverage-floor provenance closed, risk register synced through Sprint 4 pre-work, frontend-standards.md created |
 | 2026-07-26 | REF-21: established the team-wide pagination/sorting convention — repositories accept `Pageable` and return `Page<>`/projection DTOs, controllers accept `?page=&size=&sort=`, responses use Spring Data's `PagedModel` shape (`content` + `page`). `GET /api/trips` is the first endpoint on this convention; see `docs/api-contracts.md` for the full contract. |
-| 2026-07-26 | REF-23: added springdoc-openapi 3.0.3 (`springdoc-openapi-starter-webmvc-ui`) — confirmed against the running app (Testcontainers IT) that the 3.x line supports Spring Boot 4.1 / Spring Framework 7, per its own release notes (2.x targets Boot 3.x only). Swagger UI at `/swagger-ui.html`, raw doc at `/api-docs`, both permit-all in `SecurityConfig`; disabled via `springdoc.*.enabled=false` in the prod profile. |
+| 2026-07-26 | REF-23: added springdoc-openapi 3.1.0 (`springdoc-openapi-starter-webmvc-ui`) — confirmed against the running app (Testcontainers IT) that the 3.x line supports Spring Boot 4.1 / Spring Framework 7, per its own release notes (2.x targets Boot 3.x only). Swagger UI at `/swagger-ui.html`, raw doc at `/api-docs`, both permit-all in `SecurityConfig`; disabled via `springdoc.*.enabled=false` in the prod profile. |
 | 2026-08-05 | Added §10 Deployment, pointing to `docs/deployment.md` (SCRUM-73/SCRUM-168) — backend and frontend are live on Render. |

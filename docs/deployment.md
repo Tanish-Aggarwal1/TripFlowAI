@@ -79,6 +79,8 @@ CI runs under the `test` profile with Testcontainers-provisioned PostgreSQL (no 
 3. If the issue was caused by a database migration (Flyway), do **not** roll back the code without also assessing whether the migration needs a corresponding down-migration — Flyway does not auto-revert schema changes. Coordinate with the team before rolling back any change that included a new migration file.
 4. Re-verify `/actuator/health` and the auth smoke test after rollback completes.
 
+**Destructive migrations** (e.g. `V5__cleanup_orphan_places.sql`, which permanently deletes orphaned `places` rows) cannot be rolled back by redeploying old code — the data is gone regardless of which application version is running. Before writing a migration that deletes or overwrites rows, add a one-line note in the migration file itself describing what's destroyed and whether it's reconstructible (e.g. re-derivable from other tables, or genuinely gone), so an incident responder doesn't have to reverse-engineer the blast radius under pressure.
+
 ## Troubleshooting
 
 | Symptom | Likely Cause |
