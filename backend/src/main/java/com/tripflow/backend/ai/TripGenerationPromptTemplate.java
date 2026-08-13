@@ -3,6 +3,7 @@ package com.tripflow.backend.ai;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
@@ -33,7 +34,7 @@ public class TripGenerationPromptTemplate {
     }
 
     public String render(TripGenerationPromptInput input) {
-        String rendered = rawTemplate.replace("{{prompt}}", input.prompt());
+        String rendered = TemplateSubstitution.substitute(rawTemplate, Map.of("prompt", input.prompt()));
 
         if (rendered.length() > MAX_PROMPT_LENGTH) {
             throw new PromptTooLargeException(

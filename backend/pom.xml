@@ -88,7 +88,11 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-devtools</artifactId>
-			<scope>runtime</scope>
+			<!-- provided (not runtime): devtools's LiveReload server and restart
+			classloader are severe enough vectors that "excluded from the fat jar by
+			the repackage plugin" shouldn't be the only thing keeping this off a
+			deployed classpath. -->
+			<scope>provided</scope>
 			<optional>true</optional>
 		</dependency>
 		<!-- Jackson 2 databind: not provided by Boot 4.1 web starters (they use

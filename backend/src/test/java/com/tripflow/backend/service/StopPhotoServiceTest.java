@@ -148,7 +148,7 @@ class StopPhotoServiceTest {
         photo.setId(5L);
         photo.setStop(stop);
         photo.setUrl("https://res.cloudinary.com/demo/image/upload/v1/a.jpg");
-        when(stopPhotoRepository.findByStopId(1L)).thenReturn(List.of(photo));
+        when(stopPhotoRepository.findByStopIdOrderByCreatedAtAsc(1L)).thenReturn(List.of(photo));
 
         List<StopPhotoResponse> photos = stopPhotoService.listPhotos(1L, 10L);
 
@@ -160,7 +160,7 @@ class StopPhotoServiceTest {
     void listPhotos_nonOwnerOnPublicTrip_returnsPhotos() {
         Stop stop = stopOwnedBy(1L, 10L, TripVisibility.PUBLIC);
         when(stopRepository.findWithTripAndOwnerById(1L)).thenReturn(Optional.of(stop));
-        when(stopPhotoRepository.findByStopId(1L)).thenReturn(List.of());
+        when(stopPhotoRepository.findByStopIdOrderByCreatedAtAsc(1L)).thenReturn(List.of());
 
         List<StopPhotoResponse> photos = stopPhotoService.listPhotos(1L, 99L);
 

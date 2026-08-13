@@ -24,7 +24,7 @@ public class TripMapper {
         trip.setUser(owner);
         trip.setTitle(request.title());
         trip.setDescription(request.description());
-        trip.setTags(request.tags() != null ? request.tags() : new ArrayList<>());
+        trip.setTags(request.tags() != null ? new ArrayList<>(request.tags()) : new ArrayList<>());
         trip.setVisibility(request.visibility());
         trip.setStatus(TripStatus.DRAFT);
         trip.setStartDate(request.startDate());
