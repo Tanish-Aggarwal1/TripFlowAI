@@ -52,7 +52,7 @@
     "@types/jasmine": "~6.0.0",
     "@types/mapbox-gl": "^3.5.0",
     "@typescript-eslint/eslint-plugin": "^8.66.0",
-    "@typescript-eslint/parser": "^8.65.0",
+    "@typescript-eslint/parser": "^8.67.0",
     "eslint": "^9.16.0",
     "eslint-plugin-import": "^2.29.1",
     "eslint-plugin-jsdoc": "^63.3.3",
