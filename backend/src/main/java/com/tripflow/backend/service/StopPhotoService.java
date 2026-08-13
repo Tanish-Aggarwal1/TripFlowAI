@@ -2,6 +2,7 @@ package com.tripflow.backend.service;
 
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,11 +42,22 @@ public class StopPhotoService {
     private final CloudinarySigningService signingService;
     private final CloudinaryProperties cloudinaryProperties;
 
+    // Constrains what a signature authorizes: format is Cloudinary-validated against actual
+    // file content (not just extension), so this is the real backstop against a signature
+    // meant for a photo being reused to upload video/raw content. public_id is server-generated
+    // per signature so one signature can create exactly one asset, not an arbitrary number.
+    private static final List<String> ALLOWED_PHOTO_FORMATS = List.of("jpg", "jpeg", "png", "webp", "gif");
+    private static final long MAX_UPLOAD_BYTES = 10_000_000; // 10MB
+
     @Transactional(readOnly = true)
     public PhotoSignatureResponse getUploadSignature(Long stopId, Long requesterId) {
         Stop stop = loadOwnedStop(stopId, requesterId);
         log.info("Issued photo-upload signature stopId={} requesterId={}", stop.getId(), requesterId);
-        SignedUploadRequest signed = signingService.sign(Map.of("folder", "stops/" + stop.getId()));
+        SignedUploadRequest signed = signingService.sign(Map.of(
+                "folder", "stops/" + stop.getId(),
+                "public_id", UUID.randomUUID().toString(),
+                "allowed_formats", ALLOWED_PHOTO_FORMATS,
+                "max_file_size", MAX_UPLOAD_BYTES));
         return new PhotoSignatureResponse(
                 signed.cloudName(),
                 signed.apiKey(),

@@ -33,8 +33,14 @@ public class TripGenerationPromptTemplate {
         }
     }
 
+    // Strip the literal delimiter tokens generate-trip.txt uses to fence the untrusted
+    // traveler input — without this, a prompt containing its own <<<END_TRAVELER_INPUT>>>
+    // could close the fence early and have the remainder read as trusted instructions.
+    private static final String STRIPPED_DELIMITER_MARKER = "[stripped]";
+
     public String render(TripGenerationPromptInput input) {
-        String rendered = TemplateSubstitution.substitute(rawTemplate, Map.of("prompt", input.prompt()));
+        String sanitizedPrompt = input.prompt().replace("<<<", STRIPPED_DELIMITER_MARKER);
+        String rendered = TemplateSubstitution.substitute(rawTemplate, Map.of("prompt", sanitizedPrompt));
 
         if (rendered.length() > MAX_PROMPT_LENGTH) {
             throw new PromptTooLargeException(
