@@ -278,7 +278,6 @@ describe('TripMapComponent', () => {
         data: jasmine.objectContaining({ geometry }),
       }));
       expect(mockMap.addLayer).toHaveBeenCalled();
-      expect(component.routeMissing).toBeFalse();
     });
 
     it('removes an existing layer/source before re-adding the route', () => {
@@ -292,22 +291,20 @@ describe('TripMapComponent', () => {
       expect(mockMap.removeSource).toHaveBeenCalledWith('trip-route');
     });
 
-    it('sets routeMissing when routeGeometry is null', () => {
+    it('does not add a route source when routeGeometry is null', () => {
       component.trip = makeTrip({ routeGeometry: null });
       fixture.detectChanges(false);
       triggerLoad();
 
-      expect(component.routeMissing).toBeTrue();
       expect(mockMap.addSource).not.toHaveBeenCalled();
     });
 
-    it('sets routeMissing and logs when routeGeometry is malformed JSON', () => {
+    it('logs and skips adding a route source when routeGeometry is malformed JSON', () => {
       spyOn(console, 'error');
       component.trip = makeTrip({ routeGeometry: 'not-json' });
       fixture.detectChanges(false);
       triggerLoad();
 
-      expect(component.routeMissing).toBeTrue();
       expect(console.error).toHaveBeenCalled();
       expect(mockMap.addSource).not.toHaveBeenCalled();
     });

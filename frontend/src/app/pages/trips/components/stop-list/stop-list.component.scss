@@ -1,3 +1,10 @@
+.stop-card {
+  --background: var(--card-background);
+  --border-radius: var(--card-radius);
+  margin: var(--card-margin);
+  box-shadow: var(--card-shadow);
+}
+
 .empty {
   text-align: center;
   color: var(--ion-color-medium);

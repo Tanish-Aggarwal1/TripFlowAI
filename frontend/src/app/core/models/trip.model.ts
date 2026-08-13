@@ -149,16 +149,6 @@ export interface SuggestedItineraryResponse {
   stops: SuggestedStopResponse[];
 }
 
-// ── API error shape (matches ApiError as of REF-10) ──────────────────────────
-
-export interface ApiError {
-  status: number;
-  error: string;
-  message: string;
-  path: string;
-  timestamp: string;
-  fieldErrors: Array<{ field: string; message: string }> | null;
-}
 // ── Stop photos (SCRUM-72/164) ────────────────────────────────────────────────
 // Mirrors backend: PhotoSignatureResponse, StopPhotoResponse, CreateStopPhotoRequest
 

@@ -17,11 +17,6 @@
   text-align: center;
 }
 
-.planned-time {
-  color: var(--ion-color-medium);
-  font-weight: 500;
-}
-
 .stop-list {
   background: transparent;
 }
@@ -36,9 +31,10 @@
 }
 
 .stop-card {
-  --border-radius: 12px;
-  margin: 0 0 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --background: var(--card-background);
+  --border-radius: var(--card-radius);
+  margin: var(--card-margin);
+  box-shadow: var(--card-shadow);
 }
 
 .just-optimized ion-item {

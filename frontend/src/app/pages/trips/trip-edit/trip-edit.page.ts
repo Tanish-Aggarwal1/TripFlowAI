@@ -1,6 +1,5 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
   IonHeader,
@@ -38,7 +37,6 @@ import { StopListComponent } from '../components/stop-list/stop-list.component';
   templateUrl: 'trip-edit.page.html',
   styleUrls: ['trip-edit.page.scss'],
   imports: [
-    CommonModule,
     FormsModule,
     IonHeader,
     IonToolbar,

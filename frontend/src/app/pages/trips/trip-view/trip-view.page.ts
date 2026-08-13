@@ -1,6 +1,5 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { CommonModule } from '@angular/common';
 import {
   IonHeader,
   IonToolbar,
@@ -49,7 +48,6 @@ interface DayGroup {
   templateUrl: 'trip-view.page.html',
   styleUrls: ['trip-view.page.scss'],
   imports: [
-    CommonModule,
     IonHeader,
     IonToolbar,
     IonTitle,
@@ -152,18 +150,6 @@ export class TripViewPage implements OnInit {
   get nextStopId(): number | null {
     const next = this.sortedStops.find((s) => s.status === 'PLANNED');
     return next ? next.id : null;
-  }
-
-  // Manual parsing rather than `new Date(plannedTime)` — a bare "HH:mm:ss" string with
-  // no date component is not reliably parsed as a time-of-day across browsers and can
-  // silently yield "Invalid Date".
-  formatPlannedTime(plannedTime: string): string {
-    const [hourStr, minuteStr] = plannedTime.split(':');
-    const hour = Number(hourStr);
-    const minute = Number(minuteStr);
-    const period = hour >= 12 ? 'PM' : 'AM';
-    const displayHour = hour % 12 === 0 ? 12 : hour % 12;
-    return `${displayHour}:${minute.toString().padStart(2, '0')} ${period}`;
   }
 
   editTrip(): void {

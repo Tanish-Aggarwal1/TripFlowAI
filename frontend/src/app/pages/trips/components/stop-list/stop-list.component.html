@@ -1,6 +1,6 @@
 <ion-reorder-group (ionItemReorder)="handleReorder($event)" [disabled]="false">
   @for (stop of stops; track i; let i = $index) {
-    <ion-item>
+    <ion-item class="stop-card">
       <ion-reorder slot="start"></ion-reorder>
 
       <ion-label>
@@ -56,7 +56,7 @@
   </ion-item>
 
   @if (formError) {
-    <p class="form-error">{{ formError }}</p>
+    <p class="form-error" role="alert">{{ formError }}</p>
   }
 
   <ion-button expand="block" fill="outline" class="ion-margin-top" (click)="addStop()">

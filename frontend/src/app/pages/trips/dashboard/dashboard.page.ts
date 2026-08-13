@@ -142,4 +142,13 @@ export class DashboardPage implements ViewWillEnter {
       default:            return 'medium';
     }
   }
+
+  statusLabel(status: string): string {
+    switch (status) {
+      case 'IN_PROGRESS': return 'In progress';
+      case 'COMPLETED':   return 'Completed';
+      case 'DRAFT':        return 'Draft';
+      default:            return status;
+    }
+  }
 }

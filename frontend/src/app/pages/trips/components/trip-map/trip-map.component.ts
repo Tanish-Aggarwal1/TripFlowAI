@@ -2,7 +2,6 @@ import {
   Component, Input, Output, EventEmitter,
   ElementRef, ViewChild, OnChanges, OnDestroy, SimpleChanges, AfterViewInit
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { IonButton, IonSpinner, IonIcon } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import { navigate } from 'ionicons/icons';
@@ -14,8 +13,7 @@ import { TripResponse, StopResponse } from '../../../../core/models/trip.model';
 
 @Component({
   selector: 'app-trip-map',
-  standalone: true,
-  imports: [CommonModule, IonButton,  IonSpinner, IonIcon],
+  imports: [IonButton, IonSpinner, IonIcon],
   templateUrl: './trip-map.component.html',
   styleUrls: ['./trip-map.component.scss'],
 })
@@ -23,6 +21,8 @@ export class TripMapComponent implements AfterViewInit, OnChanges, OnDestroy {
   @Input({ required: true }) trip!: TripResponse;
   @Input() optimizing = false;
   @Output() optimizeRequested = new EventEmitter<void>();
+  // Not yet consumed by any host — the intended hook for a future map-click stop
+  // picker (see SCRUM-367/368). Kept and tested rather than removed.
   @Output() stopSelected = new EventEmitter<StopResponse>();
   constructor() {
     addIcons({ navigate });
@@ -31,7 +31,6 @@ export class TripMapComponent implements AfterViewInit, OnChanges, OnDestroy {
 
   map: mapboxgl.Map | null = null;
   mapFailed = false;
-  routeMissing = false;
 
   private markers: mapboxgl.Marker[] = [];
   private popup: mapboxgl.Popup | null = null;
@@ -166,7 +165,6 @@ export class TripMapComponent implements AfterViewInit, OnChanges, OnDestroy {
     if (this.map.getSource(this.ROUTE_SOURCE_ID)) this.map.removeSource(this.ROUTE_SOURCE_ID);
 
     if (!this.trip.routeGeometry) {
-      this.routeMissing = true;
       return;
     }
 
@@ -175,11 +173,8 @@ export class TripMapComponent implements AfterViewInit, OnChanges, OnDestroy {
       geometry = JSON.parse(this.trip.routeGeometry);
     } catch (err) {
       console.error('Failed to parse routeGeometry', err);
-      this.routeMissing = true;
       return;
     }
-
-    this.routeMissing = false;
 
     this.map.addSource(this.ROUTE_SOURCE_ID, {
       type: 'geojson',

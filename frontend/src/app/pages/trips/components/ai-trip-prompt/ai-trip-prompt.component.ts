@@ -1,5 +1,4 @@
 import { Component, EventEmitter, inject, Output } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
   IonItem,
@@ -32,7 +31,6 @@ const MAX_INTERESTS = 10;
   templateUrl: 'ai-trip-prompt.component.html',
   styleUrls: ['ai-trip-prompt.component.scss'],
   imports: [
-    CommonModule,
     FormsModule,
     IonItem,
     IonLabel,
