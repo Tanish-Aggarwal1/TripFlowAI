@@ -28,7 +28,7 @@
 ## SECTION 2 — Winter work items
 
 ### WP-01 · Story · Production hardening pass
-- **Epic:** SCRUM-10 (DEVOPS)
+- **Epic:** SCRUM-280 (DEVOPS v2)
 - **Priority:** High
 - **Story Points:** 5
 - **Labels:** security, reliability, production
@@ -48,7 +48,7 @@
 ---
 
 ### WP-02 · Task · Deployment automation / post-deploy smoke test script
-- **Epic:** SCRUM-10 (DEVOPS)
+- **Epic:** SCRUM-280 (DEVOPS v2)
 - **Priority:** Medium
 - **Story Points:** 3
 - **Labels:** devops, automation
@@ -63,7 +63,7 @@
 ---
 
 ### WP-03 · Task · Load/performance test on rate-limited endpoints
-- **Epic:** SCRUM-10 (DEVOPS)
+- **Epic:** SCRUM-280 (DEVOPS v2)
 - **Priority:** Medium
 - **Story Points:** 3
 - **Labels:** performance, testing
@@ -78,7 +78,7 @@
 ---
 
 ### WP-04 · Task · Retro backlog catch-up
-- **Epic:** SCRUM-11 (DOCS)
+- **Epic:** SCRUM-281 (DOCS v2)
 - **Priority:** Medium
 - **Story Points:** 2
 - **Labels:** docs, process
@@ -93,7 +93,7 @@
 ---
 
 ### WP-05 · Task · Documentation freshness audit
-- **Epic:** SCRUM-11 (DOCS)
+- **Epic:** SCRUM-281 (DOCS v2)
 - **Priority:** Medium
 - **Story Points:** 2
 - **Labels:** docs, quality
@@ -108,7 +108,7 @@
 ---
 
 ### WP-06 · Story · Final end-to-end regression + sign-off
-- **Epic:** SCRUM-6 (TRIP) / cross-cutting
+- **Epic:** SCRUM-276 (TRIP v2) / cross-cutting
 - **Priority:** High
 - **Story Points:** 5
 - **Labels:** testing, regression, sign-off
@@ -123,7 +123,7 @@
 ---
 
 ### WP-07 · Task · Demo/seed data script
-- **Epic:** SCRUM-10 (DEVOPS)
+- **Epic:** SCRUM-280 (DEVOPS v2)
 - **Priority:** Medium
 - **Story Points:** 2
 - **Labels:** devops, presentation
@@ -138,7 +138,7 @@
 ---
 
 ### WP-08 · Task · Grading/portfolio README pass
-- **Epic:** SCRUM-11 (DOCS)
+- **Epic:** SCRUM-281 (DOCS v2)
 - **Priority:** Low
 - **Story Points:** 2
 - **Labels:** docs, presentation
