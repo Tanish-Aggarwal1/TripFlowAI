@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
@@ -13,6 +14,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -84,6 +86,26 @@ class StopPhotoServiceTest {
 
         assertThat(response.signature()).isEqualTo("sig");
         assertThat(response.uploadParams()).containsEntry("folder", "stops/1");
+    }
+
+    @Test
+    void getUploadSignature_constrainsFormatSizeAndPinsAPublicId() {
+        Stop stop = stopOwnedBy(1L, 10L, TripVisibility.PRIVATE);
+        when(stopRepository.findWithTripAndOwnerById(1L)).thenReturn(Optional.of(stop));
+        when(signingService.sign(anyMap())).thenReturn(
+                new SignedUploadRequest("cloud", "key", 123L, "sig", Map.of("folder", "stops/1")));
+
+        stopPhotoService.getUploadSignature(1L, 10L);
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<Map<String, Object>> captor = ArgumentCaptor.forClass(Map.class);
+        verify(signingService).sign(captor.capture());
+        Map<String, Object> signedParams = captor.getValue();
+
+        assertThat(signedParams).containsEntry("allowed_formats", List.of("jpg", "jpeg", "png", "webp", "gif"));
+        assertThat(signedParams).containsEntry("max_file_size", 10_000_000L);
+        assertThat(signedParams).containsKey("public_id");
+        assertThat(signedParams.get("public_id")).asString().isNotBlank();
     }
 
     @Test

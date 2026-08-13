@@ -24,3 +24,7 @@ Out of scope: the third-party services we integrate with (OpenRouteService, Goog
 - Secrets (`JWT_SECRET`, database credentials, API keys) are never committed — managed via `.env` (gitignored) locally and platform environment variables in production.
 - `ddl-auto=validate` in every environment — schema changes only via reviewed Flyway migrations, never silent auto-DDL.
 - See `docs/risk-register.md` for tracked security-adjacent risks (e.g. R2: JWT filter misconfiguration risk).
+
+## Dependency Vulnerability Scanning
+
+`dependabot.yml` opens weekly *update* PRs (maven, npm, github-actions, docker), but that alone doesn't fail a build on a known-vulnerable dependency. The gate is GitHub's Dependabot vulnerability alerts + security updates (Settings → Security → Code security), which scans against the GitHub Advisory Database and opens PRs automatically for anything flagged. **This needs to be enabled on the repository** (Settings → Security → Code security → "Dependabot alerts" and "Dependabot security updates") — it is currently off. A CI-integrated scanner (`npm audit --audit-level=high` in `frontend-ci.yml`, `dependency-check-maven` for the backend) was evaluated as an alternative but rejected for the backend: it needs a synced NVD CVE database, which is slow on first run and prone to rate-limiting without an NVD API key, making it a poor fit for a per-PR gate — the alerts-tab approach gives equivalent coverage without that fragility.
