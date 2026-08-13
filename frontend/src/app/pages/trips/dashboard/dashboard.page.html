@@ -8,14 +8,14 @@
 
   <!-- Loading -->
   @if (loading) {
-  <div class="center">
+  <div class="centered">
     <ion-spinner name="crescent" />
   </div>
   }
 
   <!-- Error -->
   @if (!loading && error) {
-  <div class="center error">
+  <div class="centered error">
     <p>{{ error }}</p>
     <ion-button fill="outline" (click)="loadTrips()">Retry</ion-button>
   </div>
@@ -23,7 +23,7 @@
 
   <!-- Empty state -->
   @if (!loading && !error && trips.length === 0) {
-  <div class="center empty-state">
+  <div class="centered empty-state">
     <ion-icon name="map-outline"></ion-icon>
     <p>No trips yet. Tap + to create your first trip!</p>
   </div>
@@ -50,7 +50,7 @@
       </ion-label>
 
       <ion-badge slot="end" [color]="statusColor(trip.status)">
-        {{ trip.status }}
+        {{ statusLabel(trip.status) }}
       </ion-badge>
 
       <ion-icon slot="end" [name]="trip.visibility === 'PUBLIC' ? 'globe-outline' : 'lock-closed'"

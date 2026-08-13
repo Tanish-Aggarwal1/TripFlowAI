@@ -1,4 +1,4 @@
-.center {
+.centered {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -22,12 +22,12 @@
 }
 
 .trip-card {
-  --background: var(--ion-color-light);
-  --border-radius: 12px;
+  --background: var(--card-background);
+  --border-radius: var(--card-radius);
   --padding-start: 12px;
   --inner-padding-end: 12px;
   margin-bottom: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--card-shadow);
 }
 
 .visibility-icon {

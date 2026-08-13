@@ -1,5 +1,4 @@
 import { Component, EventEmitter, inject, Input, OnInit, Output } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { IonButton, IonIcon, IonSpinner, AlertController } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import { add, trash } from 'ionicons/icons';
@@ -16,10 +15,12 @@ import { ToastService } from '../../../../core/services/toast.service';
   selector: 'app-stop-photo-gallery',
   templateUrl: 'stop-photo-gallery.component.html',
   styleUrls: ['stop-photo-gallery.component.scss'],
-  imports: [CommonModule, IonButton, IonIcon, IonSpinner, StopPhotoUploadComponent],
+  imports: [IonButton, IonIcon, IonSpinner, StopPhotoUploadComponent],
 })
 export class StopPhotoGalleryComponent implements OnInit {
   @Input({ required: true }) stopId!: number;
+  // Not yet bound by any host — the right hook for trip-view to learn about photo
+  // count changes once it stops rendering its own separate upload UI (SCRUM-432).
   @Output() photosChanged = new EventEmitter<StopPhotoResponse[]>();
 
   private stopPhotoService = inject(StopPhotoService);

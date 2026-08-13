@@ -22,7 +22,7 @@
 <ion-content class="ion-padding">
 
   @if (loading) {
-    <div class="center">
+    <div class="centered">
       <ion-spinner name="crescent" />
     </div>
   }
@@ -31,7 +31,7 @@
     <div>
 
       @if (error) {
-        <div class="error-banner">{{ error }}</div>
+        <div class="error-banner" role="alert">{{ error }}</div>
       }
 
       <ion-item>

@@ -1,12 +1,11 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
   IonItem, IonLabel, IonButton, IonIcon,
   IonInput, IonReorderGroup, IonReorder, ItemReorderEventDetail
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { add, trash, reorderTwo } from 'ionicons/icons';
+import { add, trash } from 'ionicons/icons';
 import { UpsertStopRequest } from '../../../../core/models/trip.model';
 
 @Component({
@@ -14,7 +13,7 @@ import { UpsertStopRequest } from '../../../../core/models/trip.model';
   templateUrl: 'stop-list.component.html',
   styleUrls: ['stop-list.component.scss'],
   imports: [
-    CommonModule, FormsModule,
+    FormsModule,
      IonItem, IonLabel, IonButton, IonIcon,
     IonInput, IonReorderGroup, IonReorder,
   ],
@@ -35,7 +34,7 @@ export class StopListComponent {
   formError  = '';
 
   constructor() {
-    addIcons({ add, trash, reorderTwo });
+    addIcons({ add, trash });
   }
 
   // ── Add a stop ────────────────────────────────────────────────────────────

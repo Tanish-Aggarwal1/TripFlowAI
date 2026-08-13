@@ -163,6 +163,24 @@ describe('DashboardPage', () => {
     });
   });
 
+  describe('statusLabel', () => {
+    it('maps IN_PROGRESS to a display label', () => {
+      expect(component.statusLabel('IN_PROGRESS')).toBe('In progress');
+    });
+
+    it('maps COMPLETED to a display label', () => {
+      expect(component.statusLabel('COMPLETED')).toBe('Completed');
+    });
+
+    it('maps DRAFT to a display label', () => {
+      expect(component.statusLabel('DRAFT')).toBe('Draft');
+    });
+
+    it('falls back to the raw value for an unrecognized status', () => {
+      expect(component.statusLabel('UNKNOWN')).toBe('UNKNOWN');
+    });
+  });
+
   describe('confirmDelete', () => {
     function stubAlertWithDeleteHandler(): jasmine.Spy {
       let deleteHandler: () => void = () => {};

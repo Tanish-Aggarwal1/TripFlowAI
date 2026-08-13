@@ -1,8 +1,8 @@
 {
   "name": "frontend",
   "version": "0.0.1",
-  "author": "Ionic Framework",
-  "homepage": "https://ionicframework.com/",
+  "author": "Tanish Aggarwal",
+  "homepage": "https://github.com/Tanish-Aggarwal1/TripFlowAI",
   "scripts": {
     "ng": "ng",
     "start": "ionic serve",
@@ -66,5 +66,5 @@
     "karma-jasmine-html-reporter": "~2.2.0",
     "typescript": "~5.9.0"
   },
-  "description": "An Ionic project"
+  "description": "TripFlowAI — AI-powered multi-stop trip planning PWA (Ionic + Angular frontend)"
 }

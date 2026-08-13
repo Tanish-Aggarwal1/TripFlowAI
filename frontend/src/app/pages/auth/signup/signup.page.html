@@ -13,7 +13,7 @@
           autocomplete="nickname"></ion-input>
       </ion-item>
       @if (fieldError('username')) {
-        <ion-text color="danger">
+        <ion-text color="danger" role="alert">
           <p>{{ fieldError('username') }}</p>
         </ion-text>
       }
@@ -27,7 +27,7 @@
           autocomplete="email"></ion-input>
       </ion-item>
       @if (fieldError('email')) {
-        <ion-text color="danger">
+        <ion-text color="danger" role="alert">
           <p>{{ fieldError('email') }}</p>
         </ion-text>
       }
@@ -41,7 +41,7 @@
           autocomplete="new-password"></ion-input>
       </ion-item>
       @if (fieldError('password')) {
-        <ion-text color="danger">
+        <ion-text color="danger" role="alert">
           <p>{{ fieldError('password') }}</p>
         </ion-text>
       }
@@ -55,13 +55,13 @@
           autocomplete="new-password"></ion-input>
       </ion-item>
       @if (passwordMismatch) {
-        <ion-text color="danger">
+        <ion-text color="danger" role="alert">
           <p>Passwords do not match.</p>
         </ion-text>
       }
 
       @if (generalError) {
-        <ion-text color="danger">
+        <ion-text color="danger" role="alert">
           <p>{{ generalError }}</p>
         </ion-text>
       }

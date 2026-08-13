@@ -7,7 +7,6 @@ import {
   Output,
   SimpleChanges,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { IonButton, IonIcon, IonSpinner } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import { addCircleOutline, closeOutline } from 'ionicons/icons';
@@ -33,7 +32,7 @@ interface SuggestionCardState {
   selector: 'app-ai-suggestion-cards',
   templateUrl: 'ai-suggestion-cards.component.html',
   styleUrls: ['ai-suggestion-cards.component.scss'],
-  imports: [CommonModule, IonButton, IonIcon, IonSpinner],
+  imports: [IonButton, IonIcon, IonSpinner],
 })
 export class AiSuggestionCardsComponent implements OnChanges {
   @Input({ required: true }) tripId!: number;

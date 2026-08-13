@@ -1,5 +1,4 @@
 import { Component, EventEmitter, inject, Input, Output } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
   IonItem,
@@ -30,7 +29,6 @@ import { ToastService } from '../../../../core/services/toast.service';
   templateUrl: 'ai-preferences-form.component.html',
   styleUrls: ['ai-preferences-form.component.scss'],
   imports: [
-    CommonModule,
     FormsModule,
     IonItem,
     IonLabel,

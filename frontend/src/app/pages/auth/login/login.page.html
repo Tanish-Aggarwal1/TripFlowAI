@@ -13,7 +13,7 @@
           autocomplete="email"></ion-input>
       </ion-item>
       @if (fieldError('email')) {
-        <ion-text color="danger">
+        <ion-text color="danger" role="alert">
           <p>{{ fieldError('email') }}</p>
         </ion-text>
       }
@@ -27,13 +27,13 @@
           autocomplete="current-password"></ion-input>
       </ion-item>
       @if (fieldError('password')) {
-        <ion-text color="danger">
+        <ion-text color="danger" role="alert">
           <p>{{ fieldError('password') }}</p>
         </ion-text>
       }
 
       @if (generalError) {
-        <ion-text color="danger">
+        <ion-text color="danger" role="alert">
           <p>{{ generalError }}</p>
         </ion-text>
       }

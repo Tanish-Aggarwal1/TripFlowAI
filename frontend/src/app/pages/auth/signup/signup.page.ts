@@ -7,7 +7,6 @@ import { FieldError } from '../../../core/models/auth.model';
 
 @Component({
   selector: 'app-signup',
-  standalone: true,
   imports: [ReactiveFormsModule, RouterLink, IonContent, IonItem, IonInput, IonButton, IonText],
   templateUrl: './signup.page.html',
   styleUrls: ['./signup.page.scss'],

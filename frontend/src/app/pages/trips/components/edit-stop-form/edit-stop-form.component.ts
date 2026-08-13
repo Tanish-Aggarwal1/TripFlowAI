@@ -1,5 +1,4 @@
 import { Component, EventEmitter, inject, Input, OnInit, Output } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
   IonItem,
@@ -26,7 +25,6 @@ import { ToastService } from '../../../../core/services/toast.service';
   templateUrl: 'edit-stop-form.component.html',
   styleUrls: ['edit-stop-form.component.scss'],
   imports: [
-    CommonModule,
     FormsModule,
     IonItem,
     IonLabel,

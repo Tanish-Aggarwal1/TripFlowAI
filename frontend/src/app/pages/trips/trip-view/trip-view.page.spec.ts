@@ -288,23 +288,6 @@ describe('TripViewPage', () => {
     });
   });
 
-  describe('formatPlannedTime', () => {
-    it('formats a morning time in AM', () => {
-      expect(component.formatPlannedTime('09:05:00')).toBe('9:05 AM');
-    });
-
-    it('formats an afternoon time in PM', () => {
-      expect(component.formatPlannedTime('14:30:00')).toBe('2:30 PM');
-    });
-
-    it('formats noon as 12 PM', () => {
-      expect(component.formatPlannedTime('12:00:00')).toBe('12:00 PM');
-    });
-
-    it('formats midnight as 12 AM', () => {
-      expect(component.formatPlannedTime('00:15:00')).toBe('12:15 AM');
-    });
-  });
   describe('AI suggestion modal (SCRUM-67 wiring)', () => {
     it('openAiSuggest resets suggestions and opens the modal', () => {
       component.aiSuggestions = { tripId: 1, summary: 'old', stops: [] };

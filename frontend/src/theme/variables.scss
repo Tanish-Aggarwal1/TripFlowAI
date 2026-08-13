@@ -25,6 +25,14 @@
   --ion-color-tertiary-contrast-rgb: 255, 255, 255;
   --ion-color-tertiary-shade: #0d9488;
   --ion-color-tertiary-tint: #2dd4bf;
+
+  /** shared card treatment for list rows (trip list, stop list) — one
+   *  definition so the trip and stop lists don't drift into different
+   *  visual languages as each gets styled independently. **/
+  --card-radius: 12px;
+  --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --card-background: var(--ion-color-light);
+  --card-margin: 0 0 8px;
 }
 
 .ion-color-secondary {

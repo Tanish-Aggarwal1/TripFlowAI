@@ -11,7 +11,7 @@ Owner: Neel. Applies to all code under `frontend/src/`.
 
 ## Component Pattern
 
-- All components are **standalone** (`standalone: true` in `@Component` decorator).
+- All components are **standalone** (the Angular 20 default) — omit the redundant `standalone: true` flag in `@Component` rather than declaring it.
 - Use Angular 20 built-in control flow (`@if`, `@for`, `@switch`) — never `*ngIf`, `*ngFor`, `*ngSwitch`.
 - Use the `inject()` function for dependency injection, not constructor parameters — enforced by `@angular-eslint/prefer-inject`.
 
@@ -61,7 +61,7 @@ constructor(private router: Router, private tripService: TripService) {}
 - Test runner: Karma + Jasmine.
 - Coverage: Istanbul via `karma-coverage`, reported as `json-summary` for CI PR comments.
 - Use `provideHttpClient()` + `provideHttpClientTesting()` (not `HttpClientTestingModule`) in standalone component tests.
-- Include `provideIonicAngular()` for components that inject Ionic services.
+- Components that inject an Ionic controller service (`ToastController`, `AlertController`, etc.) mock that service directly in the TestBed rather than providing `provideIonicAngular()` — this isolates the unit under test and is what every current spec does.
 - Include `provideRouter([])` for components that use `Router` or `RouterLink`.
 
 ## Linting
