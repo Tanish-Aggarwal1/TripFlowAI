@@ -5,6 +5,8 @@ import java.time.Duration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
 
+import com.tripflow.backend.config.SecretMask;
+
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
@@ -30,16 +32,9 @@ public record GeminiProperties(
     @Override
     public String toString() {
         return "GeminiProperties[baseUrl=" + baseUrl
-                + ", apiKey=" + mask(apiKey)
+                + ", apiKey=" + SecretMask.mask(apiKey)
                 + ", model=" + model
                 + ", connectTimeout=" + connectTimeout
                 + ", readTimeout=" + readTimeout + "]";
-    }
-
-    private static String mask(String key) {
-        if (key == null || key.length() < 4) {
-            return "****";
-        }
-        return "****" + key.substring(key.length() - 4);
     }
 }

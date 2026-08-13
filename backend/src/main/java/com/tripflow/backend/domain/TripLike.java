@@ -18,7 +18,15 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 /** A single user's like on a single trip (SCRUM-161). Existence of a row is the source of
- * truth; {@code Trip.likeCount} is a denormalized count kept in sync alongside it. */
+ * truth; {@code Trip.likeCount} is a denormalized count kept in sync alongside it.
+ *
+ * <p>Mapping-only entity: {@link com.tripflow.backend.repository.TripLikeRepository} never
+ * calls {@code save()} or reads a {@code TripLike} back — both operations it exposes are
+ * hand-written queries (a native {@code INSERT ... ON CONFLICT} and a JPQL bulk
+ * {@code DELETE}) chosen so liking/unliking is a single atomic statement rather than a
+ * read-modify-write. This class exists so {@code ddl-auto=validate} has a mapping for
+ * {@code trip_likes} and so the repository can extend {@code JpaRepository}; the
+ * constructor and {@code @MapsId} associations below are otherwise unreachable code. */
 @Entity
 @Table(name = "trip_likes")
 @Getter

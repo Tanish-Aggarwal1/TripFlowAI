@@ -1,6 +1,6 @@
 package com.tripflow.backend.client.cloudinary;
 
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -11,13 +11,14 @@ import java.util.HashMap;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 
-@Service
+@Component
 public class CloudinarySigningService {
 
-    private static final java.util.Set<String> UNSIGNED_KEYS = java.util.Set.of(
+    private static final Set<String> UNSIGNED_KEYS = Set.of(
             "file", "cloud_name", "resource_type", "api_key", "signature"
     );
 

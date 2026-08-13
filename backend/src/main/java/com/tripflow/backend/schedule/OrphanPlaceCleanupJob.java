@@ -1,4 +1,4 @@
-package com.tripflow.backend.service;
+package com.tripflow.backend.schedule;
 
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;

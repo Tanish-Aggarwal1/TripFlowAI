@@ -74,7 +74,7 @@ public class StopPhotoService {
     @Transactional(readOnly = true)
     public List<StopPhotoResponse> listPhotos(Long stopId, Long requesterId) {
         Stop stop = loadVisibleStop(stopId, requesterId);
-        return stopPhotoRepository.findByStopId(stop.getId()).stream()
+        return stopPhotoRepository.findByStopIdOrderByCreatedAtAsc(stop.getId()).stream()
                 .map(this::toResponse)
                 .toList();
     }

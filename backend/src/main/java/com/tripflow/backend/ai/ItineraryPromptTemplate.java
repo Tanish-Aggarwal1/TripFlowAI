@@ -5,8 +5,6 @@ import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
@@ -32,8 +30,6 @@ public class ItineraryPromptTemplate {
 	 */
 	static final int MAX_PROMPT_LENGTH = 8_000;
 
-	private static final Pattern PLACEHOLDER = Pattern.compile("\\{\\{(\\w+)}}");
-
 	private final String rawTemplate;
 
     public ItineraryPromptTemplate(@Value("classpath:prompts/itinerary.txt") Resource resource) {
@@ -51,7 +47,7 @@ public class ItineraryPromptTemplate {
                 "pace", input.pace() == null ? "not specified" : input.pace(),
                 "destinations", joinOrNone(input.destinations()));
 
-        String rendered = substitute(values);
+        String rendered = TemplateSubstitution.substitute(rawTemplate, values);
 
         if (rendered.length() > MAX_PROMPT_LENGTH) {
             throw new PromptTooLargeException(
@@ -63,27 +59,6 @@ public class ItineraryPromptTemplate {
 
     private static String joinOrNone(List<String> values) {
         return (values == null || values.isEmpty()) ? "none specified" : String.join(", ", values);
-    }
-
-    /**
-     * Single-pass placeholder substitution. Chained {@code String.replace()} calls
-     * re-scan the *entire current string* on each call, including whatever the
-     * previous call just substituted in — so user-supplied text (e.g. an
-     * {@code interests} entry that happens to contain the literal text
-     * {@code "{{budget}}"}) could be found and replaced by a later call in the
-     * chain, landing another field's value inside what was meant to be free-text
-     * content. Scanning the raw template exactly once and looking up each match
-     * avoids that entirely: a value is never itself re-scanned for placeholders.
-     */
-    private String substitute(Map<String, String> values) {
-        Matcher matcher = PLACEHOLDER.matcher(rawTemplate);
-        StringBuilder result = new StringBuilder();
-        while (matcher.find()) {
-            String replacement = values.getOrDefault(matcher.group(1), matcher.group(0));
-            matcher.appendReplacement(result, Matcher.quoteReplacement(replacement));
-        }
-        matcher.appendTail(result);
-        return result.toString();
     }
 
 }

@@ -4,6 +4,8 @@ import java.time.Duration;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+import com.tripflow.backend.config.SecretMask;
+
 /**
  * OpenRouteService client configuration.
  * API key lives in backend/.env (ORS_API_KEY) — never committed.
@@ -24,15 +26,8 @@ public record OrsProperties(
     @Override
     public String toString() {
         return "OrsProperties[baseUrl=" + baseUrl
-                + ", apiKey=" + mask(apiKey)
+                + ", apiKey=" + SecretMask.mask(apiKey)
                 + ", connectTimeout=" + connectTimeout
                 + ", readTimeout=" + readTimeout + "]";
-    }
-
-    private static String mask(String key) {
-        if (key == null || key.length() < 4) {
-            return "****";
-        }
-        return "****" + key.substring(key.length() - 4);
     }
 }

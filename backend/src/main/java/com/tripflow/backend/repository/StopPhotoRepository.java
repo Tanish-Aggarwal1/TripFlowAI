@@ -8,7 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import com.tripflow.backend.domain.StopPhoto;
 
 public interface StopPhotoRepository extends JpaRepository<StopPhoto, Long> {
-    List<StopPhoto> findByStopId(Long stopId);
+    List<StopPhoto> findByStopIdOrderByCreatedAtAsc(Long stopId);
 
     Optional<StopPhoto> findByIdAndStopId(Long id, Long stopId);
 }

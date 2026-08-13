@@ -14,7 +14,6 @@ import com.tripflow.backend.dto.CreateTripRequest;
 import com.tripflow.backend.dto.TripResponse;
 import com.tripflow.backend.dto.TripSummaryResponse;
 import com.tripflow.backend.dto.UpdateTripRequest;
-import com.tripflow.backend.exception.ForbiddenException;
 import com.tripflow.backend.exception.InvalidRequestException;
 import com.tripflow.backend.exception.ResourceNotFoundException;
 import com.tripflow.backend.mapper.TripMapper;
@@ -137,7 +136,7 @@ public class TripService {
 
 		trip.setTitle(request.title());
 		trip.setDescription(request.description());
-		trip.setTags(request.tags() != null ? request.tags() : new ArrayList<>());
+		trip.setTags(request.tags() != null ? new ArrayList<>(request.tags()) : new ArrayList<>());
 		trip.setVisibility(request.visibility());
 		// Absent startDate means "leave unchanged", not "clear". A record can't tell an
 		// omitted JSON field from an explicit null, and the 5-arg convenience constructor

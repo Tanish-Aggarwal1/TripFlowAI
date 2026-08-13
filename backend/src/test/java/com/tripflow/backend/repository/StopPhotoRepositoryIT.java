@@ -113,15 +113,15 @@ class StopPhotoRepositoryIT {
         entityManager.flush();
         entityManager.clear();
 
-        assertThat(stopPhotoRepository.findByStopId(stopAId)).hasSize(2);
-        assertThat(stopPhotoRepository.findByStopId(stopBId)).hasSize(1);
+        assertThat(stopPhotoRepository.findByStopIdOrderByCreatedAtAsc(stopAId)).hasSize(2);
+        assertThat(stopPhotoRepository.findByStopIdOrderByCreatedAtAsc(stopBId)).hasSize(1);
     }
 
     @Test
     void findByStopId_noPhotos_returnsEmptyList() {
         Long stopId = createStopId("empty");
 
-        assertThat(stopPhotoRepository.findByStopId(stopId)).isEmpty();
+        assertThat(stopPhotoRepository.findByStopIdOrderByCreatedAtAsc(stopId)).isEmpty();
     }
 
     @Test
@@ -175,6 +175,6 @@ class StopPhotoRepositoryIT {
         entityManager.clear();
 
         assertThat(stopPhotoRepository.findById(savedPhotoId)).isEmpty();
-        assertThat(stopPhotoRepository.findByStopId(stopId)).isEmpty();
+        assertThat(stopPhotoRepository.findByStopIdOrderByCreatedAtAsc(stopId)).isEmpty();
     }
 }
