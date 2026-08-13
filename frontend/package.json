@@ -31,7 +31,7 @@
     "@capacitor/status-bar": "8.0.3",
     "@ionic/angular": "^8.8.16",
     "ionicons": "^8.1.0",
-    "mapbox-gl": "^3.27.0",
+    "mapbox-gl": "^3.28.1",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
     "zone.js": "~0.15.0"
