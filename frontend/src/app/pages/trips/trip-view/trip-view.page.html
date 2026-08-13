@@ -43,7 +43,7 @@
   </div>
 
   <ion-list class="stop-list">
-    @for (group of dayGroups; track group.dayNumber ?? 'unscheduled') {
+    @for (group of dayGroups; track group.stops[0].id) {
     @if (group.dayNumber !== null) {
     <ion-item-divider class="day-divider">
       <ion-label>Day {{ group.dayNumber }}</ion-label>
