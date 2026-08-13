@@ -48,3 +48,16 @@ updates:
       - "ci"
     commit-message:
       prefix: "chore(deps-github-actions)"
+
+  # backend/Dockerfile base images (eclipse-temurin) — currently referenced by
+  # mutable tags, not digests; this at least surfaces base-image bumps as PRs.
+  - package-ecosystem: "docker"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    labels:
+      - "dependencies"
+      - "devops"
+    commit-message:
+      prefix: "chore(deps-docker)"
