@@ -215,6 +215,9 @@ export class TripMapComponent implements AfterViewInit, OnChanges, OnDestroy {
   private escapeHtml(value: string): string {
     const div = document.createElement('div');
     div.textContent = value;
-    return div.innerHTML;
+    // innerHTML from textContent escapes <, >, & but not quotes (they're only special inside
+    // attribute values, not text nodes) — escape them too so this stays safe if a future caller
+    // interpolates into an attribute instead of text content.
+    return div.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 }

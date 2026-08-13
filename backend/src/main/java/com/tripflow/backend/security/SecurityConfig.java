@@ -71,8 +71,11 @@ public class SecurityConfig {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(allowedOrigins);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(List.of("*"));
-        config.setAllowCredentials(true);
+        config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+        // Stateless bearer-token API — no cookies, no session (SessionCreationPolicy.STATELESS above).
+        // Nothing needs credentialed CORS; keeping it false also fails closed if allowedOriginPatterns
+        // (which permits wildcards alongside credentials, unlike setAllowedOrigins) is ever adopted here.
+        config.setAllowCredentials(false);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);

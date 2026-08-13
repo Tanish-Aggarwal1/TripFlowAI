@@ -90,4 +90,12 @@ class JwtServiceTest {
 		assertThatThrownBy(() -> new JwtProperties(null, EXPIRY_MS))
 				.isInstanceOf(IllegalStateException.class);
 	}
+
+	@Test
+	void constructor_rejectsLongButLowEntropySecret() {
+		String repeatedChar = "a".repeat(36); // 36 bytes, satisfies length but not variety
+		assertThatThrownBy(() -> new JwtProperties(repeatedChar, EXPIRY_MS))
+				.isInstanceOf(IllegalStateException.class)
+				.hasMessageContaining("distinct characters");
+	}
 }
