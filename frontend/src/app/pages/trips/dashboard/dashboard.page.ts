@@ -7,7 +7,7 @@ import {
   ViewWillEnter
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { add, lockClosed, globeOutline, trash, create, sparkles, imageOutline  } from 'ionicons/icons';
+import { add, lockClosed, globeOutline, trash, create, sparkles, imageOutline, mapOutline } from 'ionicons/icons';
 import { TripService } from '../../../core/services/trip.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { TripSummaryResponse, TripResponse } from '../../../core/models/trip.model';
@@ -44,7 +44,16 @@ export class DashboardPage implements ViewWillEnter {
   aiModalOpen = false;
 
   constructor() {
-    addIcons({ add, lockClosed, globeOutline, trash, create, sparkles, 'image-outline': imageOutline });
+    addIcons({
+      add,
+      lockClosed,
+      globeOutline,
+      trash,
+      create,
+      sparkles,
+      'image-outline': imageOutline,
+      'map-outline': mapOutline,
+    });
   }
 
   ionViewWillEnter(): void {
