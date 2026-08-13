@@ -33,7 +33,7 @@ Detailed sequence diagrams:
 [SD5](docs/diagrams/SD5.png)
 
 ## Architecture rationale
-- Layered (`controller/service/repository/domain/dto/mapper/security/config/client/`) over feature-slice: 4 devs, ~5k LoC, Spring Boot conventions every grader recognizes.
+- Layered (see `docs/architecture.md` for the full package list) over feature-slice: 4 devs, ~5k LoC, Spring Boot conventions every grader recognizes.
 - `client/{ors,gemini,cloudinary}/` pattern for external integrations: wire-format DTOs separate from domain DTOs, `@ConfigurationProperties` per client, per-client timeouts, translated exceptions (`OrsClientException` → 502).
 - JWT + `UserPrincipal implements UserDetails` — real Spring Security principal, not string parsing.
 - Testcontainers CI-only via `-Pci` Maven profile — none of the team's machines run Docker.

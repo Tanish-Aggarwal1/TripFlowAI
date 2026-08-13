@@ -12,12 +12,14 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Only cancel in-progress runs on PR branches — see backend-ci.yml for why main is exempt.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
+  # Only pull-requests: write is needed — the coverage step posts a PR comment,
+  # nothing here creates or updates a check run.
   pull-requests: write
-  checks: write
 
 jobs:
   frontend:
@@ -27,8 +29,8 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: "20"
           cache: npm
@@ -62,13 +64,14 @@ jobs:
           fi
 
       - run: npm ci
+      - run: npm audit --audit-level=high
       - run: npm run lint
       - run: npm run test:ci
       - run: npm run build
 
       - name: Upload coverage HTML report
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: karma-coverage-report
           path: frontend/coverage/app/
@@ -76,7 +79,7 @@ jobs:
 
       - name: Post coverage PR comment
         if: always() && github.event_name == 'pull_request'
-        uses: actions/github-script@v9
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
         with:
           script: |
             const fs = require('fs');
