@@ -133,8 +133,11 @@ export class TripViewPage implements OnInit {
   get dayGroups(): DayGroup[] {
     if (!this.trip) return [];
 
+    // Must consume sortedStops, not this.trip.stops — the consecutive-grouping below
+    // relies on dayNumber being monotonically non-decreasing along stopOrder, which is
+    // only true of sorted input.
     const groups: DayGroup[] = [];
-    for (const stop of this.trip.stops) {
+    for (const stop of this.sortedStops) {
       const lastGroup = groups[groups.length - 1];
       if (lastGroup && lastGroup.dayNumber === stop.dayNumber) {
         lastGroup.stops.push(stop);

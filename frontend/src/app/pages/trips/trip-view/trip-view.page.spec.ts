@@ -286,6 +286,41 @@ describe('TripViewPage', () => {
       expect(groups[1].dayNumber).toBe(2);
       expect(groups[1].stops.map((s) => s.id)).toEqual([3]);
     });
+
+    it('groups by dayNumber correctly even when stops arrive unsorted by stopOrder', () => {
+      component.trip = trip({
+        stops: [
+          stop({ id: 3, dayNumber: 2, stopOrder: 2 }),
+          stop({ id: 1, dayNumber: 1, stopOrder: 0 }),
+          stop({ id: 2, dayNumber: 1, stopOrder: 1 }),
+        ],
+      });
+
+      const groups = component.dayGroups;
+
+      expect(groups.length).toBe(2);
+      expect(groups[0].dayNumber).toBe(1);
+      expect(groups[0].stops.map((s) => s.id)).toEqual([1, 2]);
+      expect(groups[1].dayNumber).toBe(2);
+      expect(groups[1].stops.map((s) => s.id)).toEqual([3]);
+    });
+
+    it('stays correct after onStopAdded appends two unscheduled stops to a partially-scheduled trip', () => {
+      component.trip = trip({
+        stops: [stop({ id: 1, dayNumber: 1, stopOrder: 0 })],
+      });
+
+      component.onStopAdded(stop({ id: 2, dayNumber: null, stopOrder: 1 }));
+      component.onStopAdded(stop({ id: 3, dayNumber: null, stopOrder: 2 }));
+
+      const groups = component.dayGroups;
+
+      expect(groups.length).toBe(2);
+      expect(groups[0].dayNumber).toBe(1);
+      expect(groups[0].stops.map((s) => s.id)).toEqual([1]);
+      expect(groups[1].dayNumber).toBeNull();
+      expect(groups[1].stops.map((s) => s.id)).toEqual([2, 3]);
+    });
   });
 
   describe('AI suggestion modal (SCRUM-67 wiring)', () => {
