@@ -254,6 +254,19 @@ describe('TripMapComponent', () => {
       expect(html).not.toContain('<i>note</i>');
     });
 
+    it('escapes quotes in the popup HTML', () => {
+      const stop = makeStop({ name: `"onmouseover="alert(1)` });
+      component.trip = makeTrip({ stops: [stop] });
+      fixture.detectChanges(false);
+      triggerLoad();
+
+      markerElements[0].click();
+
+      const html = mockPopup.setHTML.calls.mostRecent().args[0] as string;
+      expect(html).not.toContain('"onmouseover="alert(1)');
+      expect(html).toContain('&quot;onmouseover=&quot;alert(1)');
+    });
+
     it('omits the address/notes blocks when they are null', () => {
       const stop = makeStop({ address: null, notes: null });
       component.trip = makeTrip({ stops: [stop] });

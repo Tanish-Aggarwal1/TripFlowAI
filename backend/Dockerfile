@@ -17,5 +17,10 @@ RUN useradd --system --uid 1001 spring
 COPY --from=build /app/target/*.jar app.jar
 USER spring
 
+# Explicit safety net: prod hardening (forwarded-headers trust, springdoc disablement, log level,
+# CORS origins) all live behind the prod profile. Without this, a deploy that forgets to set
+# SPRING_PROFILES_ACTIVE externally silently boots with dev security posture instead of failing.
+ENV SPRING_PROFILES_ACTIVE=prod
+
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]
