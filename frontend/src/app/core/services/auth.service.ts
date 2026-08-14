@@ -2,7 +2,7 @@ import { inject, Injectable, signal } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable, tap, catchError, throwError } from 'rxjs';
-import { AuthResponse, LoginRequest, RegisterRequest } from '../models/auth.model';
+import { AuthResponse, LoginRequest, RefreshResponse, RegisterRequest } from '../models/auth.model';
 import { environment } from '../../../environments/environment';
 import { mapApiError } from '../http/api-error.mapper';
 
@@ -18,6 +18,10 @@ export class AuthService {
   // Reactive auth state other components/guards can read
   isAuthenticated = signal<boolean>(this.hasValidToken());
 
+  // ISO expiry of the current access token. SessionStateService arms the silent-refresh
+  // timer off this; seeding it from the stored token is what lets a page reload re-arm.
+  expiresAt = signal<string | null>(this.storedTokenExpiry());
+
   login(request: LoginRequest): Observable<AuthResponse> {
     return this.http.post<AuthResponse>(`${this.baseUrl}/login`, request).pipe(
       tap((res) => this.handleAuthSuccess(res)),
@@ -32,21 +36,53 @@ export class AuthService {
     );
   }
 
+  // Redeems the httpOnly refresh cookie for a new access token. The header is not decorative:
+  // it forces a CORS preflight and is the backend's CSRF gate, which answers 400 without it.
+  refresh(): Observable<RefreshResponse> {
+    return this.http
+      .post<RefreshResponse>(
+        `${this.baseUrl}/refresh`,
+        {},
+        { withCredentials: true, headers: { 'X-Requested-With': 'XMLHttpRequest' } }
+      )
+      .pipe(
+        tap((res) => {
+          localStorage.setItem(TOKEN_KEY, res.token);
+          this.expiresAt.set(res.expiresAt);
+          this.isAuthenticated.set(true);
+        })
+      );
+  }
+
   logout(): void {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(USER_KEY);
-    this.isAuthenticated.set(false);
-    this.router.navigate(['/login']);
+    this.http
+      .post(
+        `${this.baseUrl}/logout`,
+        {},
+        { withCredentials: true, headers: { 'X-Requested-With': 'XMLHttpRequest' } }
+      )
+      // Local teardown runs on both paths: a user must be able to get out even when the
+      // server cannot be told, and the endpoint answers 204 for every cookie state anyway.
+      .subscribe({ next: () => this.clearSession(), error: () => this.clearSession() });
   }
 
   getToken(): string | null {
     return localStorage.getItem(TOKEN_KEY);
   }
 
+  private clearSession(): void {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
+    this.isAuthenticated.set(false);
+    this.expiresAt.set(null);
+    this.router.navigate(['/login']);
+  }
+
   private handleAuthSuccess(res: AuthResponse): void {
     localStorage.setItem(TOKEN_KEY, res.token);
     localStorage.setItem(USER_KEY, JSON.stringify({ userId: res.userId, username: res.username }));
     this.isAuthenticated.set(true);
+    this.expiresAt.set(res.expiresAt);
   }
 
   // Maps backend responses to the generic, non-revealing messages required by UC-01 / UC-02
@@ -64,13 +100,19 @@ export class AuthService {
   }
 
   hasValidToken(): boolean {
+    return this.storedTokenExpiry() !== null;
+  }
+
+  // Single owner of the JWT-payload decode — two copies of a token parser is how they drift.
+  private storedTokenExpiry(): string | null {
     const token = localStorage.getItem(TOKEN_KEY);
-    if (!token) return false;
+    if (!token) return null;
     try {
       const payload = JSON.parse(atob(token.split('.')[1]));
-      return payload.exp * 1000 > Date.now();
+      const expiresAtMs = payload.exp * 1000;
+      return expiresAtMs > Date.now() ? new Date(expiresAtMs).toISOString() : null;
     } catch {
-      return false;
+      return null;
     }
   }
 }
