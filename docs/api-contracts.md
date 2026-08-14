@@ -42,6 +42,33 @@ Living document. Add a new section per epic as endpoints are built. Update if a 
 - 401 — invalid credentials
 - 429 — rate limit exceeded (per-IP, `app.ratelimit.login.*` — see Rate Limiting below; `Retry-After` header included)
 
+### Refresh cookie (issued by register and login)
+
+Both endpoints additionally set a refresh-token cookie alongside the JSON body:
+
+`Set-Cookie: refresh_token=<opaque>; Path=/api/auth; Max-Age=2592000; Secure; HttpOnly; SameSite=None`
+
+Host-only by design — no `Domain` attribute is ever set, so the cookie is never exposed to other tenants on the shared PaaS suffix. `Secure`/`SameSite` are overridable for local development via `REFRESH_COOKIE_SECURE` / `REFRESH_COOKIE_SAME_SITE`; production must not override them. Lifetime is `app.refresh-token.expiration-days` (default 30), fixed from issuance rather than sliding. The raw value never appears in a response body and is never persisted — only its SHA-256 hex digest reaches the database.
+
+### POST /api/auth/refresh
+Redeems the refresh cookie exactly once and returns a fresh access token plus a rotated cookie.
+
+**Request:** no body. Requires the `refresh_token` cookie **and** an `X-Requested-With` header (any value). The header is the CSRF control: a cross-site form or image cannot set it, so the browser is forced into a CORS preflight that only an allow-listed origin passes. `SameSite` cannot carry this protection because the deployed frontend and backend are different subdomains of a shared PaaS suffix.
+
+**Success (200):**
+```json
+{
+  "token": "string",
+  "tokenType": "Bearer",
+  "expiresAt": "ISO-8601 datetime"
+}
+```
+No `userId`/`username` — the client already holds them from login. The response also carries a new `refresh_token` cookie with the same attributes as above; the presented value is single-use and is rejected on any subsequent presentation.
+
+**Errors:**
+- 400 — `X-Requested-With` header missing (checked before any token lookup)
+- 401 — cookie absent, unknown, already redeemed, revoked, or expired (one generic message for all cases)
+
 
 ## Auth Header
 Protected endpoints require: `Authorization: Bearer <token>`
