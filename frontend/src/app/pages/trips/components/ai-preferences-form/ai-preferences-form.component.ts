@@ -2,7 +2,6 @@ import { Component, EventEmitter, inject, Input, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
   IonItem,
-  IonLabel,
   IonInput,
   IonSelect,
   IonSelectOption,
@@ -31,7 +30,6 @@ import { ToastService } from '../../../../core/services/toast.service';
   imports: [
     FormsModule,
     IonItem,
-    IonLabel,
     IonInput,
     IonSelect,
     IonSelectOption,

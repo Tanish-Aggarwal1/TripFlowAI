@@ -18,8 +18,9 @@
   }
 
   <ion-item>
-    <ion-label position="stacked">Caption / note</ion-label>
     <ion-textarea
+      label="Caption / note"
+      labelPlacement="stacked"
       [(ngModel)]="caption"
       [disabled]="uploading"
       placeholder="Say something about this stop..."
