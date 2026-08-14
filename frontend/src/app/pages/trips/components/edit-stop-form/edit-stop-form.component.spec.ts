@@ -4,6 +4,7 @@ import { of, throwError } from 'rxjs';
 import { EditStopFormComponent } from './edit-stop-form.component';
 import { TripService } from '../../../../core/services/trip.service';
 import { StopResponse } from '../../../../core/models/trip.model';
+import { expectNoA11yViolations, expectAllFormControlsLabeled } from '../../../../../testing/a11y';
 
 describe('EditStopFormComponent', () => {
   let component: EditStopFormComponent;
@@ -49,6 +50,14 @@ describe('EditStopFormComponent', () => {
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  it('has no accessibility violations', async () => {
+    await expectNoA11yViolations(fixture.nativeElement);
+  });
+
+  it('labels every form control', () => {
+    expectAllFormControlsLabeled(fixture.nativeElement);
   });
 
   it('initializes form fields from the input stop', () => {

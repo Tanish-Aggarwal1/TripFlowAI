@@ -1,3 +1,4 @@
+import { Component, Input } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, provideRouter, Router } from '@angular/router';
 import { ToastController } from '@ionic/angular/standalone';
@@ -5,6 +6,16 @@ import { of, throwError, Subject } from 'rxjs';
 import { TripViewPage, sanitizeFilename } from './trip-view.page';
 import { TripService } from '../../../core/services/trip.service';
 import { StopResponse, TripResponse } from '../../../core/models/trip.model';
+import { TripMapComponent } from '../components/trip-map/trip-map.component';
+
+// Renders in place of the real TripMapComponent, which would otherwise construct a
+// live mapboxgl.Map (network calls, WebGL) the moment TripViewPage's DOM is rendered
+// — see trip-map.component.spec.ts for why that constructor is normally spied on.
+@Component({ selector: 'app-trip-map', template: '', standalone: true })
+class TripMapStubComponent {
+  @Input() trip: TripResponse | null = null;
+  @Input() optimizing = false;
+}
 
 describe('TripViewPage', () => {
   let component: TripViewPage;
@@ -61,6 +72,11 @@ describe('TripViewPage', () => {
     );
     tripServiceSpy.getTrip.and.returnValue(of(trip({ id: 1 })));
 
+    TestBed.overrideComponent(TripViewPage, {
+      remove: { imports: [TripMapComponent] },
+      add: { imports: [TripMapStubComponent] },
+    });
+
     await TestBed.configureTestingModule({
       imports: [TripViewPage],
       providers: [
@@ -82,6 +98,28 @@ describe('TripViewPage', () => {
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  it('renders stop cards grouped by day without duplicate track-key errors', () => {
+    // Regression guard for C-2: dayGroups() must consume sortedStops, not raw
+    // trip.stops — unsorted input interleaving day 1/2/1 would otherwise split
+    // into three groups sharing a track key instead of two.
+    tripServiceSpy.getTrip.and.returnValue(
+      of(
+        trip({
+          stops: [
+            stop({ id: 3, stopOrder: 2, dayNumber: 1, name: 'Stop C' }),
+            stop({ id: 1, stopOrder: 0, dayNumber: 2, name: 'Stop A' }),
+            stop({ id: 2, stopOrder: 1, dayNumber: 1, name: 'Stop B' }),
+          ],
+        }),
+      ),
+    );
+
+    expect(() => fixture.detectChanges()).not.toThrow();
+
+    expect(fixture.nativeElement.querySelectorAll('.stop-card').length).toBe(3);
+    expect(fixture.nativeElement.querySelectorAll('.day-divider').length).toBe(2);
   });
 
   describe('loadTrip', () => {

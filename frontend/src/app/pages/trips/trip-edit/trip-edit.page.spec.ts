@@ -5,6 +5,7 @@ import { of, throwError } from 'rxjs';
 import { TripEditPage } from './trip-edit.page';
 import { TripService } from '../../../core/services/trip.service';
 import { MAX_STOPS, TripResponse } from '../../../core/models/trip.model';
+import { expectNoA11yViolations, expectAllFormControlsLabeled } from '../../../../testing/a11y';
 
 describe('TripEditPage', () => {
   let component: TripEditPage;
@@ -92,6 +93,14 @@ describe('TripEditPage', () => {
       expect(tripServiceSpy.getTrip).not.toHaveBeenCalled();
     });
 
+    it('renders the empty form with a "Create Trip" submit button', () => {
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('ion-input')).toBeTruthy();
+      expect(fixture.nativeElement.textContent).toContain('Create Trip');
+      expect(fixture.nativeElement.textContent).not.toContain('Update Trip');
+    });
+
     it('save() rejects a blank title without calling the service', async () => {
       component.ngOnInit();
       component.title = '   ';
@@ -171,6 +180,31 @@ describe('TripEditPage', () => {
       expect(component.stops.length).toBe(2);
       expect(component.stops[0].name).toBe('Stop A');
       expect(component.loading).toBeFalse();
+    });
+
+    it('renders the loaded trip title in the input', () => {
+      tripServiceSpy.getTrip.and.returnValue(of(existingTrip));
+
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.textContent).toContain('Update Trip');
+      expect(fixture.nativeElement.querySelector('ion-input')).toBeTruthy();
+    });
+
+    it('has no accessibility violations', async () => {
+      tripServiceSpy.getTrip.and.returnValue(of(existingTrip));
+
+      fixture.detectChanges();
+
+      await expectNoA11yViolations(fixture.nativeElement);
+    });
+
+    it('labels every form control', () => {
+      tripServiceSpy.getTrip.and.returnValue(of(existingTrip));
+
+      fixture.detectChanges();
+
+      expectAllFormControlsLabeled(fixture.nativeElement);
     });
 
     it('sets an error message when loading the existing trip fails', () => {

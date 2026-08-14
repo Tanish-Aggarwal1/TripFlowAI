@@ -42,6 +42,13 @@ describe('SignupPage', () => {
     expect(component).toBeTruthy();
   });
 
+  it('renders the signup form fields and a submit button', () => {
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    expect(compiled.querySelectorAll('ion-input').length).toBe(4);
+    expect(compiled.textContent).toContain('Create Account');
+  });
+
   describe('passwordsMatchValidator / passwordMismatch', () => {
     it('flags the form invalid when passwords differ', () => {
       component.form.setValue({ ...validValue, confirmPassword: 'different' });
