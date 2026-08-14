@@ -57,6 +57,28 @@ describe('DashboardPage', () => {
     expect(component).toBeTruthy();
   });
 
+  it('renders the empty-state icon when there are no trips', () => {
+    component.loading = false;
+    component.trips = [];
+
+    fixture.detectChanges();
+
+    const icon = fixture.nativeElement.querySelector('.empty-state ion-icon');
+    expect(icon).toBeTruthy();
+    expect(icon.getAttribute('name')).toBe('map-outline');
+  });
+
+  it('renders a trip card with title and stop count once trips load', () => {
+    component.loadTrips();
+
+    fixture.detectChanges();
+
+    const cards = fixture.nativeElement.querySelectorAll('.trip-card');
+    expect(cards.length).toBe(1);
+    expect(fixture.nativeElement.textContent).toContain('Trip A');
+    expect(fixture.nativeElement.textContent).toContain('2 stops');
+  });
+
   describe('loadTrips', () => {
     it('populates trips and clears loading on success', () => {
       component.loadTrips();

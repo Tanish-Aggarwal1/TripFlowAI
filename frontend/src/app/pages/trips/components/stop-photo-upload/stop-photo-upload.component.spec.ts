@@ -4,6 +4,7 @@ import { of, throwError } from 'rxjs';
 import { StopPhotoUploadComponent } from './stop-photo-upload.component';
 import { StopPhotoService } from '../../../../core/services/stop-photo.service';
 import { StopPhotoResponse } from '../../../../core/models/trip.model';
+import { expectNoA11yViolations, expectAllFormControlsLabeled } from '../../../../../testing/a11y';
 
 describe('StopPhotoUploadComponent', () => {
   let component: StopPhotoUploadComponent;
@@ -40,6 +41,14 @@ describe('StopPhotoUploadComponent', () => {
   });
 
   it('should create', () => expect(component).toBeTruthy());
+
+  it('has no accessibility violations', async () => {
+    await expectNoA11yViolations(fixture.nativeElement);
+  });
+
+  it('labels every form control', () => {
+    expectAllFormControlsLabeled(fixture.nativeElement);
+  });
 
   it('blocks submit with no file selected', () => {
     component.submit();

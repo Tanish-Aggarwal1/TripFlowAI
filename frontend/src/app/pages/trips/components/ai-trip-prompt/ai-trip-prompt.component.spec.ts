@@ -4,6 +4,7 @@ import { of, throwError } from 'rxjs';
 import { AiTripPromptComponent } from './ai-trip-prompt.component';
 import { TripService } from '../../../../core/services/trip.service';
 import { TripResponse } from '../../../../core/models/trip.model';
+import { expectNoA11yViolations, expectAllFormControlsLabeled } from '../../../../../testing/a11y';
 
 describe('AiTripPromptComponent', () => {
   let component: AiTripPromptComponent;
@@ -48,6 +49,14 @@ describe('AiTripPromptComponent', () => {
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  it('has no accessibility violations', async () => {
+    await expectNoA11yViolations(fixture.nativeElement);
+  });
+
+  it('labels every form control', () => {
+    expectAllFormControlsLabeled(fixture.nativeElement);
   });
 
   describe('addInterest / removeInterest', () => {

@@ -34,6 +34,13 @@ describe('LoginPage', () => {
     expect(component).toBeTruthy();
   });
 
+  it('renders email/password inputs and a submit button', () => {
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    expect(compiled.querySelectorAll('ion-input').length).toBe(2);
+    expect(compiled.textContent).toContain('Log In');
+  });
+
   describe('onSubmit', () => {
     it('marks all fields as touched and does not call the service when the form is invalid', () => {
       component.onSubmit();

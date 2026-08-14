@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ItemReorderEventDetail } from '@ionic/angular/standalone';
 import { StopListComponent } from './stop-list.component';
+import { expectNoA11yViolations, expectAllFormControlsLabeled } from '../../../../../testing/a11y';
 
 describe('StopListComponent', () => {
   let component: StopListComponent;
@@ -18,6 +19,14 @@ describe('StopListComponent', () => {
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  it('has no accessibility violations', async () => {
+    await expectNoA11yViolations(fixture.nativeElement);
+  });
+
+  it('labels every form control', () => {
+    expectAllFormControlsLabeled(fixture.nativeElement);
   });
 
   describe('addStop validation', () => {
