@@ -5,12 +5,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.context.ImportTestcontainers;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -20,6 +24,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tripflow.backend.domain.User;
 import com.tripflow.backend.repository.UserRepository;
 import com.tripflow.backend.testsupport.PostgresTestcontainersConfiguration;
+
+import jakarta.persistence.EntityManager;
+import jakarta.servlet.http.Cookie;
 
 /**
  * End-to-end tests for {@code /api/auth/**} against the real Spring context,
@@ -45,9 +52,33 @@ public class AuthControllerIT {
 	@Autowired
 	private PasswordEncoder passwordEncoder;
 
+	@Autowired
+	private JdbcTemplate jdbcTemplate;
+
+	@Autowired
+	private EntityManager entityManager;
+
 	private final ObjectMapper objectMapper = new ObjectMapper();
 
+	private static final String REFRESH_COOKIE = "refresh_token";
+	private static final String CSRF_HEADER = "X-Requested-With";
+
 	// ---------- helpers ----------
+
+	/** The raw {@code Set-Cookie} line for the refresh cookie, attribute string included. */
+	private String refreshSetCookieHeader(MockHttpServletResponse response) {
+		return response.getHeaders(HttpHeaders.SET_COOKIE).stream()
+				.filter(header -> header.startsWith(REFRESH_COOKIE + "="))
+				.findFirst()
+				.orElseThrow(() -> new AssertionError("no " + REFRESH_COOKIE + " Set-Cookie header on the response"));
+	}
+
+	private String refreshCookieValue(MockHttpServletResponse response) {
+		String header = refreshSetCookieHeader(response);
+		int start = REFRESH_COOKIE.length() + 1;
+		int end = header.indexOf(';', start);
+		return end < 0 ? header.substring(start) : header.substring(start, end);
+	}
 
 	private String registerJson(String username, String email, String password) throws Exception {
 		return objectMapper.writeValueAsString(new com.tripflow.backend.dto.RegisterRequest(username, email, password));
@@ -264,4 +295,111 @@ public class AuthControllerIT {
 					.header("Authorization", "Bearer " + token))
 					.andExpect(status().isOk());
 		}
+
+	// ---------- refresh-token flow (AUTH-04) ----------
+
+	@Test
+	void login_setsHttpOnlyRefreshTokenCookie() throws Exception {
+		persistUser("tanish", "tanish@tripflow.com", "password123");
+
+		MockHttpServletResponse response = mockMvc.perform(post("/api/auth/login")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(loginJson("tanish@tripflow.com", "password123")))
+				.andExpect(status().isOk())
+				// the frozen AuthResponse body shape is unchanged by the cookie
+				.andExpect(jsonPath("$.token").isNotEmpty())
+				.andExpect(jsonPath("$.tokenType").value("Bearer"))
+				.andExpect(jsonPath("$.userId").isNumber())
+				.andExpect(jsonPath("$.username").value("tanish"))
+				.andExpect(jsonPath("$.expiresAt").isNotEmpty())
+				.andReturn().getResponse();
+
+		Assertions.assertThat(refreshSetCookieHeader(response))
+				.contains("HttpOnly")
+				.contains("Secure")
+				.contains("SameSite=None")
+				.contains("Path=/api/auth")
+				// a Domain attribute would expose the cookie to every other tenant on the PaaS suffix
+				.doesNotContain("Domain=");
+	}
+
+	@Test
+	void login_refreshTokenValueIsNotInResponseBody() throws Exception {
+		persistUser("tanish", "tanish@tripflow.com", "password123");
+
+		MockHttpServletResponse response = mockMvc.perform(post("/api/auth/login")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(loginJson("tanish@tripflow.com", "password123")))
+				.andExpect(status().isOk())
+				.andReturn().getResponse();
+
+		Assertions.assertThat(response.getContentAsString()).doesNotContain(refreshCookieValue(response));
+	}
+
+	@Test
+	void refresh_withValidCookie_returnsNewAccessTokenAndRotatesCookie() throws Exception {
+		persistUser("tanish", "tanish@tripflow.com", "password123");
+
+		String issued = refreshCookieValue(mockMvc.perform(post("/api/auth/login")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(loginJson("tanish@tripflow.com", "password123")))
+				.andExpect(status().isOk())
+				.andReturn().getResponse());
+
+		MockHttpServletResponse response = mockMvc.perform(post("/api/auth/refresh")
+				.cookie(new Cookie(REFRESH_COOKIE, issued))
+				.header(CSRF_HEADER, "XMLHttpRequest"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.token").isNotEmpty())
+				.andExpect(jsonPath("$.tokenType").value("Bearer"))
+				.andExpect(jsonPath("$.expiresAt").isNotEmpty())
+				.andReturn().getResponse();
+
+		Assertions.assertThat(refreshCookieValue(response)).isNotBlank().isNotEqualTo(issued);
+	}
+
+	@Test
+	void refresh_withoutCustomHeader_returns400BeforeAnyTokenLookup() throws Exception {
+		persistUser("tanish", "tanish@tripflow.com", "password123");
+
+		String issued = refreshCookieValue(mockMvc.perform(post("/api/auth/login")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(loginJson("tanish@tripflow.com", "password123")))
+				.andExpect(status().isOk())
+				.andReturn().getResponse());
+
+		mockMvc.perform(post("/api/auth/refresh")
+				.cookie(new Cookie(REFRESH_COOKIE, issued)))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.status").value(400))
+				.andExpect(jsonPath("$.path").value("/api/auth/refresh"));
+	}
+
+	@Test
+	void refresh_withNoCookie_returns401() throws Exception {
+		mockMvc.perform(post("/api/auth/refresh")
+				.header(CSRF_HEADER, "XMLHttpRequest"))
+				.andExpect(status().isUnauthorized())
+				.andExpect(jsonPath("$.status").value(401))
+				.andExpect(jsonPath("$.path").value("/api/auth/refresh"));
+	}
+
+	@Test
+	void refreshTokensTable_storesOnlyTheHash() throws Exception {
+		User user = persistUser("tanish", "tanish@tripflow.com", "password123");
+
+		String issued = refreshCookieValue(mockMvc.perform(post("/api/auth/login")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(loginJson("tanish@tripflow.com", "password123")))
+				.andExpect(status().isOk())
+				.andReturn().getResponse());
+
+		// the raw JdbcTemplate count below bypasses Hibernate's auto-flush
+		entityManager.flush();
+
+		Assertions.assertThat(jdbcTemplate.queryForObject(
+				"SELECT COUNT(*) FROM refresh_tokens WHERE token_hash = ?", Long.class, issued)).isZero();
+		Assertions.assertThat(jdbcTemplate.queryForObject(
+				"SELECT COUNT(*) FROM refresh_tokens WHERE user_id = ?", Long.class, user.getId())).isEqualTo(1L);
+	}
 }
