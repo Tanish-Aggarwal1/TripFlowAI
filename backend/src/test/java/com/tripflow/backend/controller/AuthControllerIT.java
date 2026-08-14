@@ -402,4 +402,138 @@ public class AuthControllerIT {
 		Assertions.assertThat(jdbcTemplate.queryForObject(
 				"SELECT COUNT(*) FROM refresh_tokens WHERE user_id = ?", Long.class, user.getId())).isEqualTo(1L);
 	}
+
+	// ---------- reuse detection and logout (AUTH-04, D-03/D-04) ----------
+
+	private String loginAndCaptureRefreshCookie(String email, String password) throws Exception {
+		return refreshCookieValue(mockMvc.perform(post("/api/auth/login")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(loginJson(email, password)))
+				.andExpect(status().isOk())
+				.andReturn().getResponse());
+	}
+
+	private long unrevokedTokenCount(Long userId) {
+		entityManager.flush();
+		return jdbcTemplate.queryForObject(
+				"SELECT COUNT(*) FROM refresh_tokens WHERE user_id = ? AND revoked_at IS NULL", Long.class, userId);
+	}
+
+	@Test
+	void refresh_replayOfAlreadyRotatedCookie_returns401AndRevokesAllUserTokens() throws Exception {
+		User user = persistUser("tanish", "tanish@tripflow.com", "password123");
+		String original = loginAndCaptureRefreshCookie("tanish@tripflow.com", "password123");
+
+		mockMvc.perform(post("/api/auth/refresh")
+				.cookie(new Cookie(REFRESH_COOKIE, original))
+				.header(CSRF_HEADER, "XMLHttpRequest"))
+				.andExpect(status().isOk());
+
+		// two rows now, neither revoked: the redeemed original and its live replacement
+		Assertions.assertThat(unrevokedTokenCount(user.getId())).isEqualTo(2L);
+
+		mockMvc.perform(post("/api/auth/refresh")
+				.cookie(new Cookie(REFRESH_COOKIE, original))
+				.header(CSRF_HEADER, "XMLHttpRequest"))
+				.andExpect(status().isUnauthorized())
+				.andExpect(jsonPath("$.status").value(401))
+				.andExpect(jsonPath("$.path").value("/api/auth/refresh"));
+
+		// the replacement was valid a moment ago and is now revoked too — that is the whole of D-03
+		Assertions.assertThat(unrevokedTokenCount(user.getId())).isZero();
+		Assertions.assertThat(jdbcTemplate.queryForObject(
+				"SELECT COUNT(*) FROM refresh_tokens WHERE user_id = ?", Long.class, user.getId())).isEqualTo(2L);
+	}
+
+	@Test
+	void refresh_afterMassRevoke_evenTheRotatedCookieIsRejected() throws Exception {
+		persistUser("tanish", "tanish@tripflow.com", "password123");
+		String original = loginAndCaptureRefreshCookie("tanish@tripflow.com", "password123");
+
+		String rotated = refreshCookieValue(mockMvc.perform(post("/api/auth/refresh")
+				.cookie(new Cookie(REFRESH_COOKIE, original))
+				.header(CSRF_HEADER, "XMLHttpRequest"))
+				.andExpect(status().isOk())
+				.andReturn().getResponse());
+
+		mockMvc.perform(post("/api/auth/refresh")
+				.cookie(new Cookie(REFRESH_COOKIE, original))
+				.header(CSRF_HEADER, "XMLHttpRequest"))
+				.andExpect(status().isUnauthorized());
+
+		mockMvc.perform(post("/api/auth/refresh")
+				.cookie(new Cookie(REFRESH_COOKIE, rotated))
+				.header(CSRF_HEADER, "XMLHttpRequest"))
+				.andExpect(status().isUnauthorized())
+				.andExpect(jsonPath("$.status").value(401));
+	}
+
+	@Test
+	void logout_revokesOnlyThePresentedToken() throws Exception {
+		persistUser("tanish", "tanish@tripflow.com", "password123");
+		String deviceOne = loginAndCaptureRefreshCookie("tanish@tripflow.com", "password123");
+		String deviceTwo = loginAndCaptureRefreshCookie("tanish@tripflow.com", "password123");
+
+		mockMvc.perform(post("/api/auth/logout")
+				.cookie(new Cookie(REFRESH_COOKIE, deviceOne))
+				.header(CSRF_HEADER, "XMLHttpRequest"))
+				.andExpect(status().isNoContent());
+
+		mockMvc.perform(post("/api/auth/refresh")
+				.cookie(new Cookie(REFRESH_COOKIE, deviceOne))
+				.header(CSRF_HEADER, "XMLHttpRequest"))
+				.andExpect(status().isUnauthorized());
+
+		// the other device is untouched — D-04's blast radius is exactly one session
+		mockMvc.perform(post("/api/auth/refresh")
+				.cookie(new Cookie(REFRESH_COOKIE, deviceTwo))
+				.header(CSRF_HEADER, "XMLHttpRequest"))
+				.andExpect(status().isOk());
+	}
+
+	@Test
+	void logout_clearsTheCookieWithMatchingAttributes() throws Exception {
+		persistUser("tanish", "tanish@tripflow.com", "password123");
+		String issued = loginAndCaptureRefreshCookie("tanish@tripflow.com", "password123");
+
+		MockHttpServletResponse response = mockMvc.perform(post("/api/auth/logout")
+				.cookie(new Cookie(REFRESH_COOKIE, issued))
+				.header(CSRF_HEADER, "XMLHttpRequest"))
+				.andExpect(status().isNoContent())
+				.andReturn().getResponse();
+
+		// a mismatched path or attribute set makes the browser keep the original cookie
+		Assertions.assertThat(refreshSetCookieHeader(response))
+				.contains("Max-Age=0")
+				.contains("Path=/api/auth")
+				.contains("HttpOnly")
+				.contains("SameSite=None")
+				.doesNotContain("Domain=");
+		Assertions.assertThat(refreshCookieValue(response)).isEmpty();
+	}
+
+	@Test
+	void logout_withNoCookie_returns204() throws Exception {
+		mockMvc.perform(post("/api/auth/logout")
+				.header(CSRF_HEADER, "XMLHttpRequest"))
+				.andExpect(status().isNoContent());
+	}
+
+	@Test
+	void logout_withoutCustomHeader_isRejected() throws Exception {
+		persistUser("tanish", "tanish@tripflow.com", "password123");
+		String issued = loginAndCaptureRefreshCookie("tanish@tripflow.com", "password123");
+
+		mockMvc.perform(post("/api/auth/logout")
+				.cookie(new Cookie(REFRESH_COOKIE, issued)))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.status").value(400))
+				.andExpect(jsonPath("$.path").value("/api/auth/logout"));
+
+		// the presented token survives a rejected logout
+		mockMvc.perform(post("/api/auth/refresh")
+				.cookie(new Cookie(REFRESH_COOKIE, issued))
+				.header(CSRF_HEADER, "XMLHttpRequest"))
+				.andExpect(status().isOk());
+	}
 }

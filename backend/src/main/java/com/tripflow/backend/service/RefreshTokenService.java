@@ -67,7 +67,14 @@ public class RefreshTokenService {
         return new IssuedToken(rawToken, expiresAt);
     }
 
-    @Transactional
+    /**
+     * {@code noRollbackFor} is load-bearing, not tidiness: the D-03 mass revoke below is followed
+     * immediately by a thrown {@link InvalidRefreshTokenException}, and under the default
+     * rollback-on-runtime-exception rule that throw would undo the very revocation the compromise
+     * signal just triggered. Every write this method performs is one we want kept even when it
+     * ends in a 401.
+     */
+    @Transactional(noRollbackFor = InvalidRefreshTokenException.class)
     public RotatedSession rotate(String rawRefreshToken) {
         RefreshToken stored = refreshTokenRepository.findByTokenHash(hash(rawRefreshToken))
                 .orElseThrow(InvalidRefreshTokenException::new);
