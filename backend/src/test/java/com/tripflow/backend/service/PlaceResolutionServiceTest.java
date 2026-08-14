@@ -34,6 +34,9 @@ class PlaceResolutionServiceTest {
     @BeforeEach
     void setUp() {
         placeResolutionService = new PlaceResolutionService(placeRepository);
+        // No Spring context here, so wire the self-proxy field to `this` directly —
+        // see PlaceResolutionService.self for why it exists.
+        placeResolutionService.self = placeResolutionService;
     }
 
     @Test

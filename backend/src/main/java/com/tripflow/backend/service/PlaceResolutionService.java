@@ -8,8 +8,12 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.tripflow.backend.domain.Place;
 import com.tripflow.backend.dto.CreateStopRequest;
@@ -40,6 +44,13 @@ public class PlaceResolutionService {
     private static final double COORDINATE_SCALE_FACTOR = 100_000.0; // 10^COORDINATE_SCALE
 
     private final PlaceRepository placeRepository;
+
+    // Self-injected proxy so insertPlace's @Transactional(REQUIRES_NEW) actually applies —
+    // calling it via `this` from within this class bypasses Spring's AOP proxy entirely.
+    // @Lazy avoids a circular-dependency failure at startup.
+    @Autowired
+    @Lazy
+    PlaceResolutionService self; // package-private: unit tests wire this to `this` directly (no Spring context)
 
     public Place resolvePlace(CreateStopRequest request) {
         return resolvePlace(request.name(), request.latitude(), request.longitude(),
@@ -118,15 +129,29 @@ public class PlaceResolutionService {
         place.setAddress(address);
         place.setExternalPlaceId(externalPlaceId);
         try {
-            return placeRepository.save(place);
+            return self.insertPlace(place);
         } catch (DataIntegrityViolationException ex) {
             // Another request won the race against the partial unique index on
             // external_place_id (V3__create_places.sql) between our lookup and this save.
-            // Re-read and reuse its row instead of surfacing a 500 to the client.
+            // insertPlace() ran (and rolled back) in its own REQUIRES_NEW transaction, so
+            // this method's ambient transaction was only suspended, never poisoned — the
+            // recovery read below can run safely (SCRUM-306; a Postgres constraint
+            // violation aborts the transaction it occurred in, and every later statement
+            // on that same transaction — including a naive recovery read — would fail with
+            // "current transaction is aborted" if it weren't isolated like this).
             log.debug("Place save raced on externalPlaceId={}, re-reading existing row", externalPlaceId);
             return findExistingPlace(name, roundedLatitude, roundedLongitude, externalPlaceId)
                     .orElseThrow(() -> ex);
         }
+    }
+
+    /**
+     * Isolated in its own transaction so a constraint-violation rollback here only unwinds
+     * this single insert, not the caller's whole trip/stop-creation transaction.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public Place insertPlace(Place place) {
+        return placeRepository.save(place);
     }
 
     private Optional<Place> findExistingPlace(String name, Double latitude, Double longitude, String externalPlaceId) {
