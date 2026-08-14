@@ -2,7 +2,6 @@ import { Component, EventEmitter, inject, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
   IonItem,
-  IonLabel,
   IonInput,
   IonSelect,
   IonSelectOption,
@@ -33,7 +32,6 @@ const MAX_INTERESTS = 10;
   imports: [
     FormsModule,
     IonItem,
-    IonLabel,
     IonInput,
     IonSelect,
     IonSelectOption,

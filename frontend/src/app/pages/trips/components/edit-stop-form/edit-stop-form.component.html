@@ -2,23 +2,19 @@
   <h3>Edit stop</h3>
 
   <ion-item>
-    <ion-label position="stacked">Name</ion-label>
-    <ion-input [(ngModel)]="name" placeholder="Stop name"></ion-input>
+    <ion-input label="Name" labelPlacement="stacked" [(ngModel)]="name" placeholder="Stop name"></ion-input>
   </ion-item>
 
   <ion-item>
-    <ion-label position="stacked">Address</ion-label>
-    <ion-input [(ngModel)]="address" placeholder="Optional"></ion-input>
+    <ion-input label="Address" labelPlacement="stacked" [(ngModel)]="address" placeholder="Optional"></ion-input>
   </ion-item>
 
   <ion-item>
-    <ion-label position="stacked">Notes</ion-label>
-    <ion-textarea [(ngModel)]="notes" placeholder="Optional" autoGrow="true"></ion-textarea>
+    <ion-textarea label="Notes" labelPlacement="stacked" [(ngModel)]="notes" placeholder="Optional" autoGrow="true"></ion-textarea>
   </ion-item>
 
   <ion-item>
-    <ion-label position="stacked">Status</ion-label>
-    <ion-select [(ngModel)]="status" interface="popover">
+    <ion-select label="Status" labelPlacement="stacked" [(ngModel)]="status" interface="popover">
       <ion-select-option value="PLANNED">Planned</ion-select-option>
       <ion-select-option value="VISITED">Visited</ion-select-option>
       <ion-select-option value="SKIPPED">Skipped</ion-select-option>

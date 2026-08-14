@@ -2,13 +2,11 @@
   <h3>Plan your trip</h3>
 
   <ion-item>
-    <ion-label position="stacked">Destination</ion-label>
-    <ion-input [(ngModel)]="location" placeholder="e.g. Kyoto, Japan"></ion-input>
+    <ion-input label="Destination" labelPlacement="stacked" [(ngModel)]="location" placeholder="e.g. Kyoto, Japan"></ion-input>
   </ion-item>
 
   <ion-item>
-    <ion-label position="stacked">Days</ion-label>
-    <ion-select [(ngModel)]="days" interface="popover">
+    <ion-select label="Days" labelPlacement="stacked" [(ngModel)]="days" interface="popover">
       @for (n of dayOptions; track n) {
         <ion-select-option [value]="n">{{ n }}</ion-select-option>
       }
@@ -16,8 +14,7 @@
   </ion-item>
 
   <ion-item>
-    <ion-label position="stacked">Budget</ion-label>
-    <ion-select [(ngModel)]="budget" interface="popover">
+    <ion-select label="Budget" labelPlacement="stacked" [(ngModel)]="budget" interface="popover">
       <ion-select-option value="low">Low</ion-select-option>
       <ion-select-option value="medium">Medium</ion-select-option>
       <ion-select-option value="high">High</ion-select-option>
@@ -25,8 +22,7 @@
   </ion-item>
 
   <ion-item>
-    <ion-label position="stacked">Pace</ion-label>
-    <ion-select [(ngModel)]="pace" interface="popover">
+    <ion-select label="Pace" labelPlacement="stacked" [(ngModel)]="pace" interface="popover">
       <ion-select-option value="relaxed">Relaxed</ion-select-option>
       <ion-select-option value="moderate">Moderate</ion-select-option>
       <ion-select-option value="packed">Packed</ion-select-option>
@@ -34,8 +30,9 @@
   </ion-item>
 
   <ion-item>
-    <ion-label position="stacked">Interests (optional)</ion-label>
     <ion-input
+      label="Interests (optional)"
+      labelPlacement="stacked"
       [(ngModel)]="interestInput"
       placeholder="e.g. food, hiking, museums"
       (keyup.enter)="addInterest()"
@@ -55,8 +52,7 @@
   }
 
   <ion-item>
-    <ion-label position="stacked">Title (optional)</ion-label>
-    <ion-input [(ngModel)]="title" placeholder="Leave blank to let Gemini name it"></ion-input>
+    <ion-input label="Title (optional)" labelPlacement="stacked" [(ngModel)]="title" placeholder="Leave blank to let Gemini name it"></ion-input>
   </ion-item>
 
   @if (formError) {

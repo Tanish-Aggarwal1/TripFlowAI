@@ -2,8 +2,9 @@
   <h3>Tell Gemini about this trip</h3>
 
   <ion-item>
-    <ion-label position="stacked">Interests</ion-label>
     <ion-input
+      label="Interests"
+      labelPlacement="stacked"
       [(ngModel)]="interestInput"
       placeholder="e.g. food, hiking, museums"
       (keyup.enter)="addInterest()"
@@ -23,8 +24,7 @@
   }
 
   <ion-item>
-    <ion-label position="stacked">Budget</ion-label>
-    <ion-select [(ngModel)]="budget" interface="popover">
+    <ion-select label="Budget" labelPlacement="stacked" [(ngModel)]="budget" interface="popover">
       <ion-select-option value="low">Low</ion-select-option>
       <ion-select-option value="medium">Medium</ion-select-option>
       <ion-select-option value="high">High</ion-select-option>
@@ -32,8 +32,7 @@
   </ion-item>
 
   <ion-item>
-    <ion-label position="stacked">Pace</ion-label>
-    <ion-select [(ngModel)]="pace" interface="popover">
+    <ion-select label="Pace" labelPlacement="stacked" [(ngModel)]="pace" interface="popover">
       <ion-select-option value="relaxed">Relaxed</ion-select-option>
       <ion-select-option value="moderate">Moderate</ion-select-option>
       <ion-select-option value="packed">Packed</ion-select-option>

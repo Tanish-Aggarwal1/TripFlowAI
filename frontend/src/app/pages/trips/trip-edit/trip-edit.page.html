@@ -35,8 +35,9 @@
       }
 
       <ion-item>
-        <ion-label position="stacked">Title *</ion-label>
         <ion-input
+          label="Title *"
+          labelPlacement="stacked"
           [(ngModel)]="title"
           placeholder="e.g. Weekend in Muskoka"
           maxlength="150">
@@ -44,8 +45,9 @@
       </ion-item>
 
       <ion-item>
-        <ion-label position="stacked">Description</ion-label>
         <ion-textarea
+          label="Description"
+          labelPlacement="stacked"
           [(ngModel)]="description"
           placeholder="Optional description"
           rows="3">
@@ -53,8 +55,9 @@
       </ion-item>
 
       <ion-item>
-        <ion-label position="stacked">Tags (comma separated)</ion-label>
         <ion-input
+          label="Tags (comma separated)"
+          labelPlacement="stacked"
           [(ngModel)]="tagsInput"
           placeholder="e.g. road trip, family, ontario">
         </ion-input>
