@@ -11,6 +11,8 @@ describe('AuthService', () => {
   const USER_KEY = 'tripflow_user';
   const LOGIN_URL = 'http://localhost:8080/api/auth/login';
   const REGISTER_URL = 'http://localhost:8080/api/auth/register';
+  const REFRESH_URL = 'http://localhost:8080/api/auth/refresh';
+  const LOGOUT_URL = 'http://localhost:8080/api/auth/logout';
 
   function makeJwt(payload: Record<string, unknown>): string {
     const base64url = (obj: unknown) => btoa(JSON.stringify(obj));
@@ -107,21 +109,6 @@ describe('AuthService', () => {
       req.flush(response);
     });
 
-    it('logout clears storage, resets isAuthenticated, and navigates to /login', () => {
-      localStorage.setItem(TOKEN_KEY, 'some-token');
-      localStorage.setItem(USER_KEY, JSON.stringify({ userId: 1, username: 'tanish' }));
-      const service = TestBed.inject(AuthService);
-      const router = TestBed.inject(Router);
-      spyOn(router, 'navigate');
-
-      service.logout();
-
-      expect(localStorage.getItem(TOKEN_KEY)).toBeNull();
-      expect(localStorage.getItem(USER_KEY)).toBeNull();
-      expect(service.isAuthenticated()).toBeFalse();
-      expect(router.navigate).toHaveBeenCalledWith(['/login']);
-    });
-
     it('getToken returns the stored token', () => {
       localStorage.setItem(TOKEN_KEY, 'abc-token');
       expect(TestBed.inject(AuthService).getToken()).toBe('abc-token');
@@ -129,6 +116,159 @@ describe('AuthService', () => {
 
     it('getToken returns null when nothing is stored', () => {
       expect(TestBed.inject(AuthService).getToken()).toBeNull();
+    });
+  });
+
+  // ---------- expiresAt: the schedule the silent-refresh timer arms from ----------
+
+  describe('expiresAt signal', () => {
+    it('is null when nothing is stored', () => {
+      expect(TestBed.inject(AuthService).expiresAt()).toBeNull();
+    });
+
+    it('is populated from the stored token on construction, so a page reload keeps the schedule', () => {
+      const exp = Math.floor(Date.now() / 1000) + 3600;
+      localStorage.setItem(TOKEN_KEY, makeJwt({ exp }));
+
+      expect(TestBed.inject(AuthService).expiresAt()).toBe(new Date(exp * 1000).toISOString());
+    });
+
+    it('is null when the stored token is already expired', () => {
+      localStorage.setItem(TOKEN_KEY, makeJwt({ exp: Math.floor(Date.now() / 1000) - 60 }));
+      expect(TestBed.inject(AuthService).expiresAt()).toBeNull();
+    });
+
+    it('is set from the login response', (done) => {
+      const service = TestBed.inject(AuthService);
+
+      service.login({ email: 'tanish@example.com', password: 'password123' }).subscribe(() => {
+        expect(service.expiresAt()).toBe('2026-12-31T23:59:59Z');
+        done();
+      });
+
+      httpMock.expectOne(LOGIN_URL).flush({
+        token: makeJwt({ exp: Math.floor(Date.now() / 1000) + 900 }),
+        tokenType: 'Bearer',
+        userId: 1,
+        username: 'tanish',
+        expiresAt: '2026-12-31T23:59:59Z',
+      });
+    });
+  });
+
+  // ---------- refresh: the credentialed, CSRF-gated silent refresh call ----------
+
+  describe('refresh', () => {
+    it('POSTs to the refresh endpoint with credentials and the CSRF gate header', (done) => {
+      const service = TestBed.inject(AuthService);
+
+      service.refresh().subscribe(() => done());
+
+      const req = httpMock.expectOne(REFRESH_URL);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.withCredentials).toBeTrue();
+      expect(req.request.headers.get('X-Requested-With')).toBe('XMLHttpRequest');
+      req.flush({ token: 'new-token', tokenType: 'Bearer', expiresAt: '2026-12-31T23:59:59Z' });
+    });
+
+    it('stores the new access token and leaves the stored user record untouched', (done) => {
+      const storedUser = JSON.stringify({ userId: 1, username: 'tanish' });
+      localStorage.setItem(TOKEN_KEY, 'old-token');
+      localStorage.setItem(USER_KEY, storedUser);
+      const service = TestBed.inject(AuthService);
+
+      service.refresh().subscribe(() => {
+        expect(localStorage.getItem(TOKEN_KEY)).toBe('new-token');
+        expect(localStorage.getItem(USER_KEY)).toBe(storedUser);
+        done();
+      });
+
+      httpMock
+        .expectOne(REFRESH_URL)
+        .flush({ token: 'new-token', tokenType: 'Bearer', expiresAt: '2026-12-31T23:59:59Z' });
+    });
+
+    it('updates expiresAt and isAuthenticated from the response', (done) => {
+      const service = TestBed.inject(AuthService);
+
+      service.refresh().subscribe(() => {
+        expect(service.expiresAt()).toBe('2026-12-31T23:59:59Z');
+        expect(service.isAuthenticated()).toBeTrue();
+        done();
+      });
+
+      httpMock
+        .expectOne(REFRESH_URL)
+        .flush({ token: 'new-token', tokenType: 'Bearer', expiresAt: '2026-12-31T23:59:59Z' });
+    });
+
+    it('propagates a 401 to the caller without clearing storage or navigating', (done) => {
+      localStorage.setItem(TOKEN_KEY, 'old-token');
+      localStorage.setItem(USER_KEY, JSON.stringify({ userId: 1, username: 'tanish' }));
+      const service = TestBed.inject(AuthService);
+      const router = TestBed.inject(Router);
+      spyOn(router, 'navigate');
+
+      service.refresh().subscribe({
+        error: (err) => {
+          expect(err.status).toBe(401);
+          expect(localStorage.getItem(TOKEN_KEY)).toBe('old-token');
+          expect(localStorage.getItem(USER_KEY)).not.toBeNull();
+          expect(router.navigate).not.toHaveBeenCalled();
+          done();
+        },
+      });
+
+      httpMock.expectOne(REFRESH_URL).flush({}, { status: 401, statusText: 'Unauthorized' });
+    });
+  });
+
+  // ---------- logout: revoke server-side first, then tear down locally ----------
+
+  describe('logout', () => {
+    function seedSession(): AuthService {
+      localStorage.setItem(TOKEN_KEY, 'some-token');
+      localStorage.setItem(USER_KEY, JSON.stringify({ userId: 1, username: 'tanish' }));
+      return TestBed.inject(AuthService);
+    }
+
+    it('POSTs to the logout endpoint with credentials and the CSRF gate header', () => {
+      seedSession().logout();
+
+      const req = httpMock.expectOne(LOGOUT_URL);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.withCredentials).toBeTrue();
+      expect(req.request.headers.get('X-Requested-With')).toBe('XMLHttpRequest');
+      req.flush(null, { status: 204, statusText: 'No Content' });
+    });
+
+    it('clears storage, resets state, and navigates to /login once the call settles', () => {
+      const service = seedSession();
+      const router = TestBed.inject(Router);
+      spyOn(router, 'navigate');
+
+      service.logout();
+      httpMock.expectOne(LOGOUT_URL).flush(null, { status: 204, statusText: 'No Content' });
+
+      expect(localStorage.getItem(TOKEN_KEY)).toBeNull();
+      expect(localStorage.getItem(USER_KEY)).toBeNull();
+      expect(service.isAuthenticated()).toBeFalse();
+      expect(service.expiresAt()).toBeNull();
+      expect(router.navigate).toHaveBeenCalledWith(['/login']);
+    });
+
+    it('still clears storage and navigates when the logout call fails', () => {
+      const service = seedSession();
+      const router = TestBed.inject(Router);
+      spyOn(router, 'navigate');
+
+      service.logout();
+      httpMock.expectOne(LOGOUT_URL).error(new ProgressEvent('error'), { status: 0 });
+
+      expect(localStorage.getItem(TOKEN_KEY)).toBeNull();
+      expect(localStorage.getItem(USER_KEY)).toBeNull();
+      expect(service.isAuthenticated()).toBeFalse();
+      expect(router.navigate).toHaveBeenCalledWith(['/login']);
     });
   });
 
