@@ -72,12 +72,21 @@ public class RefreshTokenService {
         RefreshToken stored = refreshTokenRepository.findByTokenHash(hash(rawRefreshToken))
                 .orElseThrow(InvalidRefreshTokenException::new);
 
-        // A row whose usedAt is already set is rejected as invalid here. Reuse of a redeemed
-        // token is a compromise signal and gets the D-03 mass-revoke response in plan 01-03;
-        // until then this branch is the fail-closed placeholder, never fail-open.
-        if (stored.getUsedAt() != null || stored.getRevokedAt() != null
-                || stored.getExpiresAt().isBefore(Instant.now())) {
-            log.warn("Refresh token rejected userId={} (already redeemed, revoked, or expired)", stored.getUserId());
+        // Revoked and expired are checked BEFORE reuse: a revoked-but-never-redeemed token is a
+        // logged-out session and a lapsed one is just old, so neither may be mistaken for theft.
+        if (stored.getRevokedAt() != null || stored.getExpiresAt().isBefore(Instant.now())) {
+            log.warn("Refresh token rejected userId={} (revoked or expired)", stored.getUserId());
+            throw new InvalidRefreshTokenException();
+        }
+
+        // Replay of an already-redeemed token means two parties hold the same value, so the
+        // whole user is treated as compromised and every device is signed out (D-03).
+        if (stored.getUsedAt() != null) {
+            int revoked = refreshTokenRepository.revokeAllForUser(stored.getUserId(), Instant.now());
+            // Distinguishable marker (checkpoint option-c): greppable in production logs, so how
+            // often a benign multi-tab race trips this is measurable rather than guessed at.
+            log.warn("REFRESH_TOKEN_REUSE_DETECTED all sessions revoked userId={} revokedTokenCount={}",
+                    stored.getUserId(), revoked);
             throw new InvalidRefreshTokenException();
         }
 
@@ -91,6 +100,24 @@ public class RefreshTokenService {
         log.info("Refresh token rotated userId={}", user.getId());
         return new RotatedSession(accessToken, jwtService.getExpiry(accessToken), replacement.rawToken(),
                 replacement.expiresAt());
+    }
+
+    /**
+     * Ends exactly the session whose token was presented, leaving the user's other devices
+     * signed in (D-04). Absent, already-revoked and expired tokens are no-ops rather than
+     * errors: a caller must never be left unable to log out, and the uniform outcome keeps
+     * logout from reporting whether a given cookie was valid.
+     */
+    @Transactional
+    public void revoke(String rawRefreshToken) {
+        refreshTokenRepository.findByTokenHash(hash(rawRefreshToken)).ifPresent(stored -> {
+            if (stored.getRevokedAt() != null || stored.getExpiresAt().isBefore(Instant.now())) {
+                return;
+            }
+            stored.setRevokedAt(Instant.now());
+            refreshTokenRepository.save(stored);
+            log.info("Refresh token revoked on logout userId={}", stored.getUserId());
+        });
     }
 
     private String generateRawToken() {

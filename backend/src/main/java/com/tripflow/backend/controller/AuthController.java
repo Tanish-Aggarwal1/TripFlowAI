@@ -79,6 +79,7 @@ public class AuthController {
             @CookieValue(name = "refresh_token", required = false) String rawRefreshToken,
             HttpServletRequest httpRequest, HttpServletResponse httpResponse) {
         requireCsrfGateHeader(httpRequest);
+        rateLimiterService.checkLimit("refresh:" + httpRequest.getRemoteAddr(), rateLimitProperties.refresh());
         if (rawRefreshToken == null) {
             throw new InvalidRefreshTokenException();
         }
@@ -89,22 +90,49 @@ public class AuthController {
         return ResponseEntity.ok(new RefreshResponse(session.accessToken(), "Bearer", session.accessExpiresAt()));
     }
 
+    @Operation(summary = "Log out this device",
+            description = "Revokes the presented refresh cookie and clears it, leaving the user's other devices "
+                    + "signed in. Always 204, whether or not a valid cookie was presented. "
+                    + "Requires an X-Requested-With header.")
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(
+            @CookieValue(name = "refresh_token", required = false) String rawRefreshToken,
+            HttpServletRequest httpRequest, HttpServletResponse httpResponse) {
+        requireCsrfGateHeader(httpRequest);
+        if (rawRefreshToken != null) {
+            refreshTokenService.revoke(rawRefreshToken);
+        }
+        // Cleared unconditionally, and 204 regardless of what the cookie was worth: logout must be
+        // idempotent and must not become an oracle for whether a given cookie was still valid.
+        httpResponse.addHeader(HttpHeaders.SET_COOKIE,
+                refreshCookie("").maxAge(Duration.ZERO).build().toString());
+        return ResponseEntity.noContent().build();
+    }
+
     private void requireCsrfGateHeader(HttpServletRequest request) {
         if (request.getHeader(CSRF_GATE_HEADER) == null) {
             throw new InvalidRequestException("Missing required " + CSRF_GATE_HEADER + " header");
         }
     }
 
-    /** Never sets a Domain attribute: an explicit parent-suffix domain would expose the cookie
-     * to every other tenant hosted on the same PaaS suffix. Host-only is the point. */
     private void attachRefreshCookie(HttpServletResponse response, RefreshTokenService.IssuedToken issued) {
-        ResponseCookie cookie = ResponseCookie.from(refreshTokenProperties.cookieName(), issued.rawToken())
+        response.addHeader(HttpHeaders.SET_COOKIE, refreshCookie(issued.rawToken())
+                .maxAge(Duration.between(Instant.now(), issued.expiresAt()))
+                .build()
+                .toString());
+    }
+
+    /** Single source of the cookie's attributes so the clearing cookie matches the issuing one
+     * exactly — a browser treats a mismatched name/path/attribute set as a different cookie and
+     * silently keeps the original, which is the classic way a logout fails to log anyone out.
+     *
+     * <p>Never sets a Domain attribute: an explicit parent-suffix domain would expose the cookie
+     * to every other tenant hosted on the same PaaS suffix. Host-only is the point. */
+    private ResponseCookie.ResponseCookieBuilder refreshCookie(String value) {
+        return ResponseCookie.from(refreshTokenProperties.cookieName(), value)
                 .httpOnly(true)
                 .secure(refreshTokenProperties.cookieSecure())
                 .sameSite(refreshTokenProperties.cookieSameSite())
-                .path(refreshTokenProperties.cookiePath())
-                .maxAge(Duration.between(Instant.now(), issued.expiresAt()))
-                .build();
-        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+                .path(refreshTokenProperties.cookiePath());
     }
 }
