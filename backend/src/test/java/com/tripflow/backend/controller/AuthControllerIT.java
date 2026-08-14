@@ -146,6 +146,15 @@ public class AuthControllerIT {
 				.andExpect(jsonPath("$.fieldErrors[*].field").value(org.hamcrest.Matchers.hasItem("password")));
 	}
 
+	@Test
+	void register_passwordOver72Bytes_returns400NotBCryptError() throws Exception {
+		mockMvc.perform(post("/api/auth/register")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(registerJson("joann", "joann@tripflow.com", "a".repeat(100))))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.fieldErrors[*].field").value(org.hamcrest.Matchers.hasItem("password")));
+	}
+
 	// ---------- login ----------
 
 	@Test
