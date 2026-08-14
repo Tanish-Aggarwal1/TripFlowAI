@@ -35,5 +35,6 @@ public class JsonAccessDeniedHandlerTest {
 		assertThat(body.get("error").asText()).isEqualTo("Forbidden");
 		assertThat(body.get("message").asText()).isEqualTo("You do not have access to this resource");
 		assertThat(body.get("path").asText()).isEqualTo("/api/admin/reports");
+		assertThat(body.get("fieldErrors").isNull()).isTrue();
 	}
 }
