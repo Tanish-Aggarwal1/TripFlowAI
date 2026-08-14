@@ -43,9 +43,20 @@ jobs:
             exit 1
           fi
 
+      - run: npm ci
+      - run: npm audit --omit=dev --audit-level=high
+      - run: npm run lint
+      - run: npm run test:ci
+
+      # Injected only now, after tests: `npm run build` uses the "production"
+      # config, whose fileReplacements swap environment.ts -> environment.prod.ts
+      # (angular.json), so environment.ts never needs the real token at all.
+      # test:ci has no fileReplacements and reads environment.ts's placeholder
+      # directly — injecting earlier baked the live secret into Istanbul's HTML
+      # coverage report, which is uploaded as a public 14-day artifact below
+      # (SCRUM-450).
       - name: Inject Mapbox token
         run: |
-          sed -i "s|__MAPBOX_TOKEN__|${{ secrets.MAPBOX_TOKEN }}|g" src/environments/environment.ts
           sed -i "s|__MAPBOX_TOKEN__|${{ secrets.MAPBOX_TOKEN }}|g" src/environments/environment.prod.ts
 
       - name: Inject prod API base URL
@@ -63,10 +74,6 @@ jobs:
             echo "::warning::API_BASE_URL secret not set — leaving __API_BASE_URL__ placeholder in environment.prod.ts (fine for CI verification builds; set this secret before an actual production build/deploy)."
           fi
 
-      - run: npm ci
-      - run: npm audit --omit=dev --audit-level=high
-      - run: npm run lint
-      - run: npm run test:ci
       - run: npm run build
 
       - name: Upload coverage HTML report
