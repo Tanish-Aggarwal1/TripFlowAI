@@ -364,7 +364,9 @@ class TripControllerIT {
 		User user = createTestUser("getnotfound");
 
 		mockMvc.perform(get("/api/trips/999999").with(csrf()).with(asUser(user)))
-				.andExpect(status().isNotFound());
+				.andExpect(status().isNotFound())
+				.andExpect(jsonPath("$.status").value(404))
+				.andExpect(jsonPath("$.path").value("/api/trips/999999"));
 	}
 
 	@Test
@@ -375,7 +377,9 @@ class TripControllerIT {
 		Long tripId = createTrip(owner, sampleTripRequest("Not Yours", TripVisibility.PRIVATE));
 
 		mockMvc.perform(delete("/api/trips/" + tripId).with(csrf()).with(asUser(other)))
-				.andExpect(status().isForbidden());
+				.andExpect(status().isForbidden())
+				.andExpect(jsonPath("$.status").value(403))
+				.andExpect(jsonPath("$.path").value("/api/trips/" + tripId));
 	}
 
 	@Test
@@ -402,5 +406,17 @@ class TripControllerIT {
 						.content(objectMapper.writeValueAsString(tripRequest)))
 				.andExpect(status().isCreated())
 				.andExpect(jsonPath("$.title").value("Real JWT Trip"));
+	}
+
+	@Test
+	void controllers_resolveCurrentUserViaTypedPrincipal_notNameString() {
+		List<Class<?>> parameterTypes = java.util.Arrays.stream(TripController.class.getDeclaredMethods())
+				.filter(method -> java.lang.reflect.Modifier.isPublic(method.getModifiers()))
+				.flatMap(method -> java.util.Arrays.stream(method.getParameterTypes()))
+				.toList();
+
+		assertThat(parameterTypes).contains(UserPrincipal.class);
+		assertThat(parameterTypes).noneMatch(type -> java.security.Principal.class.isAssignableFrom(type)
+				|| org.springframework.security.core.Authentication.class.isAssignableFrom(type));
 	}
 }
