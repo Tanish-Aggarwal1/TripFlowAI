@@ -8,7 +8,9 @@
 Copy `.env.example` to `.env` in `backend/` and fill in:
 DB_PASSWORD=your_local_password
 JWT_SECRET=your_secret_here
-JWT_EXPIRY_MS=3600000
+JWT_EXPIRY_MS=900000
+# Optional — refresh-token lifetime in days, omit to accept the 30-day default
+# REFRESH_TOKEN_EXPIRY_DAYS=30
 
 Never commit `.env` — it's gitignored.
 

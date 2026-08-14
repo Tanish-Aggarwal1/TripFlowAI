@@ -16,9 +16,17 @@ Stateless JWT-based authentication via Spring Security. No sessions, no server-s
 
 Register and login also set an httpOnly `refresh_token` cookie scoped to `Path=/api/auth`. The client never sees the value in JavaScript, and the server never stores it — only a SHA-256 hex digest lands in `refresh_tokens`.
 
-`POST /api/auth/refresh` redeems that cookie once, returning a new access token and a rotated cookie; the presented value is marked used and is rejected on any later presentation. Full-reuse response (revoke every session for that user) and logout revocation are not implemented yet — a replayed token is currently rejected as invalid, which is fail-closed but does not yet raise the compromise signal.
+`POST /api/auth/refresh` redeems that cookie once, returning a new access token and a rotated cookie; the presented value is marked used and is rejected on any later presentation. The endpoint is capped at `app.ratelimit.refresh.*` (60/hour per client IP) — not only as anti-automation, but because reuse detection below turns a replayed token into a forced logout, so an uncapped refresh endpoint would be a way to keep a chosen user permanently signed out.
 
-The cookie is delivered `SameSite=None; Secure` rather than `Lax`/`Strict`, because the deployed frontend and backend are different subdomains of a shared PaaS suffix and are therefore cross-*site* — `Lax` would silently fail to attach the cookie in production while working fine on localhost. CSRF protection is instead carried by requiring a non-simple `X-Requested-With` header on `/api/auth/refresh`, checked before any token lookup: a cross-site form or image cannot set it, so the browser must preflight, and only an origin in `app.cors.allowed-origins` passes. This is why `corsConfigurationSource()` sets `setAllowCredentials(true)` and must keep using `setAllowedOrigins` (an explicit list) rather than `setAllowedOriginPatterns`.
+**Reuse detection (D-03).** Presenting an already-redeemed token means two parties hold the same value, so it is treated as theft rather than as a retry: every refresh token that user holds is revoked, on every device, and the call returns 401. `RefreshTokenService` logs this at WARN with a `REFRESH_TOKEN_REUSE_DETECTED` marker carrying the user id and the number of rows revoked — greppable in production logs, and deliberately so, since a benign multi-tab race can trip it (two tabs share one cookie, so the slower tab's timer presents a value the faster tab already spent). Revoked and expired tokens are checked *before* reuse, so an ordinary logout or a lapsed token is never mistaken for a compromise.
+
+**Known residual:** access tokens are stateless JWTs with no denylist, so one issued just before a mass revoke stays valid until its own expiry. The blast radius is bounded by the 15-minute lifetime; an access-token denylist was judged materially larger work than the risk warrants.
+
+**Logout (D-04).** `POST /api/auth/logout` revokes only the token presented in the cookie, leaving the user's other devices signed in, and always clears the cookie and returns 204 — for a valid, expired, already-revoked, unknown or absent cookie alike, so it is idempotent and is not an oracle for whether a cookie was still good.
+
+The cookie is delivered `SameSite=None; Secure` rather than `Lax`/`Strict`, because the deployed frontend and backend are different subdomains of a shared PaaS suffix and are therefore cross-*site* — `Lax` would silently fail to attach the cookie in production while working fine on localhost. CSRF protection is instead carried by requiring a non-simple `X-Requested-With` header on `/api/auth/refresh` and `/api/auth/logout`, checked before any token lookup: a cross-site form or image cannot set it, so the browser must preflight, and only an origin in `app.cors.allowed-origins` passes. This is why `corsConfigurationSource()` sets `setAllowCredentials(true)` and must keep using `setAllowedOrigins` (an explicit list) rather than `setAllowedOriginPatterns`.
+
+The clearing cookie logout sends is built from the same attribute set as the issuing one — a browser treats a differing name, path or attribute set as a *different* cookie and quietly keeps the original, which is the usual reason a logout fails to log anyone out.
 
 Tunables: `app.refresh-token.expiration-days` (`REFRESH_TOKEN_EXPIRY_DAYS`, default 30, fixed from issuance not sliding), plus `REFRESH_COOKIE_SECURE` / `REFRESH_COOKIE_SAME_SITE` for local HTTP development only — production must not override those two.
 
@@ -47,7 +55,7 @@ The full `permitAll` set is:
 
 | Path | Why it's public |
 |---|---|
-| `/api/auth/**` | Login, registration, and refresh — pre-authentication by definition (refresh authenticates on the cookie, not the access token, so it must be reachable once the access token has expired). Refresh is not rate-limited yet. Rate-limited via `app.ratelimit.login.*`/`app.ratelimit.register.*`, keyed on `HttpServletRequest.getRemoteAddr()` — per-client-IP in prod via `CF-Connecting-IP` (SCRUM-312), see the mechanism below. |
+| `/api/auth/**` | Login, registration, refresh, and logout — pre-authentication by definition. Refresh and logout are *cookie*-authenticated rather than unauthenticated: they carry no bearer token (by the time refresh is called the access token has usually expired) but neither works without a valid `refresh_token` cookie plus the `X-Requested-With` header. Rate-limited via `app.ratelimit.login.*`/`app.ratelimit.register.*`/`app.ratelimit.refresh.*`, keyed on `HttpServletRequest.getRemoteAddr()` — per-client-IP in prod via `CF-Connecting-IP` (SCRUM-312), see the mechanism below. |
 | `/api/discovery/**` | Public trip feed and search (`PUBLIC` visibility only). `TripSummaryResponse` carries no owner or user field, so nothing personal is exposed. |
 | `/actuator/health` | Liveness probe. `management.endpoint.health.show-details=never`. |
 | `/actuator/metrics`, `/actuator/metrics/**` | Exposed deliberately under SCRUM-174 (see `docs/risk-register.md`). **Note this is an unauthenticated read of `http.server.requests` — which enumerates every routed URI plus per-endpoint call counts and latency — as well as `jvm.memory.*` and `hikaricp.connections.*`.** If public metrics are no longer needed, the narrower option is a separate `management.server.port` that isn't publicly routed. |
@@ -65,10 +73,12 @@ Everything else falls through to `.anyRequest().authenticated()`. To read the cu
 ## Environment Variables Required
 
 - `JWT_SECRET` — signing key, set in `backend/.env`, never committed
-- `JWT_EXPIRY_MS` — token lifetime in milliseconds
+- `JWT_EXPIRY_MS` — access-token lifetime in milliseconds (default `900000`, 15 minutes)
+- `REFRESH_TOKEN_EXPIRY_DAYS` — optional, refresh-token lifetime in days (default 30)
+- `REFRESH_COOKIE_SECURE` / `REFRESH_COOKIE_SAME_SITE` — optional, local HTTP development only; production must not set them
 
 ## Testing
 
-- Unit: `JwtServiceTest`, `JwtAuthFilterTest`, `JsonAuthenticationEntryPointTest`, `JsonAccessDeniedHandlerTest`, `AuthServiceTest`
+- Unit: `JwtServiceTest`, `JwtAuthFilterTest`, `JsonAuthenticationEntryPointTest`, `JsonAccessDeniedHandlerTest`, `AuthServiceTest`, `RefreshTokenServiceTest` (reuse detection and logout revocation)
 - Integration: `AuthControllerIntegrationIT` (register/login end-to-end), `TripControllerIT`'s `createTrip_withRealJwt_authenticatesThroughFilterAndPersists` (full filter-chain round trip with a real token)
 - Slice: `AuthControllerTest` (`@WebMvcTest`, mocked `AuthService`, no Testcontainers needed)
