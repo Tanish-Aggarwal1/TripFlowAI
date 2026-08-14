@@ -8,7 +8,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 import com.tripflow.backend.domain.Place;
@@ -111,22 +110,22 @@ public class PlaceResolutionService {
 
     private Place createPlace(String name, double roundedLatitude, double roundedLongitude,
             String address, String externalPlaceId) {
-        Place place = new Place();
-        place.setName(name);
-        place.setLatitude(roundedLatitude);
-        place.setLongitude(roundedLongitude);
-        place.setAddress(address);
-        place.setExternalPlaceId(externalPlaceId);
-        try {
-            return placeRepository.save(place);
-        } catch (DataIntegrityViolationException ex) {
-            // Another request won the race against the partial unique index on
-            // external_place_id (V3__create_places.sql) between our lookup and this save.
-            // Re-read and reuse its row instead of surfacing a 500 to the client.
-            log.debug("Place save raced on externalPlaceId={}, re-reading existing row", externalPlaceId);
-            return findExistingPlace(name, roundedLatitude, roundedLongitude, externalPlaceId)
-                    .orElseThrow(() -> ex);
-        }
+        // ON CONFLICT DO NOTHING (idx_places_external_id, V3__create_places.sql) means a
+        // racing insert for the same external place never raises an error — unlike a plain
+        // save() + catch, Postgres never aborts this transaction, so this stays a normal
+        // part of the caller's ambient transaction instead of needing its own transaction
+        // boundary (SCRUM-306: an earlier REQUIRES_NEW-based fix committed the Place
+        // independently of the caller's trip/stop creation, breaking atomicity — if the
+        // caller's transaction later rolled back for any other reason, the Place stayed).
+        return placeRepository.insertIgnoringConflict(name, roundedLatitude, roundedLongitude, address, externalPlaceId)
+                .map(id -> placeRepository.findById(id).orElseThrow())
+                .orElseGet(() -> {
+                    log.debug("Place insert raced on externalPlaceId={}, re-reading existing row", externalPlaceId);
+                    return findExistingPlace(name, roundedLatitude, roundedLongitude, externalPlaceId)
+                            .orElseThrow(() -> new IllegalStateException(
+                                    "Place insert conflicted on externalPlaceId=" + externalPlaceId
+                                            + " but no existing row was found"));
+                });
     }
 
     private Optional<Place> findExistingPlace(String name, Double latitude, Double longitude, String externalPlaceId) {
