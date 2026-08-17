@@ -22,18 +22,25 @@ export class AuthService {
   // timer off this; seeding it from the stored token is what lets a page reload re-arm.
   expiresAt = signal<string | null>(this.storedTokenExpiry());
 
+  // withCredentials is not optional on these two: a browser discards Set-Cookie on the response
+  // to a non-credentialed cross-origin request, and frontend/backend are cross-origin in every
+  // environment this ships to. Without it the refresh cookie is never stored at all.
   login(request: LoginRequest): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${this.baseUrl}/login`, request).pipe(
-      tap((res) => this.handleAuthSuccess(res)),
-      catchError((err: HttpErrorResponse) => this.handleAuthError(err))
-    );
+    return this.http
+      .post<AuthResponse>(`${this.baseUrl}/login`, request, { withCredentials: true })
+      .pipe(
+        tap((res) => this.handleAuthSuccess(res)),
+        catchError((err: HttpErrorResponse) => this.handleAuthError(err))
+      );
   }
 
   register(request: RegisterRequest): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${this.baseUrl}/register`, request).pipe(
-      tap((res) => this.handleAuthSuccess(res)),
-      catchError((err: HttpErrorResponse) => this.handleAuthError(err))
-    );
+    return this.http
+      .post<AuthResponse>(`${this.baseUrl}/register`, request, { withCredentials: true })
+      .pipe(
+        tap((res) => this.handleAuthSuccess(res)),
+        catchError((err: HttpErrorResponse) => this.handleAuthError(err))
+      );
   }
 
   // Redeems the httpOnly refresh cookie for a new access token. The header is not decorative:

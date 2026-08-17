@@ -82,6 +82,7 @@ describe('AuthService', () => {
 
       const req = httpMock.expectOne(LOGIN_URL);
       expect(req.request.method).toBe('POST');
+      expect(req.request.withCredentials).toBeTrue();
       req.flush(response);
     });
 
@@ -106,6 +107,7 @@ describe('AuthService', () => {
 
       const req = httpMock.expectOne(REGISTER_URL);
       expect(req.request.method).toBe('POST');
+      expect(req.request.withCredentials).toBeTrue();
       req.flush(response);
     });
 
