@@ -50,7 +50,7 @@ class RefreshTokenServiceTest {
 	@BeforeEach
 	void setUp() {
 		refreshTokenService = new RefreshTokenService(refreshTokenRepository, userRepository, jwtService,
-				new RefreshTokenProperties(30, true, "None", "refresh_token", "/api/auth"));
+				new RefreshTokenProperties(30, true, "None", "/api/auth"));
 	}
 
 	private RefreshToken storedToken() {

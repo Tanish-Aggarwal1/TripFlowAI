@@ -48,7 +48,7 @@ class AuthControllerTest {
 	static class RefreshTokenPropertiesTestConfig {
 		@Bean
 		RefreshTokenProperties refreshTokenProperties() {
-			return new RefreshTokenProperties(30, true, "None", "refresh_token", "/api/auth");
+			return new RefreshTokenProperties(30, true, "None", "/api/auth");
 		}
 	}
 

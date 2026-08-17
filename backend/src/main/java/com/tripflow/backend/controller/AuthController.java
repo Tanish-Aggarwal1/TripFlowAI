@@ -45,6 +45,11 @@ public class AuthController {
      * therefore cross-site. */
     private static final String CSRF_GATE_HEADER = "X-Requested-With";
 
+    /** One constant for both directions. @CookieValue needs a compile-time constant, so a bound
+     * property could only ever be honoured on the write side — and a server that issues one
+     * cookie name while looking for another 401s every refresh and logs nothing. */
+    private static final String REFRESH_COOKIE = "refresh_token";
+
     private final AuthService authService;
     private final RefreshTokenService refreshTokenService;
     private final RefreshTokenProperties refreshTokenProperties;
@@ -76,7 +81,7 @@ public class AuthController {
                     + "Requires an X-Requested-With header.")
     @PostMapping("/refresh")
     public ResponseEntity<RefreshResponse> refresh(
-            @CookieValue(name = "refresh_token", required = false) String rawRefreshToken,
+            @CookieValue(name = REFRESH_COOKIE, required = false) String rawRefreshToken,
             HttpServletRequest httpRequest, HttpServletResponse httpResponse) {
         requireCsrfGateHeader(httpRequest);
         rateLimiterService.checkLimit("refresh:" + httpRequest.getRemoteAddr(), rateLimitProperties.refresh());
@@ -96,7 +101,7 @@ public class AuthController {
                     + "Requires an X-Requested-With header.")
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(
-            @CookieValue(name = "refresh_token", required = false) String rawRefreshToken,
+            @CookieValue(name = REFRESH_COOKIE, required = false) String rawRefreshToken,
             HttpServletRequest httpRequest, HttpServletResponse httpResponse) {
         requireCsrfGateHeader(httpRequest);
         if (rawRefreshToken != null) {
@@ -129,7 +134,7 @@ public class AuthController {
      * <p>Never sets a Domain attribute: an explicit parent-suffix domain would expose the cookie
      * to every other tenant hosted on the same PaaS suffix. Host-only is the point. */
     private ResponseCookie.ResponseCookieBuilder refreshCookie(String value) {
-        return ResponseCookie.from(refreshTokenProperties.cookieName(), value)
+        return ResponseCookie.from(REFRESH_COOKIE, value)
                 .httpOnly(true)
                 .secure(refreshTokenProperties.cookieSecure())
                 .sameSite(refreshTokenProperties.cookieSameSite())

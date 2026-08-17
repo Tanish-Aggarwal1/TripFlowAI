@@ -15,7 +15,6 @@ public record RefreshTokenProperties(
         int expirationDays,
         boolean cookieSecure,
         String cookieSameSite,
-        String cookieName,
         String cookiePath) {
 
     public RefreshTokenProperties {
