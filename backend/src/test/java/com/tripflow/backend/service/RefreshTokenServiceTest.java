@@ -39,6 +39,7 @@ class RefreshTokenServiceTest {
 
 	private static final String RAW_TOKEN = "a-raw-refresh-token-value";
 	private static final Long USER_ID = 42L;
+	private static final Long TOKEN_ID = 7L;
 
 	@Mock private RefreshTokenRepository refreshTokenRepository;
 	@Mock private UserRepository userRepository;
@@ -54,6 +55,7 @@ class RefreshTokenServiceTest {
 
 	private RefreshToken storedToken() {
 		RefreshToken token = new RefreshToken();
+		token.setId(TOKEN_ID);
 		token.setUserId(USER_ID);
 		token.setTokenHash("irrelevant-the-service-hashes-the-input-itself");
 		token.setExpiresAt(Instant.now().plus(30, ChronoUnit.DAYS));
@@ -67,6 +69,7 @@ class RefreshTokenServiceTest {
 		RefreshToken used = storedToken();
 		used.setUsedAt(Instant.now().minus(1, ChronoUnit.MINUTES));
 		when(refreshTokenRepository.findByTokenHash(anyString())).thenReturn(Optional.of(used));
+		when(refreshTokenRepository.markUsed(eq(TOKEN_ID), any(Instant.class))).thenReturn(0);
 		when(refreshTokenRepository.revokeAllForUser(eq(USER_ID), any(Instant.class))).thenReturn(3);
 
 		assertThatThrownBy(() -> refreshTokenService.rotate(RAW_TOKEN))
@@ -80,12 +83,30 @@ class RefreshTokenServiceTest {
 		RefreshToken used = storedToken();
 		used.setUsedAt(Instant.now().minus(1, ChronoUnit.MINUTES));
 		when(refreshTokenRepository.findByTokenHash(anyString())).thenReturn(Optional.of(used));
+		when(refreshTokenRepository.markUsed(eq(TOKEN_ID), any(Instant.class))).thenReturn(0);
 		when(refreshTokenRepository.revokeAllForUser(eq(USER_ID), any(Instant.class))).thenReturn(1);
 
 		assertThatThrownBy(() -> refreshTokenService.rotate(RAW_TOKEN))
 				.isInstanceOf(InvalidRefreshTokenException.class);
 
 		verify(refreshTokenRepository, never()).save(any(RefreshToken.class));
+		verify(jwtService, never()).generateToken(anyLong(), anyString());
+	}
+
+	@Test
+	void rotate_losingAConcurrentRedemption_isTreatedAsReuseEvenThoughTheRowLookedUnused() {
+		// The row read at the top of rotate() still has usedAt == null — the winning request
+		// committed in between. Only the conditional UPDATE's rowcount can see that, which is
+		// exactly why the check is not a read of the entity.
+		RefreshToken looksUnused = storedToken();
+		when(refreshTokenRepository.findByTokenHash(anyString())).thenReturn(Optional.of(looksUnused));
+		when(refreshTokenRepository.markUsed(eq(TOKEN_ID), any(Instant.class))).thenReturn(0);
+		when(refreshTokenRepository.revokeAllForUser(eq(USER_ID), any(Instant.class))).thenReturn(2);
+
+		assertThatThrownBy(() -> refreshTokenService.rotate(RAW_TOKEN))
+				.isInstanceOf(InvalidRefreshTokenException.class);
+
+		verify(refreshTokenRepository, times(1)).revokeAllForUser(eq(USER_ID), any(Instant.class));
 		verify(jwtService, never()).generateToken(anyLong(), anyString());
 	}
 

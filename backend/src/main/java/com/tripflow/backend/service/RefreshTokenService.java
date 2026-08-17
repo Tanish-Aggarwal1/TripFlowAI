@@ -86,9 +86,11 @@ public class RefreshTokenService {
             throw new InvalidRefreshTokenException();
         }
 
-        // Replay of an already-redeemed token means two parties hold the same value, so the
-        // whole user is treated as compromised and every device is signed out (D-03).
-        if (stored.getUsedAt() != null) {
+        // Redemption is a conditional UPDATE rather than a read-check-write: two tabs sharing one
+        // cookie can present it at the same instant, and only the statement that flips usedAt away
+        // from NULL wins. A zero rowcount therefore means someone already spent this exact token —
+        // replay, so the whole user is treated as compromised and every device signed out (D-03).
+        if (refreshTokenRepository.markUsed(stored.getId(), Instant.now()) == 0) {
             int revoked = refreshTokenRepository.revokeAllForUser(stored.getUserId(), Instant.now());
             // Distinguishable marker (checkpoint option-c): greppable in production logs, so how
             // often a benign multi-tab race trips this is measurable rather than guessed at.
@@ -96,9 +98,6 @@ public class RefreshTokenService {
                     stored.getUserId(), revoked);
             throw new InvalidRefreshTokenException();
         }
-
-        stored.setUsedAt(Instant.now());
-        refreshTokenRepository.save(stored);
 
         User user = userRepository.findById(stored.getUserId()).orElseThrow(InvalidRefreshTokenException::new);
         String accessToken = jwtService.generateToken(user.getId(), user.getEmail());

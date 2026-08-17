@@ -24,4 +24,14 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long
     @Query("UPDATE RefreshToken rt SET rt.revokedAt = :revokedAt "
             + "WHERE rt.userId = :userId AND rt.revokedAt IS NULL")
     int revokeAllForUser(@Param("userId") Long userId, @Param("revokedAt") Instant revokedAt);
+
+    /**
+     * Claims a token for redemption, returning 1 if this caller won it and 0 if it was already
+     * spent. The {@code usedAt IS NULL} predicate is the concurrency guard: a read-check-write
+     * would let two tabs presenting the same cookie both pass the check and both rotate, which
+     * breaks the single-use invariant D-03 rests on. A zero here means replay.
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("UPDATE RefreshToken rt SET rt.usedAt = :now WHERE rt.id = :id AND rt.usedAt IS NULL")
+    int markUsed(@Param("id") Long id, @Param("now") Instant now);
 }
