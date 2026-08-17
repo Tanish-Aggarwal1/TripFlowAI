@@ -96,6 +96,23 @@ describe('AppComponent', () => {
     expect(authSpy.logout).toHaveBeenCalled();
   });
 
+  it('the banner clears and the dialog stops re-opening once logout resets the status', async () => {
+    // Mirrors the real wiring: AuthService.clearSession() calls SessionStateService.reset().
+    authSpy.logout.and.callFake(() => status.set('active'));
+    status.set('expired');
+
+    const click = fixture.componentInstance.onDocumentClick();
+    const buttons = alertCtrlSpy.create.calls.mostRecent().args[0]?.buttons as AlertButton[];
+    buttons[0].handler?.(undefined);
+    dismiss();
+    await click;
+    fixture.detectChanges();
+
+    expect(bannerText()).toBeUndefined();
+    await fixture.componentInstance.onDocumentClick();
+    expect(alertCtrlSpy.create).toHaveBeenCalledTimes(1);
+  });
+
   it('acting on the banner logs out without also raising the dialog', async () => {
     status.set('expired');
     fixture.componentInstance.logIn();

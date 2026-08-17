@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { DestroyRef, Injectable, effect, inject, signal } from '@angular/core';
 import { AuthService } from './auth.service';
 
@@ -41,6 +42,17 @@ export class SessionStateService {
     this.sessionStatus.set('expired');
   }
 
+  /**
+   * Back to a clean slate after a deliberate teardown. schedule(null) cannot do this — a failed
+   * silent refresh also nulls expiresAt and there the 'expired' status is exactly what the banner
+   * and dialog are for. Without this the status stays 'expired' on the login page, and every click
+   * on the email field re-presents the undismissable expiry dialog.
+   */
+  reset(): void {
+    this.clearTimer();
+    this.sessionStatus.set('active');
+  }
+
   private schedule(expiresAt: string | null): void {
     this.clearTimer();
     if (!expiresAt) return;
@@ -57,7 +69,11 @@ export class SessionStateService {
       // The re-arm rides on the effect: a success updates expiresAt, which re-runs schedule.
       // A failure leaves expiresAt alone, so nothing re-arms and a dead session cannot spin.
       next: () => this.sessionStatus.set('active'),
-      error: () => this.sessionStatus.set('expired'),
+      // Only a 401 proves the refresh token is dead. A cold start, a dropped connection or a
+      // timeout says nothing about the session, so it must not raise the expiry banner — the
+      // next navigation (authGuard) or the next 401 from a real call settles it instead.
+      error: (err: HttpErrorResponse) =>
+        this.sessionStatus.set(err?.status === 401 ? 'expired' : 'active'),
     });
   }
 

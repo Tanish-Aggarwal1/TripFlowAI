@@ -1,10 +1,11 @@
-import { inject, Injectable, signal } from '@angular/core';
+import { inject, Injectable, Injector, signal } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable, tap, catchError, throwError } from 'rxjs';
 import { AuthResponse, LoginRequest, RefreshResponse, RegisterRequest } from '../models/auth.model';
 import { environment } from '../../../environments/environment';
 import { mapApiError } from '../http/api-error.mapper';
+import { SessionStateService } from './session-state.service';
 
 const TOKEN_KEY = 'tripflow_token';
 const USER_KEY = 'tripflow_user';
@@ -14,6 +15,7 @@ export class AuthService {
   private baseUrl = `${environment.apiBaseUrl}/auth`;
   private http = inject(HttpClient);
   private router = inject(Router);
+  private injector = inject(Injector);
 
   // Reactive auth state other components/guards can read
   isAuthenticated = signal<boolean>(this.hasValidToken());
@@ -58,11 +60,12 @@ export class AuthService {
           this.expiresAt.set(res.expiresAt);
           this.isAuthenticated.set(true);
         }),
-        // Local-only teardown: the refresh token is already known-dead, so calling the
+        // Local-only teardown on a 401: the refresh token is known-dead, so calling the
         // revoking logout() here would be redundant, and navigating would fight whatever
-        // the caller (guard, silent-refresh timer) is doing about the failure.
+        // the caller (guard, silent-refresh timer) is doing about the failure. A transport
+        // failure proves nothing about the session, so it must leave storage alone.
         catchError((err: HttpErrorResponse) => {
-          this.clearLocalSession();
+          if (err.status === 401) this.clearLocalSession();
           return throwError(() => err);
         })
       );
@@ -86,6 +89,9 @@ export class AuthService {
 
   private clearSession(): void {
     this.clearLocalSession();
+    // Resolved lazily: SessionStateService injects AuthService, so a field injection here
+    // would be a DI cycle. Without the reset the expiry dialog re-opens on the login page.
+    this.injector.get(SessionStateService).reset();
     this.router.navigate(['/login']);
   }
 

@@ -9,7 +9,11 @@ const BACKEND_TIMEOUT_MS = 8000;
 // AI generation/suggestion calls legitimately take up to 30s (see
 // ai-trip-prompt.component.ts's own "This can take up to 30 seconds" hint) -
 // exempt from the timeout so mid-generation isn't misread as a dead backend.
-const EXEMPT_URL_PATTERNS = ['/ai-generate', '/ai-suggest'];
+//
+// The silent refresh is exempt for a different reason: it runs in the background, so a
+// cold-start timeout there would be reported as an expired session and race this
+// interceptor's own /starting-up navigation against the logout navigation.
+const EXEMPT_URL_PATTERNS = ['/ai-generate', '/ai-suggest', '/api/auth/refresh'];
 
 // SCRUM-273: Render's free-tier backend spins down on idle, and a cold-start
 // request can just hang with no feedback. Any other API call that times out

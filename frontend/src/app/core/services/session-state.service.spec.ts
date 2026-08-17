@@ -88,6 +88,15 @@ describe('SessionStateService', () => {
     expect(refresh).toHaveBeenCalledTimes(1);
   }));
 
+  it('does not mark the session expired when the refresh fails on transport, not auth', fakeAsync(() => {
+    refresh.and.returnValue(throwError(() => ({ status: 0 })));
+    const service = TestBed.inject(SessionStateService);
+    publishExpiry(expiryIn(15));
+
+    tick(14 * MINUTE);
+    expect(service.status()).toBe('active');
+  }));
+
   it('leaves exactly one live timer when the schedule is replaced', fakeAsync(() => {
     TestBed.inject(SessionStateService);
     publishExpiry(expiryIn(15));
@@ -127,6 +136,18 @@ describe('SessionStateService', () => {
 
     service.markExpired();
     expect(service.status()).toBe('expired');
+
+    tick(60 * MINUTE);
+    expect(refresh).not.toHaveBeenCalled();
+  }));
+
+  it('reset returns to active and stops the timer, so the expiry dialog cannot re-open on /login', fakeAsync(() => {
+    const service = TestBed.inject(SessionStateService);
+    publishExpiry(expiryIn(15));
+    service.markExpired();
+
+    service.reset();
+    expect(service.status()).toBe('active');
 
     tick(60 * MINUTE);
     expect(refresh).not.toHaveBeenCalled();

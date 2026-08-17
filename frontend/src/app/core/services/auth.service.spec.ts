@@ -3,6 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
 import { provideRouter, Router } from '@angular/router';
 import { AuthService } from './auth.service';
+import { SessionStateService } from './session-state.service';
 
 describe('AuthService', () => {
   let httpMock: HttpTestingController;
@@ -268,6 +269,17 @@ describe('AuthService', () => {
       expect(service.isAuthenticated()).toBeFalse();
       expect(service.expiresAt()).toBeNull();
       expect(router.navigate).toHaveBeenCalledWith(['/login']);
+    });
+
+    it('resets the session status, so the expiry banner is gone on the login page', () => {
+      const sessionState = TestBed.inject(SessionStateService);
+      sessionState.markExpired();
+      const service = seedSession();
+
+      service.logout();
+      httpMock.expectOne(LOGOUT_URL).flush(null, { status: 204, statusText: 'No Content' });
+
+      expect(sessionState.status()).toBe('active');
     });
 
     it('still clears storage and navigates when the logout call fails', () => {
