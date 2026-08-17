@@ -18,6 +18,7 @@ import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -419,30 +420,50 @@ public class AuthControllerIT {
 				"SELECT COUNT(*) FROM refresh_tokens WHERE user_id = ? AND revoked_at IS NULL", Long.class, userId);
 	}
 
+	/** No flush, because this runs outside a transaction — the endpoints commit their own. */
+	private long committedUnrevokedTokenCount(Long userId) {
+		return jdbcTemplate.queryForObject(
+				"SELECT COUNT(*) FROM refresh_tokens WHERE user_id = ? AND revoked_at IS NULL", Long.class, userId);
+	}
+
+	/**
+	 * Deliberately outside the class-level test transaction. Joined to it, the service's own
+	 * {@code @Transactional} would only mark the shared transaction rollback-only if rotate()'s
+	 * {@code noRollbackFor} were deleted — the JdbcTemplate reads below run on that same
+	 * connection, so they would still observe the uncommitted revocations and this test would
+	 * pass while the load-bearing annotation was gone. A real commit boundary is the only thing
+	 * that makes the mass revoke's survival observable, so the rows are cleaned up by hand.
+	 */
 	@Test
+	@Transactional(propagation = Propagation.NOT_SUPPORTED)
 	void refresh_replayOfAlreadyRotatedCookie_returns401AndRevokesAllUserTokens() throws Exception {
-		User user = persistUser("tanish", "tanish@tripflow.com", "password123");
-		String original = loginAndCaptureRefreshCookie("tanish@tripflow.com", "password123");
+		User user = persistUser("replay", "replay@tripflow.com", "password123");
+		try {
+			String original = loginAndCaptureRefreshCookie("replay@tripflow.com", "password123");
 
-		mockMvc.perform(post("/api/auth/refresh")
-				.cookie(new Cookie(REFRESH_COOKIE, original))
-				.header(CSRF_HEADER, "XMLHttpRequest"))
-				.andExpect(status().isOk());
+			mockMvc.perform(post("/api/auth/refresh")
+					.cookie(new Cookie(REFRESH_COOKIE, original))
+					.header(CSRF_HEADER, "XMLHttpRequest"))
+					.andExpect(status().isOk());
 
-		// two rows now, neither revoked: the redeemed original and its live replacement
-		Assertions.assertThat(unrevokedTokenCount(user.getId())).isEqualTo(2L);
+			// two rows now, neither revoked: the redeemed original and its live replacement
+			Assertions.assertThat(committedUnrevokedTokenCount(user.getId())).isEqualTo(2L);
 
-		mockMvc.perform(post("/api/auth/refresh")
-				.cookie(new Cookie(REFRESH_COOKIE, original))
-				.header(CSRF_HEADER, "XMLHttpRequest"))
-				.andExpect(status().isUnauthorized())
-				.andExpect(jsonPath("$.status").value(401))
-				.andExpect(jsonPath("$.path").value("/api/auth/refresh"));
+			mockMvc.perform(post("/api/auth/refresh")
+					.cookie(new Cookie(REFRESH_COOKIE, original))
+					.header(CSRF_HEADER, "XMLHttpRequest"))
+					.andExpect(status().isUnauthorized())
+					.andExpect(jsonPath("$.status").value(401))
+					.andExpect(jsonPath("$.path").value("/api/auth/refresh"));
 
-		// the replacement was valid a moment ago and is now revoked too — that is the whole of D-03
-		Assertions.assertThat(unrevokedTokenCount(user.getId())).isZero();
-		Assertions.assertThat(jdbcTemplate.queryForObject(
-				"SELECT COUNT(*) FROM refresh_tokens WHERE user_id = ?", Long.class, user.getId())).isEqualTo(2L);
+			// the replacement was valid a moment ago and is now revoked too — that is the whole of D-03
+			Assertions.assertThat(committedUnrevokedTokenCount(user.getId())).isZero();
+			Assertions.assertThat(jdbcTemplate.queryForObject(
+					"SELECT COUNT(*) FROM refresh_tokens WHERE user_id = ?", Long.class, user.getId())).isEqualTo(2L);
+		} finally {
+			jdbcTemplate.update("DELETE FROM refresh_tokens WHERE user_id = ?", user.getId());
+			jdbcTemplate.update("DELETE FROM users WHERE id = ?", user.getId());
+		}
 	}
 
 	@Test
