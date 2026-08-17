@@ -57,6 +57,13 @@ export class AuthService {
           localStorage.setItem(TOKEN_KEY, res.token);
           this.expiresAt.set(res.expiresAt);
           this.isAuthenticated.set(true);
+        }),
+        // Local-only teardown: the refresh token is already known-dead, so calling the
+        // revoking logout() here would be redundant, and navigating would fight whatever
+        // the caller (guard, silent-refresh timer) is doing about the failure.
+        catchError((err: HttpErrorResponse) => {
+          this.clearLocalSession();
+          return throwError(() => err);
         })
       );
   }
@@ -78,11 +85,16 @@ export class AuthService {
   }
 
   private clearSession(): void {
+    this.clearLocalSession();
+    this.router.navigate(['/login']);
+  }
+
+  /** Storage and signals only — no server call, no navigation. */
+  private clearLocalSession(): void {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
     this.isAuthenticated.set(false);
     this.expiresAt.set(null);
-    this.router.navigate(['/login']);
   }
 
   private handleAuthSuccess(res: AuthResponse): void {

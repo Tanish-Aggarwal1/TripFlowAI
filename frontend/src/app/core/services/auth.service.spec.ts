@@ -204,8 +204,8 @@ describe('AuthService', () => {
         .flush({ token: 'new-token', tokenType: 'Bearer', expiresAt: '2026-12-31T23:59:59Z' });
     });
 
-    it('propagates a 401 to the caller without clearing storage or navigating', (done) => {
-      localStorage.setItem(TOKEN_KEY, 'old-token');
+    it('propagates a 401 and tears the session down locally, without navigating', (done) => {
+      localStorage.setItem(TOKEN_KEY, makeJwt({ exp: Math.floor(Date.now() / 1000) + 3600 }));
       localStorage.setItem(USER_KEY, JSON.stringify({ userId: 1, username: 'tanish' }));
       const service = TestBed.inject(AuthService);
       const router = TestBed.inject(Router);
@@ -214,14 +214,25 @@ describe('AuthService', () => {
       service.refresh().subscribe({
         error: (err) => {
           expect(err.status).toBe(401);
-          expect(localStorage.getItem(TOKEN_KEY)).toBe('old-token');
-          expect(localStorage.getItem(USER_KEY)).not.toBeNull();
+          expect(localStorage.getItem(TOKEN_KEY)).toBeNull();
+          expect(localStorage.getItem(USER_KEY)).toBeNull();
+          expect(service.isAuthenticated()).toBeFalse();
+          expect(service.expiresAt()).toBeNull();
           expect(router.navigate).not.toHaveBeenCalled();
           done();
         },
       });
 
       httpMock.expectOne(REFRESH_URL).flush({}, { status: 401, statusText: 'Unauthorized' });
+    });
+
+    it('does not POST to the revoking logout endpoint when a refresh fails', (done) => {
+      const service = TestBed.inject(AuthService);
+
+      service.refresh().subscribe({ error: () => done() });
+
+      httpMock.expectOne(REFRESH_URL).flush({}, { status: 401, statusText: 'Unauthorized' });
+      httpMock.expectNone(LOGOUT_URL);
     });
   });
 
