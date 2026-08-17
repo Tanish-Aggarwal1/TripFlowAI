@@ -1,22 +1,26 @@
-import { TestBed } from '@angular/core/testing';
 import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { TestBed } from '@angular/core/testing';
+import { Router } from '@angular/router';
+import { SessionStateService } from '../services/session-state.service';
 import { sessionExpiryInterceptor } from './session-expiry.interceptor';
-import { AuthService } from '../services/auth.service';
 
 describe('sessionExpiryInterceptor', () => {
   let httpClient: HttpClient;
   let httpMock: HttpTestingController;
-  let authServiceSpy: jasmine.SpyObj<AuthService>;
+  let sessionStateSpy: jasmine.SpyObj<SessionStateService>;
+  let routerSpy: jasmine.SpyObj<Router>;
 
   beforeEach(() => {
-    authServiceSpy = jasmine.createSpyObj('AuthService', ['logout']);
+    sessionStateSpy = jasmine.createSpyObj('SessionStateService', ['markExpired']);
+    routerSpy = jasmine.createSpyObj('Router', ['navigate', 'navigateByUrl']);
 
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(withInterceptors([sessionExpiryInterceptor])),
         provideHttpClientTesting(),
-        { provide: AuthService, useValue: authServiceSpy },
+        { provide: SessionStateService, useValue: sessionStateSpy },
+        { provide: Router, useValue: routerSpy },
       ],
     });
 
@@ -28,31 +32,42 @@ describe('sessionExpiryInterceptor', () => {
     httpMock.verify();
   });
 
-  it('logs out on a 401 from a protected endpoint', () => {
-    httpClient.get('/api/trips').subscribe({ error: () => {} });
+  function flush401(url: string): void {
+    httpClient.get(url).subscribe({ error: () => {} });
+    httpMock.expectOne(url).flush({}, { status: 401, statusText: 'Unauthorized' });
+  }
 
-    const req = httpMock.expectOne('/api/trips');
-    req.flush({}, { status: 401, statusText: 'Unauthorized' });
+  it('marks the session expired on a 401 from a protected endpoint', () => {
+    flush401('/api/trips');
 
-    expect(authServiceSpy.logout).toHaveBeenCalled();
+    expect(sessionStateSpy.markExpired).toHaveBeenCalled();
   });
 
-  it('does not log out on a 401 from the login endpoint (expected wrong-credentials case)', () => {
-    httpClient.post('/api/auth/login', {}).subscribe({ error: () => {} });
+  it('leaves the user where they are — no navigation on a 401 (D-06)', () => {
+    flush401('/api/trips');
 
-    const req = httpMock.expectOne('/api/auth/login');
-    req.flush({}, { status: 401, statusText: 'Unauthorized' });
-
-    expect(authServiceSpy.logout).not.toHaveBeenCalled();
+    expect(routerSpy.navigate).not.toHaveBeenCalled();
+    expect(routerSpy.navigateByUrl).not.toHaveBeenCalled();
   });
 
-  it('passes through non-401 errors without logging out', () => {
+  it('does not mark the session expired on a 401 from login (wrong credentials)', () => {
+    flush401('/api/auth/login');
+
+    expect(sessionStateSpy.markExpired).not.toHaveBeenCalled();
+    expect(routerSpy.navigate).not.toHaveBeenCalled();
+  });
+
+  it('does not double-handle a 401 from refresh — its caller already owns that', () => {
+    flush401('/api/auth/refresh');
+
+    expect(sessionStateSpy.markExpired).not.toHaveBeenCalled();
+  });
+
+  it('passes through non-401 errors untouched', () => {
     httpClient.get('/api/trips').subscribe({ error: () => {} });
+    httpMock.expectOne('/api/trips').flush({}, { status: 500, statusText: 'Internal Server Error' });
 
-    const req = httpMock.expectOne('/api/trips');
-    req.flush({}, { status: 500, statusText: 'Internal Server Error' });
-
-    expect(authServiceSpy.logout).not.toHaveBeenCalled();
+    expect(sessionStateSpy.markExpired).not.toHaveBeenCalled();
   });
 
   it('re-throws the original error for the caller to handle', (done) => {
@@ -63,7 +78,6 @@ describe('sessionExpiryInterceptor', () => {
       },
     });
 
-    const req = httpMock.expectOne('/api/trips');
-    req.flush({}, { status: 401, statusText: 'Unauthorized' });
+    httpMock.expectOne('/api/trips').flush({}, { status: 401, statusText: 'Unauthorized' });
   });
 });
