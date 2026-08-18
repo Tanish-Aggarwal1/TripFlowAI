@@ -1,21 +1,30 @@
 package com.tripflow.backend.controller;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 
+import org.assertj.core.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Bean;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.tripflow.backend.config.RefreshTokenProperties;
 import com.tripflow.backend.dto.AuthResponse;
 import com.tripflow.backend.dto.LoginRequest;
 import com.tripflow.backend.dto.RegisterRequest;
@@ -25,16 +34,39 @@ import com.tripflow.backend.ratelimit.RateLimitProperties;
 import com.tripflow.backend.ratelimit.RateLimiterService;
 import com.tripflow.backend.security.JwtService;
 import com.tripflow.backend.service.AuthService;
+import com.tripflow.backend.service.RefreshTokenService;
+
+import jakarta.servlet.http.Cookie;
 
 @WebMvcTest(AuthController.class)
 @AutoConfigureMockMvc(addFilters = false)
 class AuthControllerTest {
+
+	/** Real values rather than a mocked record — the cookie attributes are the thing under
+	 * test in the refresh cases below, so stubbing them away would defeat the point. */
+	@TestConfiguration
+	static class RefreshTokenPropertiesTestConfig {
+		@Bean
+		RefreshTokenProperties refreshTokenProperties() {
+			return new RefreshTokenProperties(30, true, "None", "/api/auth");
+		}
+	}
 
 	@Autowired
 	private MockMvc mockMvc;
 
 	@MockitoBean
 	private AuthService authService;
+
+	@MockitoBean
+	private RefreshTokenService refreshTokenService;
+
+	@BeforeEach
+	void stubTokenIssuance() {
+		when(refreshTokenService.issue(any()))
+				.thenReturn(new RefreshTokenService.IssuedToken("issued-raw-token",
+						Instant.now().plus(30, ChronoUnit.DAYS)));
+	}
 
 	// JwtAuthFilter is a @Component implementing Filter, so @WebMvcTest auto-detects
 	// and constructs it regardless of the classes={...} narrowing — Filter beans are
@@ -126,5 +158,67 @@ class AuthControllerTest {
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(blankEmailJson))
 				.andExpect(status().isBadRequest());
+	}
+
+	// ---------- refresh (AUTH-04) ----------
+	// The full flow lives in AuthControllerIT, which only runs under -Pci. These two cover the
+	// CSRF gate and the cookie attributes without Docker, so a regression fails a local build.
+
+	@Test
+	void login_attachesHttpOnlyHostOnlyRefreshCookie() throws Exception {
+		when(authService.login(any(LoginRequest.class)))
+				.thenReturn(new AuthResponse("jwt-token", "Bearer", 1L, "tanish", Instant.now()));
+
+		String setCookie = mockMvc.perform(post("/api/auth/login")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(LOGIN_JSON))
+				.andExpect(status().isOk())
+				.andReturn().getResponse().getHeader(HttpHeaders.SET_COOKIE);
+
+		Assertions.assertThat(setCookie)
+				.startsWith("refresh_token=issued-raw-token")
+				.contains("HttpOnly")
+				.contains("Secure")
+				.contains("SameSite=None")
+				.contains("Path=/api/auth")
+				.doesNotContain("Domain=");
+	}
+
+	@Test
+	void refresh_withoutCustomHeader_returns400AndNeverCallsRotate() throws Exception {
+		mockMvc.perform(post("/api/auth/refresh")
+				.cookie(new Cookie("refresh_token", "presented-token")))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.status").value(400));
+
+		verify(refreshTokenService, never()).rotate(any());
+	}
+
+	@Test
+	void refresh_withHeaderButNoCookie_returns401() throws Exception {
+		mockMvc.perform(post("/api/auth/refresh")
+				.header("X-Requested-With", "XMLHttpRequest"))
+				.andExpect(status().isUnauthorized())
+				.andExpect(jsonPath("$.status").value(401));
+
+		verify(refreshTokenService, never()).rotate(any());
+	}
+
+	@Test
+	void refresh_withCookieAndHeader_returnsNewTokenAndRotatedCookie() throws Exception {
+		Instant accessExpiry = Instant.now().plusSeconds(900);
+		when(refreshTokenService.rotate("presented-token")).thenReturn(new RefreshTokenService.RotatedSession(
+				"new-jwt", accessExpiry, "rotated-raw-token", Instant.now().plus(30, ChronoUnit.DAYS)));
+
+		String setCookie = mockMvc.perform(post("/api/auth/refresh")
+				.cookie(new Cookie("refresh_token", "presented-token"))
+				.header("X-Requested-With", "XMLHttpRequest"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.token").value("new-jwt"))
+				.andExpect(jsonPath("$.tokenType").value("Bearer"))
+				.andExpect(jsonPath("$.expiresAt").isNotEmpty())
+				.andReturn().getResponse().getHeader(HttpHeaders.SET_COOKIE);
+
+		Assertions.assertThat(setCookie).startsWith("refresh_token=rotated-raw-token");
 	}
 }

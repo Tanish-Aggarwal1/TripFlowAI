@@ -64,6 +64,13 @@ public class GlobalExceptionHandler {
         return error(HttpStatus.UNAUTHORIZED, "Invalid email or password", req, null);
 	}
 
+	@ExceptionHandler(InvalidRefreshTokenException.class)
+	public ResponseEntity<ApiError> handleInvalidRefreshToken(InvalidRefreshTokenException ex, HttpServletRequest req) {
+		// No token material in the log line — the path is enough to locate the call.
+		log.warn("401 Unauthorized on {}: invalid refresh token", req.getRequestURI());
+		return error(HttpStatus.UNAUTHORIZED, ex.getMessage(), req, null);
+	}
+
 	@ExceptionHandler(InsufficientStopsException.class)
 	public ResponseEntity<ApiError> handleInsufficientStops(InsufficientStopsException ex, HttpServletRequest req) {
 		log.warn("422 Unprocessable Entity on {}: {}", req.getRequestURI(), ex.getMessage());

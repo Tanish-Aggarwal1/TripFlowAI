@@ -27,7 +27,8 @@ Set these in the Render/Railway dashboard under the service's Environment settin
 | `DB_USERNAME` | Database username | — |
 | `DB_PASSWORD` | Database password | — |
 | `JWT_SECRET` | Base64-encoded signing secret for JWTs | Generated via PowerShell (see below) |
-| `JWT_EXPIRY_MS` | Token expiry in milliseconds | `3600000` |
+| `JWT_EXPIRY_MS` | Access-token expiry in milliseconds | `900000` (15 min) |
+| `REFRESH_TOKEN_EXPIRY_DAYS` | Optional — refresh-token lifetime in days, fixed from issuance | `30` (the code default; omit to accept it) |
 | `ORS_API_KEY` | OpenRouteService API key (500 req/day free tier) | — |
 | `GEMINI_API_KEY` | Google Gemini API key for AI itinerary generation | — |
 | `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name (photo upload) | — |
@@ -35,6 +36,8 @@ Set these in the Render/Railway dashboard under the service's Environment settin
 | `CLOUDINARY_API_SECRET` | Cloudinary API secret (photo upload) | — |
 | `MAPBOX_TOKEN` | Mapbox public token (frontend CI injection only — not used by the backend) | `pk.eyJ1...` |
 | `CORS_ALLOWED_ORIGINS` | Comma-separated list of allowed frontend origins | `https://tripflowai.app` |
+
+**A dashboard value overrides the code default, so deploying is not enough to shorten the access-token lifetime.** `JWT_EXPIRY_MS` is set explicitly in the hosting platform's environment, which wins over `application.properties`. Until it is changed to `900000` there, production keeps issuing the old longer-lived access tokens no matter what the committed default says — and the short lifetime is what bounds how long a session survives after a refresh-token revocation.
 
 **Cloudinary fails fast in prod as of the 2026-08-06 engineering audit:** `application-prod.properties` previously defaulted these three to `dev-*-placeholder` values (unlike every other secret above, which has no default), so a forgotten env var meant the app booted fine and only failed at photo-upload request time with a confusing error instead of a clear startup failure. The prod profile now requires all three with no fallback, matching the fail-fast pattern used everywhere else in this table.
 

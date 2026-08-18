@@ -42,6 +42,50 @@ Living document. Add a new section per epic as endpoints are built. Update if a 
 - 401 — invalid credentials
 - 429 — rate limit exceeded (per-IP, `app.ratelimit.login.*` — see Rate Limiting below; `Retry-After` header included)
 
+### Refresh cookie (issued by register and login)
+
+Both endpoints additionally set a refresh-token cookie alongside the JSON body:
+
+`Set-Cookie: refresh_token=<opaque>; Path=/api/auth; Max-Age=2592000; Secure; HttpOnly; SameSite=None`
+
+Host-only by design — no `Domain` attribute is ever set, so the cookie is never exposed to other tenants on the shared PaaS suffix. `Secure`/`SameSite` are overridable for local development via `REFRESH_COOKIE_SECURE` / `REFRESH_COOKIE_SAME_SITE`; production must not override them. Lifetime is `app.refresh-token.expiration-days` (default 30), fixed from issuance rather than sliding. The raw value never appears in a response body and is never persisted — only its SHA-256 hex digest reaches the database.
+
+### POST /api/auth/refresh
+Redeems the refresh cookie exactly once and returns a fresh access token plus a rotated cookie.
+
+**Request:** no body. Requires the `refresh_token` cookie **and** an `X-Requested-With` header (any value). The header is the CSRF control: a cross-site form or image cannot set it, so the browser is forced into a CORS preflight that only an allow-listed origin passes. `SameSite` cannot carry this protection because the deployed frontend and backend are different subdomains of a shared PaaS suffix.
+
+**Success (200):**
+```json
+{
+  "token": "string",
+  "tokenType": "Bearer",
+  "expiresAt": "ISO-8601 datetime"
+}
+```
+No `userId`/`username` — the client already holds them from login. The response also carries a new `refresh_token` cookie with the same attributes as above; the presented value is single-use and is rejected on any subsequent presentation.
+
+**Errors:**
+- 400 — `X-Requested-With` header missing (checked before any token lookup)
+- 401 — cookie absent, unknown, already redeemed, revoked, or expired (one generic message for all cases)
+- 429 — rate limit exceeded (per-IP, `app.ratelimit.refresh.*` — see Rate Limiting below; `Retry-After` header included)
+
+**Replaying an already-redeemed cookie revokes every refresh token that user holds**, on every device, and returns 401 — presenting a consumed token means two parties hold the same value, which is treated as theft rather than as a retry. Access tokens already issued are stateless and keep working until they expire, so a mass revoke takes full effect within the 15-minute access-token lifetime, not instantly.
+
+### POST /api/auth/logout
+Ends the session whose refresh cookie was presented and clears that cookie.
+
+**Request:** no body. Takes the `refresh_token` cookie and requires the same `X-Requested-With` header as refresh — logout mutates server state on the strength of a cookie, so it needs the same CSRF control.
+
+**Success (204):** empty body. The response always carries a clearing `Set-Cookie` for `refresh_token` with a zero max-age and the same name, path, `Secure`, `SameSite` and `HttpOnly` attributes as the issuing cookie.
+
+Returned unconditionally — a valid, expired, already-revoked, unknown or entirely absent cookie all produce 204, so logout is idempotent and never reveals whether a given cookie was still worth anything. Only the presented token is revoked; the user's other devices stay signed in.
+
+**Errors:**
+- 400 — `X-Requested-With` header missing
+
+Login and register response bodies are unchanged by any of the above.
+
 
 ## Auth Header
 Protected endpoints require: `Authorization: Bearer <token>`
@@ -480,7 +524,7 @@ All errors return the standard `ApiError` body.
 
 `POST /api/trips/{id}/ai-suggest`, `POST /api/trips/ai-generate`, and `POST /api/trips/{id}/optimize` all call paid/quota-limited external APIs (Gemini, OpenRouteService), so each is capped per authenticated user via an in-memory token bucket (Bucket4j), keyed on the JWT-derived user id — not IP, since multiple users can share an IP (NAT, campus wifi).
 
-`POST /api/auth/login` and `POST /api/auth/register` are also capped, via the same Bucket4j mechanism, but keyed on `HttpServletRequest.getRemoteAddr()` instead — there's no JWT yet at that point. See `docs/auth.md`'s "Auth rate limiting trust chain" note for how the client IP is derived behind Render's proxy and what's verified vs. assumed about it.
+`POST /api/auth/login`, `POST /api/auth/register` and `POST /api/auth/refresh` are also capped, via the same Bucket4j mechanism, but keyed on `HttpServletRequest.getRemoteAddr()` instead — there's no JWT yet at that point. Refresh is keyed on the address rather than the token hash for the same reason: an attacker cycling forged token values would otherwise get a fresh bucket per attempt. See `docs/auth.md`'s "Auth rate limiting trust chain" note for how the client IP is derived behind Render's proxy and what's verified vs. assumed about it.
 
 **Limits** (externalized in `application.properties`, tunable without a redeploy):
 
@@ -491,6 +535,7 @@ All errors return the standard `ApiError` body.
 | `app.ratelimit.optimize.capacity` / `.window` | 20 / `1h` | `POST /api/trips/{id}/optimize` |
 | `app.ratelimit.login.capacity` / `.window` | 10 / `1h` | `POST /api/auth/login` |
 | `app.ratelimit.register.capacity` / `.window` | 5 / `1h` | `POST /api/auth/register` |
+| `app.ratelimit.refresh.capacity` / `.window` | 60 / `1h` | `POST /api/auth/refresh` |
 
 Exceeding the limit returns `429 Too Many Requests` with the standard `ApiError` body and a `Retry-After` header (seconds until the next token is available). The counter resets in full once the configured window elapses (Bucket4j "intervally" refill — tokens jump back to full capacity at the window boundary, not a continuous trickle).
 

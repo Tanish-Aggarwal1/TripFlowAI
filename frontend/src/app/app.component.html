@@ -1,3 +1,11 @@
 <ion-app>
+  @if (sessionStatus() === 'expired') {
+    <ion-toolbar color="warning">
+      <ion-title size="small">Your session has expired.</ion-title>
+      <ion-buttons slot="end">
+        <ion-button fill="clear" (click)="logIn()">Log in</ion-button>
+      </ion-buttons>
+    </ion-toolbar>
+  }
   <ion-router-outlet></ion-router-outlet>
 </ion-app>

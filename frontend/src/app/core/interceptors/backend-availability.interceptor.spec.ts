@@ -84,6 +84,16 @@ describe('backendAvailabilityInterceptor', () => {
     req.flush({});
   }));
 
+  it('exempts the silent refresh, so a cold start is not reported as an expired session', fakeAsync(() => {
+    httpClient.post(`${environment.apiBaseUrl}/auth/refresh`, {}).subscribe({ error: () => {} });
+
+    tick(9000);
+    expect(routerSpy.navigate).not.toHaveBeenCalled();
+
+    const req = httpMock.expectOne(`${environment.apiBaseUrl}/auth/refresh`);
+    req.flush({});
+  }));
+
   it('does not redirect again when already on the starting-up page', () => {
     (routerSpy as unknown as { url: string }).url = '/starting-up';
 

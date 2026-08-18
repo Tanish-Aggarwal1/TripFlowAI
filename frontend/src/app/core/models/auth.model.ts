@@ -6,6 +6,13 @@ export interface AuthResponse {
   expiresAt: string; // ISO instant
 }
 
+// POST /api/auth/refresh — deliberately omits the user identity fields; the SPA already holds them.
+export interface RefreshResponse {
+  token: string;
+  tokenType: string;
+  expiresAt: string; // ISO instant
+}
+
 export interface LoginRequest {
   email: string;
   password: string;
