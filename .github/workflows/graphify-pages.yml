@@ -1,0 +1,45 @@
+name: Deploy knowledge graph to Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Extract graph (AST-only, no API key)
+        run: uvx --from graphifyy graphify extract . --code-only
+
+      - name: Cluster and render (no LLM naming, no API key)
+        run: uvx --from graphifyy graphify cluster-only . --no-label
+
+      - name: Prepare Pages site
+        run: cp graphify-out/graph.html graphify-out/index.html
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: graphify-out
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
