@@ -10,6 +10,9 @@ frontend/node_modules/
 frontend/www/
 frontend/dist/
 frontend/.angular/
+frontend/coverage/
+npm-debug.log*
+*.tsbuildinfo
 
 # === IDE ===
 .idea/
@@ -26,6 +29,7 @@ frontend/.angular/
 # === OS ===
 .DS_Store
 Thumbs.db
+desktop.ini
 
 # === Logs ===
 *.log
@@ -36,7 +40,7 @@ Thumbs.db
 .claude-flow/
 .claude/
 .mcp.json
-.planning/
+.planning/audit/
 .swarm/
 CLAUDE.md
 graphify-out/
