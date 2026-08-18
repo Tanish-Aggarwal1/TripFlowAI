@@ -1,7 +1,6 @@
 package com.tripflow.backend.security;
 
 import java.io.IOException;
-import java.util.List;
 
 import org.springframework.http.HttpStatus;
 
@@ -22,8 +21,7 @@ final class SecurityErrorWriter {
 
 	static void write(HttpServletResponse response, ObjectMapper objectMapper, HttpStatus status,
 			String message, String path) throws IOException {
-		ApiError body = new ApiError(status.value(), status.getReasonPhrase(), message, path,
-				List.<ApiError.FieldError>of());
+		ApiError body = new ApiError(status.value(), status.getReasonPhrase(), message, path, null);
 
 		response.setStatus(status.value());
 		response.setContentType("application/json");

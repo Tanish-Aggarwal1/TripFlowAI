@@ -36,5 +36,6 @@ public class JsonAuthenticationEntryPointTest {
 		assertThat(body.get("message").asText()).isEqualTo("Authentication required");
 		assertThat(body.get("path").asText()).isEqualTo("/api/trips");
 		assertThat(body.get("timestamp").isTextual()).isTrue();
+		assertThat(body.get("fieldErrors").isNull()).isTrue();
 	}
 }
