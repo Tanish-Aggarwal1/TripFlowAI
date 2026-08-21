@@ -19,8 +19,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.tripflow.backend.dto.CreateTripRequest;
+import com.tripflow.backend.dto.TripOwnerSummaryResponse;
 import com.tripflow.backend.dto.TripResponse;
-import com.tripflow.backend.dto.TripSummaryResponse;
 import com.tripflow.backend.dto.UpdateTripRequest;
 import com.tripflow.backend.ratelimit.RateLimitProperties;
 import com.tripflow.backend.ratelimit.RateLimiterService;
@@ -49,12 +49,14 @@ public class TripController {
     private final RateLimitProperties rateLimitProperties;
 
 
-    @Operation(summary = "List the authenticated user's trips")
+    @Operation(summary = "List the authenticated user's trips",
+            description = "Owner-only: each item includes visitedStopCount and completionPercentage, "
+                    + "which are never exposed on the public discovery feed (D-08).")
     @GetMapping
-    public ResponseEntity<PagedModel<TripSummaryResponse>> listTrips(
+    public ResponseEntity<PagedModel<TripOwnerSummaryResponse>> listTrips(
             @AuthenticationPrincipal UserPrincipal principal,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        Page<TripSummaryResponse> page = tripService.listTrips(principal.userId(), pageable);
+        Page<TripOwnerSummaryResponse> page = tripService.listTrips(principal.userId(), pageable);
         return ResponseEntity.ok(new PagedModel<>(page));
     }
 

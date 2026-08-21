@@ -47,6 +47,9 @@
       <ion-label>
         <h2>{{ trip.title }}</h2>
         <p>{{ trip.stopCount }} stop{{ trip.stopCount !== 1 ? 's' : '' }}</p>
+        @if (trip.stopCount > 0) {
+        <p class="completion">{{ completionLabel(trip) }}</p>
+        }
       </ion-label>
 
       <ion-badge slot="end" [color]="statusColor(trip.status)">

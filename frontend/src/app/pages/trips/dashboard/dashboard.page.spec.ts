@@ -4,7 +4,7 @@ import { AlertController, ToastController } from '@ionic/angular/standalone';
 import { of, throwError } from 'rxjs';
 import { DashboardPage } from './dashboard.page';
 import { TripService } from '../../../core/services/trip.service';
-import { PagedResponse, TripSummaryResponse } from '../../../core/models/trip.model';
+import { PagedResponse, TripOwnerSummaryResponse } from '../../../core/models/trip.model';
 
 describe('DashboardPage', () => {
   let component: DashboardPage;
@@ -14,7 +14,7 @@ describe('DashboardPage', () => {
   let alertCtrlSpy: jasmine.SpyObj<AlertController>;
   let toastCtrlSpy: jasmine.SpyObj<ToastController>;
 
-  const summary: TripSummaryResponse = {
+  const summary: TripOwnerSummaryResponse = {
     id: 1,
     title: 'Trip A',
     visibility: 'PRIVATE',
@@ -23,6 +23,8 @@ describe('DashboardPage', () => {
     updatedAt: '2026-01-01T00:00:00Z',
     stopCount: 2,
     coverPhotoUrl: null,
+    visitedStopCount: 1,
+    completionPercentage: 0.5,
   };
 
   beforeEach(async () => {
@@ -36,7 +38,7 @@ describe('DashboardPage', () => {
       of({
         content: [summary],
         page: { size: 20, number: 0, totalElements: 1, totalPages: 1 },
-      } as PagedResponse<TripSummaryResponse>),
+      } as PagedResponse<TripOwnerSummaryResponse>),
     );
 
     await TestBed.configureTestingModule({
@@ -168,6 +170,20 @@ describe('DashboardPage', () => {
 
       expect(component.aiModalOpen).toBeFalse();
       expect(routerSpy.navigate).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('completionPercent', () => {
+    it('rounds a 3-of-5 trip to 60%', () => {
+      const trip = { ...summary, stopCount: 5, visitedStopCount: 3, completionPercentage: 0.6 };
+
+      expect(component.completionPercent(trip)).toBe(60);
+    });
+
+    it('returns 0 for a zero-stop trip', () => {
+      const trip = { ...summary, stopCount: 0, visitedStopCount: 0, completionPercentage: 0 };
+
+      expect(component.completionPercent(trip)).toBe(0);
     });
   });
 

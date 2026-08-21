@@ -5,7 +5,7 @@ import { environment } from '../../../environments/environment';
 import { mapApiError } from '../http/api-error.mapper';
 import {
   TripResponse,
-  TripSummaryResponse,
+  TripOwnerSummaryResponse,
   PagedResponse,
   CreateTripRequest,
   UpdateTripRequest,
@@ -24,10 +24,10 @@ export class TripService {
 
   // ── READ ────────────────────────────────────────────────────────────────────
 
-  listTrips(page = 0, size = 20): Observable<PagedResponse<TripSummaryResponse>> {
+  listTrips(page = 0, size = 20): Observable<PagedResponse<TripOwnerSummaryResponse>> {
     const params = new HttpParams().set('page', page).set('size', size);
     return this.http
-      .get<PagedResponse<TripSummaryResponse>>(this.baseUrl, { params })
+      .get<PagedResponse<TripOwnerSummaryResponse>>(this.baseUrl, { params })
       .pipe(catchError((err: HttpErrorResponse) => this.handleError(err)));
   }
 

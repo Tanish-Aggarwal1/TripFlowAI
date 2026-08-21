@@ -25,7 +25,7 @@ describe('TripService', () => {
 
   it('should list trips', (done) => {
     const mockSummaries = [
-      { id: 1, title: 'Trip 1', visibility: 'PUBLIC' as const, status: 'DRAFT' as const, createdAt: '2026-07-22T00:00:00Z', updatedAt: '2026-07-22T00:00:00Z', stopCount: 0, coverPhotoUrl: null },
+      { id: 1, title: 'Trip 1', visibility: 'PUBLIC' as const, status: 'DRAFT' as const, createdAt: '2026-07-22T00:00:00Z', updatedAt: '2026-07-22T00:00:00Z', stopCount: 0, coverPhotoUrl: null, visitedStopCount: 0, completionPercentage: 0 },
     ];
     const mockPage = {
       content: mockSummaries,

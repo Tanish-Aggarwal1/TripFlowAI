@@ -10,7 +10,7 @@ import { addIcons } from 'ionicons';
 import { add, lockClosed, globeOutline, trash, create, sparkles, imageOutline, mapOutline } from 'ionicons/icons';
 import { TripService } from '../../../core/services/trip.service';
 import { ToastService } from '../../../core/services/toast.service';
-import { TripSummaryResponse, TripResponse } from '../../../core/models/trip.model';
+import { TripOwnerSummaryResponse, TripResponse } from '../../../core/models/trip.model';
 import { AiTripPromptComponent } from '../components/ai-trip-prompt/ai-trip-prompt.component';
 
 
@@ -34,7 +34,7 @@ export class DashboardPage implements ViewWillEnter {
     private alertCtrl = inject(AlertController);
     private toastService = inject(ToastService);
 
-  trips: TripSummaryResponse[] = [];
+  trips: TripOwnerSummaryResponse[] = [];
   loading = true;
   error: string | null = null;
 
@@ -75,11 +75,11 @@ export class DashboardPage implements ViewWillEnter {
     });
   }
 
-  openTrip(trip: TripSummaryResponse): void {
+  openTrip(trip: TripOwnerSummaryResponse): void {
     this.router.navigate(['/trips', trip.id]);
   }
 
-  editTrip(trip: TripSummaryResponse, event: Event): void {
+  editTrip(trip: TripOwnerSummaryResponse, event: Event): void {
     event.stopPropagation();
     this.router.navigate(['/trips', trip.id, 'edit']);
   }
@@ -118,7 +118,7 @@ export class DashboardPage implements ViewWillEnter {
     this.aiModalOpen = false;
   }
 
-  async confirmDelete(trip: TripSummaryResponse, event: Event): Promise<void> {
+  async confirmDelete(trip: TripOwnerSummaryResponse, event: Event): Promise<void> {
     event.stopPropagation();
     const alert = await this.alertCtrl.create({
       header: 'Delete Trip',
@@ -159,5 +159,14 @@ export class DashboardPage implements ViewWillEnter {
       case 'DRAFT':        return 'Draft';
       default:            return status;
     }
+  }
+
+  // EXPORT-03: rounded in the component, not the template, so it stays unit-testable.
+  completionPercent(trip: TripOwnerSummaryResponse): number {
+    return Math.round(trip.completionPercentage * 100);
+  }
+
+  completionLabel(trip: TripOwnerSummaryResponse): string {
+    return `${trip.visitedStopCount} of ${trip.stopCount} visited (${this.completionPercent(trip)}%)`;
   }
 }

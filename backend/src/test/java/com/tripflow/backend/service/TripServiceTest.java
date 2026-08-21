@@ -31,8 +31,8 @@ import com.tripflow.backend.domain.User;
 import com.tripflow.backend.domain.enums.TripVisibility;
 import com.tripflow.backend.dto.CreateStopRequest;
 import com.tripflow.backend.dto.CreateTripRequest;
+import com.tripflow.backend.dto.TripOwnerSummaryResponse;
 import com.tripflow.backend.dto.TripResponse;
-import com.tripflow.backend.dto.TripSummaryResponse;
 import com.tripflow.backend.dto.UpdateTripRequest;
 import com.tripflow.backend.dto.UpsertStopRequest;
 import com.tripflow.backend.exception.ForbiddenException;
@@ -292,17 +292,19 @@ public class TripServiceTest {
     @Test
     void listTrips_returnsPagedSummariesFromRepository() {
         Pageable pageable = PageRequest.of(0, 20);
-        TripSummaryResponse summary = new TripSummaryResponse(
-                11L, "Trip B", TripVisibility.PRIVATE, null, null, null, 2L, null);
-        Page<TripSummaryResponse> page = new PageImpl<>(List.of(summary), pageable, 1);
+        TripOwnerSummaryResponse summary = new TripOwnerSummaryResponse(
+                11L, "Trip B", TripVisibility.PRIVATE, null, null, null, 5L, null, 3L);
+        Page<TripOwnerSummaryResponse> page = new PageImpl<>(List.of(summary), pageable, 1);
 
         when(tripRepository.findSummariesByUserId(1L, pageable)).thenReturn(page);
 
-        Page<TripSummaryResponse> result = tripService.listTrips(1L, pageable);
+        Page<TripOwnerSummaryResponse> result = tripService.listTrips(1L, pageable);
 
         assertThat(result.getContent()).hasSize(1);
         assertThat(result.getContent().get(0).title()).isEqualTo("Trip B");
-        assertThat(result.getContent().get(0).stopCount()).isEqualTo(2L);
+        assertThat(result.getContent().get(0).stopCount()).isEqualTo(5L);
+        assertThat(result.getContent().get(0).visitedStopCount()).isEqualTo(3L);
+        assertThat(result.getContent().get(0).completionPercentage()).isEqualTo(0.6);
     }
 
     // ---------- updateTrip ----------

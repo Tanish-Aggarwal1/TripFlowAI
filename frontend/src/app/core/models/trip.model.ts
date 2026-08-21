@@ -116,6 +116,23 @@ export interface TripSummaryResponse {
   coverPhotoUrl: string | null;
 }
 
+// EXPORT-03/D-08: owner-only sibling of TripSummaryResponse, returned by GET /api/trips.
+// completionPercentage is a 0.0-1.0 fraction, mirroring the backend TripCompletion
+// convention. Never served on the public discovery feed — that stays on
+// TripSummaryResponse so a stranger's PUBLIC trip never exposes another user's progress.
+export interface TripOwnerSummaryResponse {
+  id: number;
+  title: string;
+  visibility: TripVisibility;
+  status: TripStatus;
+  createdAt: string;
+  updatedAt: string;
+  stopCount: number;
+  coverPhotoUrl: string | null;
+  visitedStopCount: number;
+  completionPercentage: number;
+}
+
 // Matches Spring Data's PagedModel shape: { content, page: { size, number, totalElements, totalPages } }
 export interface PagedResponse<T> {
   content: T[];

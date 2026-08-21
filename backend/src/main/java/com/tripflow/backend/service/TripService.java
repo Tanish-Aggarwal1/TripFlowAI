@@ -11,6 +11,7 @@ import com.tripflow.backend.domain.Trip;
 import com.tripflow.backend.domain.User;
 import com.tripflow.backend.domain.enums.TripVisibility;
 import com.tripflow.backend.dto.CreateTripRequest;
+import com.tripflow.backend.dto.TripOwnerSummaryResponse;
 import com.tripflow.backend.dto.TripResponse;
 import com.tripflow.backend.dto.TripSummaryResponse;
 import com.tripflow.backend.dto.UpdateTripRequest;
@@ -43,7 +44,7 @@ public class TripService {
     private final StopService stopService;
 
     @Transactional(readOnly = true)
-    public Page<TripSummaryResponse> listTrips(Long ownerId, Pageable pageable) {
+    public Page<TripOwnerSummaryResponse> listTrips(Long ownerId, Pageable pageable) {
         return tripRepository.findSummariesByUserId(ownerId, pageable);
     }
 
