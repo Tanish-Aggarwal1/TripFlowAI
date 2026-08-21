@@ -139,6 +139,8 @@ describe('TripService', () => {
       updatedAt: '2026-07-22T00:00:00Z',
       routeGeometry: null,
       startDate: null,
+      visitedStopCount: 0,
+      completionPercentage: 0,
     };
 
     service.createTrip({ title: 'New Trip', description: undefined, tags: undefined, visibility: 'PUBLIC', stops: [] }).subscribe((trip) => {
@@ -165,6 +167,8 @@ describe('TripService', () => {
       updatedAt: '2026-07-22T00:00:00Z',
       routeGeometry: null,
       startDate: null,
+      visitedStopCount: 0,
+      completionPercentage: 0,
     };
 
     service.generateTripWithAi({ prompt: '3 days in Kyoto, food and temples' }).subscribe((trip) => {
@@ -362,6 +366,8 @@ describe('TripService', () => {
       updatedAt: '2026-07-22T00:00:00Z',
       routeGeometry: null,
       startDate: null,
+      visitedStopCount: 0,
+      completionPercentage: 0,
     };
 
     service.getTrip(5).subscribe((trip) => {
@@ -388,6 +394,8 @@ describe('TripService', () => {
       updatedAt: '2026-07-23T00:00:00Z',
       routeGeometry: null,
       startDate: null,
+      visitedStopCount: 0,
+      completionPercentage: 0,
     };
 
     service.updateTrip(3, { title: 'New title', visibility: 'PUBLIC', stops: [] }).subscribe((trip) => {
@@ -424,6 +432,8 @@ describe('TripService', () => {
       updatedAt: '2026-07-23T00:00:00Z',
       routeGeometry: '{"type":"LineString","coordinates":[]}',
       startDate: null,
+      visitedStopCount: 0,
+      completionPercentage: 0,
     };
 
     service.optimizeTrip(9).subscribe((trip) => {

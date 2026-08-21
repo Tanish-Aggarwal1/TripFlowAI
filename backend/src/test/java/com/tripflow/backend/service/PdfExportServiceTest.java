@@ -58,7 +58,7 @@ class PdfExportServiceTest {
 
 	private TripResponse trip(List<StopResponse> stops, String description, String routeGeometry) {
 		return new TripResponse(TRIP_ID, "Weekend Getaway", description, List.of(), TripVisibility.PRIVATE,
-				TripStatus.DRAFT, REQUESTER_ID, stops, null, null, routeGeometry, null, 0);
+				TripStatus.DRAFT, REQUESTER_ID, stops, null, null, routeGeometry, null, 0, 0);
 	}
 
 	private StopResponse stop(String name, Integer stopOrder, String notes, Integer dayNumber,

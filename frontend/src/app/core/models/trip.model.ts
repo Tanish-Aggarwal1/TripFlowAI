@@ -101,6 +101,10 @@ export interface TripResponse {
   updatedAt: string;
   routeGeometry: string | null; //// JSON-encoded GeoJSON LineString; JSON.parse before use. Null pre-optimization.
   startDate: string | null; // "YYYY-MM-DD" LocalDate (SCRUM-244a)
+  // EXPORT-03: visited-of-total stop counts. completionPercentage is a 0.0-1.0 fraction,
+  // mirroring the backend TripCompletion convention.
+  visitedStopCount: number;
+  completionPercentage: number;
 }
 
 // Card-sized projection returned by the paginated GET /api/trips list endpoint (REF-21) —

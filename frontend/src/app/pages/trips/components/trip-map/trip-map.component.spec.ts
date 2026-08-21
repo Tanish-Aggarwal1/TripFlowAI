@@ -35,6 +35,8 @@ function makeTrip(overrides: Partial<TripResponse> = {}): TripResponse {
     updatedAt: '2026-07-22T00:00:00Z',
     routeGeometry: null,
     startDate: null,
+    visitedStopCount: 0,
+    completionPercentage: 0,
     ...overrides,
   };
 }
