@@ -24,8 +24,17 @@ export class TripService {
 
   // ── READ ────────────────────────────────────────────────────────────────────
 
-  listTrips(page = 0, size = 20): Observable<PagedResponse<TripOwnerSummaryResponse>> {
-    const params = new HttpParams().set('page', page).set('size', size);
+  // SEARCH-01: search is appended only when non-blank, so an unfiltered request's URL
+  // (`?page=&size=`) stays exactly as it was before search existed.
+  listTrips(
+    page = 0,
+    size = 20,
+    search?: string,
+  ): Observable<PagedResponse<TripOwnerSummaryResponse>> {
+    let params = new HttpParams().set('page', page).set('size', size);
+    if (search && search.trim()) {
+      params = params.set('search', search.trim());
+    }
     return this.http
       .get<PagedResponse<TripOwnerSummaryResponse>>(this.baseUrl, { params })
       .pipe(catchError((err: HttpErrorResponse) => this.handleError(err)));

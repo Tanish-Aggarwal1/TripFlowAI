@@ -13,6 +13,7 @@ import com.tripflow.backend.domain.enums.TripVisibility;
 import com.tripflow.backend.dto.CreateTripRequest;
 import com.tripflow.backend.dto.TripOwnerSummaryResponse;
 import com.tripflow.backend.dto.TripResponse;
+import com.tripflow.backend.dto.TripSearchFilters;
 import com.tripflow.backend.dto.TripSummaryResponse;
 import com.tripflow.backend.dto.UpdateTripRequest;
 import com.tripflow.backend.exception.InvalidRequestException;
@@ -46,6 +47,19 @@ public class TripService {
     @Transactional(readOnly = true)
     public Page<TripOwnerSummaryResponse> listTrips(Long ownerId, Pageable pageable) {
         return tripRepository.findSummariesByUserId(ownerId, pageable);
+    }
+
+    /**
+     * SEARCH-01/D-09: search + filter over the owner's own trips only. Unlike
+     * {@link #searchPublicTrips}, a blank {@code search} is not an error — it means
+     * "show me everything", so it returns the owner's full list rather than a 400.
+     */
+    @Transactional(readOnly = true)
+    public Page<TripOwnerSummaryResponse> searchOwnedTrips(
+            Long ownerId, String search, TripSearchFilters filters, Pageable pageable) {
+        String trimmed = search == null ? "" : search.trim();
+        String pattern = trimmed.isEmpty() ? null : "%" + trimmed + "%";
+        return tripRepository.searchOwnedTrips(ownerId, pattern, filters, pageable);
     }
 
     /**

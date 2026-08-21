@@ -1,4 +1,4 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, fakeAsync, TestBed, tick } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { AlertController, ToastController } from '@ionic/angular/standalone';
 import { of, throwError } from 'rxjs';
@@ -217,6 +217,47 @@ describe('DashboardPage', () => {
     it('falls back to the raw value for an unrecognized status', () => {
       expect(component.statusLabel('UNKNOWN')).toBe('UNKNOWN');
     });
+  });
+
+  describe('search', () => {
+    it('debounces rapid keystrokes into exactly one HTTP call carrying the final term', fakeAsync(() => {
+      fixture.detectChanges();
+      tripServiceSpy.listTrips.calls.reset();
+      tripServiceSpy.listTrips.and.returnValue(
+        of({
+          content: [],
+          page: { size: 20, number: 0, totalElements: 0, totalPages: 0 },
+        } as PagedResponse<TripOwnerSummaryResponse>),
+      );
+
+      component.onSearchChange('p');
+      tick(100);
+      component.onSearchChange('pa');
+      tick(100);
+      component.onSearchChange('par');
+      tick(350);
+
+      expect(tripServiceSpy.listTrips).toHaveBeenCalledTimes(1);
+      expect(tripServiceSpy.listTrips).toHaveBeenCalledWith(0, 20, 'par');
+    }));
+
+    it('an identical term repeated back-to-back does not issue a second request', fakeAsync(() => {
+      fixture.detectChanges();
+      tripServiceSpy.listTrips.calls.reset();
+      tripServiceSpy.listTrips.and.returnValue(
+        of({
+          content: [],
+          page: { size: 20, number: 0, totalElements: 0, totalPages: 0 },
+        } as PagedResponse<TripOwnerSummaryResponse>),
+      );
+
+      component.onSearchChange('paris');
+      tick(350);
+      component.onSearchChange('paris');
+      tick(350);
+
+      expect(tripServiceSpy.listTrips).toHaveBeenCalledTimes(1);
+    }));
   });
 
   describe('confirmDelete', () => {

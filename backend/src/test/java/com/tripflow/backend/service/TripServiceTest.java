@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -33,6 +35,7 @@ import com.tripflow.backend.dto.CreateStopRequest;
 import com.tripflow.backend.dto.CreateTripRequest;
 import com.tripflow.backend.dto.TripOwnerSummaryResponse;
 import com.tripflow.backend.dto.TripResponse;
+import com.tripflow.backend.dto.TripSearchFilters;
 import com.tripflow.backend.dto.UpdateTripRequest;
 import com.tripflow.backend.dto.UpsertStopRequest;
 import com.tripflow.backend.exception.ForbiddenException;
@@ -305,6 +308,56 @@ public class TripServiceTest {
         assertThat(result.getContent().get(0).stopCount()).isEqualTo(5L);
         assertThat(result.getContent().get(0).visitedStopCount()).isEqualTo(3L);
         assertThat(result.getContent().get(0).completionPercentage()).isEqualTo(0.6);
+    }
+
+    // ---------- searchOwnedTrips ----------
+
+    @Test
+    void searchOwnedTrips_nullSearch_passesNullPatternToRepository() {
+        Pageable pageable = PageRequest.of(0, 20);
+        TripSearchFilters filters = TripSearchFilters.none();
+        when(tripRepository.searchOwnedTrips(eq(1L), isNull(), eq(filters), eq(pageable)))
+                .thenReturn(new PageImpl<>(List.of(), pageable, 0));
+
+        tripService.searchOwnedTrips(1L, null, filters, pageable);
+
+        verify(tripRepository).searchOwnedTrips(eq(1L), isNull(), eq(filters), eq(pageable));
+    }
+
+    @Test
+    void searchOwnedTrips_blankSearch_passesNullPatternToRepository() {
+        Pageable pageable = PageRequest.of(0, 20);
+        TripSearchFilters filters = TripSearchFilters.none();
+        when(tripRepository.searchOwnedTrips(eq(1L), isNull(), eq(filters), eq(pageable)))
+                .thenReturn(new PageImpl<>(List.of(), pageable, 0));
+
+        tripService.searchOwnedTrips(1L, "", filters, pageable);
+
+        verify(tripRepository).searchOwnedTrips(eq(1L), isNull(), eq(filters), eq(pageable));
+    }
+
+    @Test
+    void searchOwnedTrips_whitespaceOnlySearch_passesNullPatternToRepository() {
+        Pageable pageable = PageRequest.of(0, 20);
+        TripSearchFilters filters = TripSearchFilters.none();
+        when(tripRepository.searchOwnedTrips(eq(1L), isNull(), eq(filters), eq(pageable)))
+                .thenReturn(new PageImpl<>(List.of(), pageable, 0));
+
+        tripService.searchOwnedTrips(1L, "   ", filters, pageable);
+
+        verify(tripRepository).searchOwnedTrips(eq(1L), isNull(), eq(filters), eq(pageable));
+    }
+
+    @Test
+    void searchOwnedTrips_populatedSearch_passesWildcardedPatternToRepository() {
+        Pageable pageable = PageRequest.of(0, 20);
+        TripSearchFilters filters = TripSearchFilters.none();
+        when(tripRepository.searchOwnedTrips(eq(1L), eq("%paris%"), eq(filters), eq(pageable)))
+                .thenReturn(new PageImpl<>(List.of(), pageable, 0));
+
+        tripService.searchOwnedTrips(1L, "  paris  ", filters, pageable);
+
+        verify(tripRepository).searchOwnedTrips(eq(1L), eq("%paris%"), eq(filters), eq(pageable));
     }
 
     // ---------- updateTrip ----------

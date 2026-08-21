@@ -42,6 +42,26 @@ describe('TripService', () => {
     req.flush(mockPage);
   });
 
+  it('should append search only when non-blank, leaving the plain request URL unchanged', (done) => {
+    const mockPage = { content: [], page: { size: 20, number: 0, totalElements: 0, totalPages: 0 } };
+
+    service.listTrips(0, 20, '  ').subscribe(() => done());
+
+    const req = httpMock.expectOne('http://localhost:8080/api/trips?page=0&size=20');
+    expect(req.request.method).toBe('GET');
+    req.flush(mockPage);
+  });
+
+  it('should list trips filtered by a trimmed search term', (done) => {
+    const mockPage = { content: [], page: { size: 20, number: 0, totalElements: 0, totalPages: 0 } };
+
+    service.listTrips(0, 20, '  paris  ').subscribe(() => done());
+
+    const req = httpMock.expectOne('http://localhost:8080/api/trips?page=0&size=20&search=paris');
+    expect(req.request.method).toBe('GET');
+    req.flush(mockPage);
+  });
+
   // ✓ Test error handling with fieldErrors present
   it('should handle error with fieldErrors', (done) => {
     service.listTrips().subscribe(

@@ -2,6 +2,14 @@
   <ion-toolbar color="primary">
     <ion-title>My Trips</ion-title>
   </ion-toolbar>
+  <ion-toolbar>
+    <ion-searchbar
+      [debounce]="0"
+      placeholder="Search your trips"
+      [value]="searchTerm"
+      (ionInput)="onSearchChange($event.detail.value ?? '')"
+    ></ion-searchbar>
+  </ion-toolbar>
 </ion-header>
 
 <ion-content class="ion-padding">
@@ -25,7 +33,12 @@
   @if (!loading && !error && trips.length === 0) {
   <div class="centered empty-state">
     <ion-icon name="map-outline"></ion-icon>
+    @if (searchTerm.trim()) {
+    <p>No trips match "{{ searchTerm.trim() }}".</p>
+    <ion-button fill="outline" (click)="onSearchChange('')">Clear search</ion-button>
+    } @else {
     <p>No trips yet. Tap + to create your first trip!</p>
+    }
   </div>
   }
 

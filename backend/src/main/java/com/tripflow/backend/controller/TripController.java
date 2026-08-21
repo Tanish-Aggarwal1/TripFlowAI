@@ -16,11 +16,13 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.tripflow.backend.dto.CreateTripRequest;
 import com.tripflow.backend.dto.TripOwnerSummaryResponse;
 import com.tripflow.backend.dto.TripResponse;
+import com.tripflow.backend.dto.TripSearchFilters;
 import com.tripflow.backend.dto.UpdateTripRequest;
 import com.tripflow.backend.ratelimit.RateLimitProperties;
 import com.tripflow.backend.ratelimit.RateLimiterService;
@@ -49,14 +51,20 @@ public class TripController {
     private final RateLimitProperties rateLimitProperties;
 
 
-    @Operation(summary = "List the authenticated user's trips",
+    @Operation(summary = "List (or search) the authenticated user's trips",
             description = "Owner-only: each item includes visitedStopCount and completionPercentage, "
-                    + "which are never exposed on the public discovery feed (D-08).")
+                    + "which are never exposed on the public discovery feed (D-08). When `search` is "
+                    + "present and non-blank, results match by title (and, from SEARCH-01's full scope, "
+                    + "tags/stop place-names) with ordering fixed at createdAt DESC, id DESC; otherwise "
+                    + "the plain list path honours `sort` from the pageable params.")
     @GetMapping
     public ResponseEntity<PagedModel<TripOwnerSummaryResponse>> listTrips(
             @AuthenticationPrincipal UserPrincipal principal,
+            @RequestParam(required = false) String search,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        Page<TripOwnerSummaryResponse> page = tripService.listTrips(principal.userId(), pageable);
+        Page<TripOwnerSummaryResponse> page = (search != null && !search.isBlank())
+                ? tripService.searchOwnedTrips(principal.userId(), search, TripSearchFilters.none(), pageable)
+                : tripService.listTrips(principal.userId(), pageable);
         return ResponseEntity.ok(new PagedModel<>(page));
     }
 

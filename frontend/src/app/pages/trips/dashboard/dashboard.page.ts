@@ -1,8 +1,10 @@
 import { Component, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
+import { Subject, debounceTime, distinctUntilChanged, switchMap } from 'rxjs';
 import {
   IonHeader, IonToolbar, IonTitle, IonContent, IonButton, IonButtons,
-  IonList, IonItem, IonLabel, IonBadge, IonIcon,
+  IonList, IonItem, IonLabel, IonBadge, IonIcon, IonSearchbar,
   IonFab, IonFabButton, IonFabList, IonModal, IonSpinner, AlertController,IonThumbnail,
   ViewWillEnter
 } from '@ionic/angular/standalone';
@@ -20,7 +22,7 @@ import { AiTripPromptComponent } from '../components/ai-trip-prompt/ai-trip-prom
   styleUrls: ['dashboard.page.scss'],
   imports: [
     IonHeader, IonToolbar, IonTitle, IonContent, IonButton, IonButtons,
-    IonList, IonItem, IonLabel, IonBadge, IonIcon,
+    IonList, IonItem, IonLabel, IonBadge, IonIcon, IonSearchbar,
     IonFab, IonFabButton, IonFabList, IonModal, IonSpinner,
     AiTripPromptComponent,
     IonThumbnail,
@@ -38,6 +40,12 @@ export class DashboardPage implements ViewWillEnter {
   loading = true;
   error: string | null = null;
 
+  // D-15: term flows through a debounced/distinct/switchMap stream rather than firing a
+  // request per keystroke; switchMap ensures a slow earlier response can't overwrite a
+  // newer one.
+  searchTerm = '';
+  private searchTerms = new Subject<string>();
+
   // "Create with AI" modal (dashboard entry point for generating a whole new
   // trip from a free-text prompt), distinct from the SCRUM-67 ai-suggest
   // modal on trip-view, which only adds suggestions onto an existing trip.
@@ -54,10 +62,37 @@ export class DashboardPage implements ViewWillEnter {
       'image-outline': imageOutline,
       'map-outline': mapOutline,
     });
+
+    this.searchTerms
+      .pipe(
+        debounceTime(350),
+        distinctUntilChanged(),
+        switchMap((term) => {
+          this.loading = true;
+          this.error = null;
+          return this.tripService.listTrips(0, 20, term);
+        }),
+        takeUntilDestroyed(),
+      )
+      .subscribe({
+        next: (page) => {
+          this.trips = page.content;
+          this.loading = false;
+        },
+        error: (err) => {
+          this.error = err.message;
+          this.loading = false;
+        },
+      });
   }
 
   ionViewWillEnter(): void {
     this.loadTrips();
+  }
+
+  onSearchChange(term: string): void {
+    this.searchTerm = term;
+    this.searchTerms.next(term);
   }
 
   loadTrips(): void {
