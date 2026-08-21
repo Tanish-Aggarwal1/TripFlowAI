@@ -449,4 +449,18 @@ describe('TripService', () => {
     expect(req.request.responseType).toBe('blob');
     req.flush(mockBlob);
   });
+
+  it('should export a trip PDF as a blob', (done) => {
+    const mockBlob = new Blob(['%PDF-'], { type: 'application/pdf' });
+
+    service.exportPdf(11).subscribe((blob) => {
+      expect(blob).toEqual(mockBlob);
+      done();
+    });
+
+    const req = httpMock.expectOne('http://localhost:8080/api/trips/11/export/pdf');
+    expect(req.request.method).toBe('GET');
+    expect(req.request.responseType).toBe('blob');
+    req.flush(mockBlob);
+  });
 });

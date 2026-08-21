@@ -110,6 +110,13 @@ export class TripService {
       .pipe(catchError((err: HttpErrorResponse) => this.handleError(err)));
   }
 
+  // EXPORT-02: same blob-download shape as exportIcs above.
+  exportPdf(tripId: number): Observable<Blob> {
+    return this.http
+      .get(`${this.baseUrl}/${tripId}/export/pdf`, { responseType: 'blob' })
+      .pipe(catchError((err: HttpErrorResponse) => this.handleError(err)));
+  }
+
   // ── ERROR HANDLING ───────────────────────────────────────────────────────────
 
   private handleError(err: HttpErrorResponse): Observable<never> {
