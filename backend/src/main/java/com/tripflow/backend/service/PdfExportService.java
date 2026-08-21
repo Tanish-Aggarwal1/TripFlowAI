@@ -1,20 +1,27 @@
 package com.tripflow.backend.service;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 
+import com.lowagie.text.BadElementException;
 import com.lowagie.text.Document;
 import com.lowagie.text.DocumentException;
+import com.lowagie.text.Image;
 import com.lowagie.text.Paragraph;
 import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfWriter;
+import com.tripflow.backend.client.mapbox.MapboxClient;
 import com.tripflow.backend.dto.StopResponse;
 import com.tripflow.backend.dto.TripResponse;
+import com.tripflow.backend.exception.MapboxClientException;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Generates a formatted PDF itinerary from a trip's ordered stops (EXPORT-02).
@@ -22,13 +29,16 @@ import lombok.RequiredArgsConstructor;
  * <p>Delegates the ownership/visibility check to {@link TripService#getTrip} — same
  * "owner or PUBLIC trip" rule as every other trip read, not reimplemented here.
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class PdfExportService {
 
 	private static final int STOP_TABLE_COLUMNS = 4; // #, name/address, schedule, notes
+	private static final float MAP_IMAGE_WIDTH_PERCENTAGE = 100f;
 
 	private final TripService tripService;
+	private final MapboxClient mapboxClient;
 
 	/** The trip's title is returned alongside the PDF bytes so the controller can
 	 * build a sensible download filename without a second lookup (and second
@@ -47,6 +57,7 @@ public class PdfExportService {
 
 			addHeader(doc, trip);
 			addStopsTable(doc, trip);
+			addMapSnapshot(doc, trip);
 
 			doc.close();
 			return new PdfExport(trip.title(), out.toByteArray());
@@ -118,5 +129,38 @@ public class PdfExportService {
 			return "";
 		}
 		return "Day " + stop.dayNumber() + ", " + stop.plannedTime();
+	}
+
+	/** Best-effort map snapshot (D-04): never lets a Mapbox failure fail the PDF. */
+	private void addMapSnapshot(Document doc, TripResponse trip) throws DocumentException {
+		if (trip.stops().isEmpty()) {
+			return;
+		}
+
+		List<double[]> stopCoordinates = trip.stops().stream()
+				.map(stop -> new double[] { stop.longitude(), stop.latitude() })
+				.toList();
+
+		Optional<byte[]> snapshot;
+		try {
+			snapshot = mapboxClient.staticSnapshot(trip.routeGeometry(), stopCoordinates);
+		} catch (MapboxClientException ex) {
+			log.warn("Mapbox snapshot unavailable for trip {}, exporting PDF without it", trip.id());
+			return;
+		}
+
+		if (snapshot.isEmpty()) {
+			return;
+		}
+
+		Image image;
+		try {
+			image = Image.getInstance(snapshot.get());
+		} catch (IOException | BadElementException ex) {
+			log.warn("Malformed Mapbox snapshot for trip {}, exporting PDF without it", trip.id());
+			return;
+		}
+		image.setWidthPercentage(MAP_IMAGE_WIDTH_PERCENTAGE);
+		doc.add(image);
 	}
 }
