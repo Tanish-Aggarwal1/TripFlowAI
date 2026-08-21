@@ -207,6 +207,54 @@ class TripControllerIT {
 	}
 
 	@Test
+	void listTrips_fullSearchQueryString_returnsPagedEnvelope() throws Exception {
+		// SEARCH-01: every optional query param present (blank), asserting the
+		// REF-21/SCRUM-110 paged envelope survives the DTO/routing change unchanged.
+		User user = createTestUser("searchqueryowner");
+		createTrip(user, sampleTripRequest("Paris Getaway", TripVisibility.PRIVATE));
+
+		mockMvc.perform(get("/api/trips")
+						.param("search", "")
+						.param("status", "")
+						.param("visibility", "")
+						.param("startDateFrom", "")
+						.param("startDateTo", "")
+						.param("durationDays", "")
+						.param("page", "0")
+						.param("size", "20")
+						.with(csrf()).with(asUser(user)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.content").isArray())
+				.andExpect(jsonPath("$.page.size").exists())
+				.andExpect(jsonPath("$.page.number").exists())
+				.andExpect(jsonPath("$.page.totalElements").exists())
+				.andExpect(jsonPath("$.page.totalPages").exists());
+	}
+
+	@Test
+	void listTrips_searchParam_narrowsToTitleMatch() throws Exception {
+		User user = createTestUser("searchmatchowner");
+		createTrip(user, sampleTripRequest("Ottawa Weekend", TripVisibility.PRIVATE));
+		createTrip(user, sampleTripRequest("Toronto Weekend", TripVisibility.PRIVATE));
+
+		mockMvc.perform(get("/api/trips").param("search", "ottawa").with(csrf()).with(asUser(user)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.content.length()").value(1))
+				.andExpect(jsonPath("$.content[0].title").value("Ottawa Weekend"))
+				.andExpect(jsonPath("$.page.totalElements").value(1));
+	}
+
+	@Test
+	void listTrips_invalidStatusValue_returns400WithApiError() throws Exception {
+		User user = createTestUser("badstatusowner");
+
+		mockMvc.perform(get("/api/trips").param("status", "NOT_A_STATUS").with(csrf()).with(asUser(user)))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.status").value(400))
+				.andExpect(jsonPath("$.path").value("/api/trips"));
+	}
+
+	@Test
 	void listTrips_pageSizeParam_boundsResultsAndReportsTotalPages() throws Exception {
 		User user = createTestUser("pageowner");
 		createTrip(user, sampleTripRequest("Trip One", TripVisibility.PRIVATE));
