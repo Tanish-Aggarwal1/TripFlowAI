@@ -83,6 +83,14 @@ class TripControllerIT {
 		return new CreateTripRequest(title, null, null, visibility, List.of(stop));
 	}
 
+	private CreateTripRequest tripRequestWithStops(String title, TripVisibility visibility, int stopCount) {
+		List<CreateStopRequest> stops = new java.util.ArrayList<>();
+		for (int i = 0; i < stopCount; i++) {
+			stops.add(new CreateStopRequest("Stop " + i, 45.0 + i * 0.01, -79.9 - i * 0.01, null, null, null));
+		}
+		return new CreateTripRequest(title, null, null, visibility, stops);
+	}
+
 	private Long createTrip(User user, CreateTripRequest request) throws Exception {
 		MvcResult result = mockMvc
 				.perform(post("/api/trips").with(csrf()).contentType(MediaType.APPLICATION_JSON)
@@ -211,6 +219,28 @@ class TripControllerIT {
 				.andExpect(jsonPath("$.page.size").value(2))
 				.andExpect(jsonPath("$.page.totalElements").value(3))
 				.andExpect(jsonPath("$.page.totalPages").value(2));
+	}
+
+	@Test
+	void listTrips_itemsIncludeCompletionFields_pagedEnvelopeUnchanged() throws Exception {
+		// EXPORT-03/D-08: the owner list gains per-item completion fields but the
+		// REF-21/SCRUM-110 paged envelope must survive the DTO swap unchanged.
+		User user = createTestUser("completionowner");
+		Long tripId = createTrip(user, tripRequestWithStops("Completion Trip", TripVisibility.PRIVATE, 2));
+
+		Long visitedStopId = jdbcTemplate.queryForObject(
+				"SELECT id FROM stops WHERE trip_id = ? ORDER BY stop_order LIMIT 1", Long.class, tripId);
+		jdbcTemplate.update("UPDATE stops SET status = 'VISITED' WHERE id = ?", visitedStopId);
+
+		mockMvc.perform(get("/api/trips").with(csrf()).with(asUser(user)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.content[0].visitedStopCount").value(1))
+				.andExpect(jsonPath("$.content[0].completionPercentage").value(0.5))
+				.andExpect(jsonPath("$.content[0].stopCount").value(2))
+				.andExpect(jsonPath("$.page.totalElements").value(1))
+				.andExpect(jsonPath("$.page.size").exists())
+				.andExpect(jsonPath("$.page.number").exists())
+				.andExpect(jsonPath("$.page.totalPages").exists());
 	}
 
 	/**
