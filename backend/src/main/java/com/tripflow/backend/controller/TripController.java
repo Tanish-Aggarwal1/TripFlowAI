@@ -1,10 +1,13 @@
 package com.tripflow.backend.controller;
 
+import java.time.LocalDate;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.data.web.PagedModel;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -19,6 +22,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.tripflow.backend.domain.enums.TripStatus;
+import com.tripflow.backend.domain.enums.TripVisibility;
 import com.tripflow.backend.dto.CreateTripRequest;
 import com.tripflow.backend.dto.TripOwnerSummaryResponse;
 import com.tripflow.backend.dto.TripResponse;
@@ -51,19 +56,32 @@ public class TripController {
     private final RateLimitProperties rateLimitProperties;
 
 
-    @Operation(summary = "List (or search) the authenticated user's trips",
+    @Operation(summary = "List (or search/filter) the authenticated user's trips",
             description = "Owner-only: each item includes visitedStopCount and completionPercentage, "
-                    + "which are never exposed on the public discovery feed (D-08). When `search` is "
-                    + "present and non-blank, results match by title (and, from SEARCH-01's full scope, "
-                    + "tags/stop place-names) with ordering fixed at createdAt DESC, id DESC; otherwise "
-                    + "the plain list path honours `sort` from the pageable params.")
+                    + "which are never exposed on the public discovery feed (D-08). `search` (title, "
+                    + "tags, stop place-names), `status`, `visibility`, `startDateFrom`/`startDateTo` "
+                    + "(Trip.startDate, not creation time) and `durationDays` (computed from stop "
+                    + "day numbers, 0 for a stopless trip) are all optional and AND together; a blank "
+                    + "search returns the full list, not a 400. When search or any filter is present, "
+                    + "ordering is fixed at createdAt DESC, id DESC; otherwise the plain list path "
+                    + "honours `sort` from the pageable params.")
     @GetMapping
     public ResponseEntity<PagedModel<TripOwnerSummaryResponse>> listTrips(
             @AuthenticationPrincipal UserPrincipal principal,
             @RequestParam(required = false) String search,
+            @RequestParam(required = false) TripStatus status,
+            @RequestParam(required = false) TripVisibility visibility,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDateFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDateTo,
+            @RequestParam(required = false) Integer durationDays,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        Page<TripOwnerSummaryResponse> page = (search != null && !search.isBlank())
-                ? tripService.searchOwnedTrips(principal.userId(), search, TripSearchFilters.none(), pageable)
+        boolean hasSearchOrFilters = (search != null && !search.isBlank())
+                || status != null || visibility != null
+                || startDateFrom != null || startDateTo != null || durationDays != null;
+        Page<TripOwnerSummaryResponse> page = hasSearchOrFilters
+                ? tripService.searchOwnedTrips(principal.userId(), search,
+                        new TripSearchFilters(status, visibility, startDateFrom, startDateTo, durationDays),
+                        pageable)
                 : tripService.listTrips(principal.userId(), pageable);
         return ResponseEntity.ok(new PagedModel<>(page));
     }
