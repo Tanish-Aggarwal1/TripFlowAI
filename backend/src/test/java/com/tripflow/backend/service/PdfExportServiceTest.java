@@ -2,13 +2,17 @@ package com.tripflow.backend.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
 import java.nio.charset.StandardCharsets;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,17 +22,20 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.lowagie.text.pdf.PdfReader;
 import com.lowagie.text.pdf.parser.PdfTextExtractor;
+import com.tripflow.backend.client.mapbox.MapboxClient;
 import com.tripflow.backend.domain.enums.StopStatus;
 import com.tripflow.backend.domain.enums.StopType;
 import com.tripflow.backend.domain.enums.TripStatus;
 import com.tripflow.backend.domain.enums.TripVisibility;
 import com.tripflow.backend.dto.StopResponse;
 import com.tripflow.backend.dto.TripResponse;
+import com.tripflow.backend.exception.MapboxClientException;
 
 @ExtendWith(MockitoExtension.class)
 class PdfExportServiceTest {
 
 	@Mock private TripService tripService;
+	@Mock private MapboxClient mapboxClient;
 
 	private PdfExportService service;
 
@@ -38,16 +45,20 @@ class PdfExportServiceTest {
 
 	@BeforeEach
 	void setUp() {
-		service = new PdfExportService(tripService);
+		service = new PdfExportService(tripService, mapboxClient);
 	}
 
 	private TripResponse trip(List<StopResponse> stops) {
-		return trip(stops, null);
+		return trip(stops, null, null);
 	}
 
 	private TripResponse trip(List<StopResponse> stops, String description) {
+		return trip(stops, description, null);
+	}
+
+	private TripResponse trip(List<StopResponse> stops, String description, String routeGeometry) {
 		return new TripResponse(TRIP_ID, "Weekend Getaway", description, List.of(), TripVisibility.PRIVATE,
-				TripStatus.DRAFT, REQUESTER_ID, stops, null, null, null, null, 0);
+				TripStatus.DRAFT, REQUESTER_ID, stops, null, null, routeGeometry, null, 0);
 	}
 
 	private StopResponse stop(String name, Integer stopOrder, String notes, Integer dayNumber,
@@ -167,5 +178,36 @@ class PdfExportServiceTest {
 		byte[] pdfBytes = service.exportPdf(TRIP_ID, REQUESTER_ID).pdfBytes();
 
 		assertThat(pdfBytes).startsWith(PDF_MAGIC);
+	}
+
+	@Test
+	void exportPdf_mapboxClientThrows_stillYieldsPdfBytes() {
+		List<StopResponse> stops = List.of(stop("Cottage", 0, null, 1, LocalTime.of(9, 0)));
+		given(tripService.getTrip(TRIP_ID, REQUESTER_ID)).willReturn(trip(stops));
+		when(mapboxClient.staticSnapshot(any(), any())).thenThrow(new MapboxClientException("Mapbox down"));
+
+		byte[] pdfBytes = service.exportPdf(TRIP_ID, REQUESTER_ID).pdfBytes();
+
+		assertThat(pdfBytes).startsWith(PDF_MAGIC);
+	}
+
+	@Test
+	void exportPdf_nullRouteGeometry_stillYieldsAValidPdf() {
+		List<StopResponse> stops = List.of(stop("Cottage", 0, null, 1, LocalTime.of(9, 0)));
+		given(tripService.getTrip(TRIP_ID, REQUESTER_ID)).willReturn(trip(stops, null, null));
+		given(mapboxClient.staticSnapshot(eq(null), any())).willReturn(Optional.empty());
+
+		byte[] pdfBytes = service.exportPdf(TRIP_ID, REQUESTER_ID).pdfBytes();
+
+		assertThat(pdfBytes).startsWith(PDF_MAGIC);
+	}
+
+	@Test
+	void exportPdf_zeroStopTrip_neverCallsMapboxClient() {
+		given(tripService.getTrip(TRIP_ID, REQUESTER_ID)).willReturn(trip(List.of()));
+
+		service.exportPdf(TRIP_ID, REQUESTER_ID);
+
+		verifyNoInteractions(mapboxClient);
 	}
 }
