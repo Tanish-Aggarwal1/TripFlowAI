@@ -1,13 +1,17 @@
 package com.tripflow.backend.service;
 
 import java.io.ByteArrayOutputStream;
+import java.util.Comparator;
+import java.util.List;
 
 import org.springframework.stereotype.Service;
 
 import com.lowagie.text.Document;
 import com.lowagie.text.DocumentException;
 import com.lowagie.text.Paragraph;
+import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfWriter;
+import com.tripflow.backend.dto.StopResponse;
 import com.tripflow.backend.dto.TripResponse;
 
 import lombok.RequiredArgsConstructor;
@@ -21,6 +25,8 @@ import lombok.RequiredArgsConstructor;
 @Service
 @RequiredArgsConstructor
 public class PdfExportService {
+
+	private static final int STOP_TABLE_COLUMNS = 4; // #, name/address, schedule, notes
 
 	private final TripService tripService;
 
@@ -39,7 +45,8 @@ public class PdfExportService {
 			PdfWriter.getInstance(doc, out);
 			doc.open();
 
-			doc.add(new Paragraph(trip.title()));
+			addHeader(doc, trip);
+			addStopsTable(doc, trip);
 
 			doc.close();
 			return new PdfExport(trip.title(), out.toByteArray());
@@ -50,5 +57,66 @@ public class PdfExportService {
 			// condition callers should handle.
 			throw new IllegalStateException("Failed to build PDF export for trip " + tripId, ex);
 		}
+	}
+
+	private void addHeader(Document doc, TripResponse trip) throws DocumentException {
+		doc.add(new Paragraph(trip.title()));
+
+		StringBuilder subHeader = new StringBuilder();
+		if (trip.startDate() != null) {
+			subHeader.append(trip.startDate());
+		}
+		if (!trip.stops().isEmpty()) {
+			if (subHeader.length() > 0) {
+				subHeader.append(" — ");
+			}
+			subHeader.append(trip.stops().size()).append(" stop").append(trip.stops().size() == 1 ? "" : "s");
+		}
+		if (subHeader.length() > 0) {
+			doc.add(new Paragraph(subHeader.toString()));
+		}
+		if (trip.description() != null) {
+			doc.add(new Paragraph(trip.description()));
+		}
+	}
+
+	private void addStopsTable(Document doc, TripResponse trip) throws DocumentException {
+		if (trip.stops().isEmpty()) {
+			return;
+		}
+
+		List<StopResponse> sortedStops = trip.stops().stream()
+				.sorted(Comparator.comparing(StopResponse::stopOrder))
+				.toList();
+
+		PdfPTable table = new PdfPTable(STOP_TABLE_COLUMNS);
+		table.setWidthPercentage(100);
+		table.addCell("#");
+		table.addCell("Stop");
+		table.addCell("Schedule");
+		table.addCell("Notes");
+
+		for (StopResponse stop : sortedStops) {
+			table.addCell(String.valueOf(stop.stopOrder() + 1));
+			table.addCell(nameAndAddress(stop));
+			table.addCell(schedule(stop));
+			table.addCell(stop.notes() != null ? stop.notes() : "");
+		}
+
+		doc.add(table);
+	}
+
+	private static String nameAndAddress(StopResponse stop) {
+		if (stop.address() == null) {
+			return stop.name();
+		}
+		return stop.name() + "\n" + stop.address();
+	}
+
+	private static String schedule(StopResponse stop) {
+		if (stop.dayNumber() == null || stop.plannedTime() == null) {
+			return "";
+		}
+		return "Day " + stop.dayNumber() + ", " + stop.plannedTime();
 	}
 }
