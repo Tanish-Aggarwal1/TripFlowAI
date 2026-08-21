@@ -188,30 +188,24 @@ describe('DashboardPage', () => {
   });
 
   describe('statusColor', () => {
-    it('maps IN_PROGRESS to warning', () => {
-      expect(component.statusColor('IN_PROGRESS')).toBe('warning');
-    });
-
-    it('maps COMPLETED to success', () => {
+    it('maps each of the four real backend statuses to a distinct color', () => {
+      expect(component.statusColor('DRAFT')).toBe('medium');
+      expect(component.statusColor('PLANNED')).toBe('tertiary');
+      expect(component.statusColor('ACTIVE')).toBe('warning');
       expect(component.statusColor('COMPLETED')).toBe('success');
     });
 
-    it('maps any other status to medium', () => {
-      expect(component.statusColor('DRAFT')).toBe('medium');
+    it('never returns a color for the removed IN_PROGRESS value', () => {
+      expect(component.statusColor('IN_PROGRESS')).toBe('medium');
     });
   });
 
   describe('statusLabel', () => {
-    it('maps IN_PROGRESS to a display label', () => {
-      expect(component.statusLabel('IN_PROGRESS')).toBe('In progress');
-    });
+    it('maps each of the four real backend statuses to a distinct, non-fallback label', () => {
+      const labels = ['DRAFT', 'PLANNED', 'ACTIVE', 'COMPLETED'].map((s) => component.statusLabel(s));
 
-    it('maps COMPLETED to a display label', () => {
-      expect(component.statusLabel('COMPLETED')).toBe('Completed');
-    });
-
-    it('maps DRAFT to a display label', () => {
-      expect(component.statusLabel('DRAFT')).toBe('Draft');
+      expect(labels).toEqual(['Draft', 'Planned', 'Active', 'Completed']);
+      expect(new Set(labels).size).toBe(4);
     });
 
     it('falls back to the raw value for an unrecognized status', () => {
@@ -219,8 +213,8 @@ describe('DashboardPage', () => {
     });
   });
 
-  describe('search', () => {
-    it('debounces rapid keystrokes into exactly one HTTP call carrying the final term', fakeAsync(() => {
+  describe('search and filters', () => {
+    beforeEach(() => {
       fixture.detectChanges();
       tripServiceSpy.listTrips.calls.reset();
       tripServiceSpy.listTrips.and.returnValue(
@@ -229,7 +223,9 @@ describe('DashboardPage', () => {
           page: { size: 20, number: 0, totalElements: 0, totalPages: 0 },
         } as PagedResponse<TripOwnerSummaryResponse>),
       );
+    });
 
+    it('debounces rapid keystrokes into exactly one HTTP call carrying the final term', fakeAsync(() => {
       component.onSearchChange('p');
       tick(100);
       component.onSearchChange('pa');
@@ -238,25 +234,50 @@ describe('DashboardPage', () => {
       tick(350);
 
       expect(tripServiceSpy.listTrips).toHaveBeenCalledTimes(1);
-      expect(tripServiceSpy.listTrips).toHaveBeenCalledWith(0, 20, 'par');
+      expect(tripServiceSpy.listTrips).toHaveBeenCalledWith(0, 20, { search: 'par' });
     }));
 
     it('an identical term repeated back-to-back does not issue a second request', fakeAsync(() => {
-      fixture.detectChanges();
-      tripServiceSpy.listTrips.calls.reset();
-      tripServiceSpy.listTrips.and.returnValue(
-        of({
-          content: [],
-          page: { size: 20, number: 0, totalElements: 0, totalPages: 0 },
-        } as PagedResponse<TripOwnerSummaryResponse>),
-      );
-
       component.onSearchChange('paris');
       tick(350);
       component.onSearchChange('paris');
       tick(350);
 
       expect(tripServiceSpy.listTrips).toHaveBeenCalledTimes(1);
+    }));
+
+    it('changing a filter issues exactly one debounced request carrying that filter', fakeAsync(() => {
+      component.onStatusChange('ACTIVE');
+      tick(350);
+
+      expect(tripServiceSpy.listTrips).toHaveBeenCalledTimes(1);
+      expect(tripServiceSpy.listTrips).toHaveBeenCalledWith(0, 20, { status: 'ACTIVE' });
+    }));
+
+    it('combines a search term and a filter into one request', fakeAsync(() => {
+      component.onSearchChange('paris');
+      tick(350);
+      component.onVisibilityChange('PUBLIC');
+      tick(350);
+
+      expect(tripServiceSpy.listTrips).toHaveBeenCalledTimes(2);
+      expect(tripServiceSpy.listTrips).toHaveBeenCalledWith(0, 20, {
+        search: 'paris',
+        visibility: 'PUBLIC',
+      });
+    }));
+
+    it('clearFilters empties every filter and re-requests', fakeAsync(() => {
+      component.onSearchChange('paris');
+      tick(350);
+      tripServiceSpy.listTrips.calls.reset();
+
+      component.clearFilters();
+      tick(350);
+
+      expect(component.filters).toEqual({});
+      expect(tripServiceSpy.listTrips).toHaveBeenCalledTimes(1);
+      expect(tripServiceSpy.listTrips).toHaveBeenCalledWith(0, 20, {});
     }));
   });
 

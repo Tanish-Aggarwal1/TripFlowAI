@@ -1,3 +1,28 @@
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  width: 100%;
+
+  ion-select {
+    flex: 1 1 120px;
+    max-width: 160px;
+  }
+
+  .date-filter,
+  .duration-filter {
+    flex: 1 1 120px;
+    max-width: 140px;
+    padding: 6px 8px;
+    border: 1px solid var(--ion-color-medium);
+    border-radius: 6px;
+    background: var(--ion-background-color);
+    color: var(--ion-text-color);
+  }
+}
+
 .centered {
   display: flex;
   flex-direction: column;

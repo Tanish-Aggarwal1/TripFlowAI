@@ -42,10 +42,10 @@ describe('TripService', () => {
     req.flush(mockPage);
   });
 
-  it('should append search only when non-blank, leaving the plain request URL unchanged', (done) => {
+  it('should leave the plain request URL unchanged for an all-empty filter object', (done) => {
     const mockPage = { content: [], page: { size: 20, number: 0, totalElements: 0, totalPages: 0 } };
 
-    service.listTrips(0, 20, '  ').subscribe(() => done());
+    service.listTrips(0, 20, { search: '  ' }).subscribe(() => done());
 
     const req = httpMock.expectOne('http://localhost:8080/api/trips?page=0&size=20');
     expect(req.request.method).toBe('GET');
@@ -55,9 +55,29 @@ describe('TripService', () => {
   it('should list trips filtered by a trimmed search term', (done) => {
     const mockPage = { content: [], page: { size: 20, number: 0, totalElements: 0, totalPages: 0 } };
 
-    service.listTrips(0, 20, '  paris  ').subscribe(() => done());
+    service.listTrips(0, 20, { search: '  paris  ' }).subscribe(() => done());
 
     const req = httpMock.expectOne('http://localhost:8080/api/trips?page=0&size=20&search=paris');
+    expect(req.request.method).toBe('GET');
+    req.flush(mockPage);
+  });
+
+  it('should list trips filtered by status, visibility, date range and duration together', (done) => {
+    const mockPage = { content: [], page: { size: 20, number: 0, totalElements: 0, totalPages: 0 } };
+
+    service
+      .listTrips(0, 20, {
+        status: 'ACTIVE',
+        visibility: 'PUBLIC',
+        startDateFrom: '2026-06-01',
+        startDateTo: '2026-06-30',
+        durationDays: 3,
+      })
+      .subscribe(() => done());
+
+    const req = httpMock.expectOne(
+      'http://localhost:8080/api/trips?page=0&size=20&status=ACTIVE&visibility=PUBLIC&startDateFrom=2026-06-01&startDateTo=2026-06-30&durationDays=3',
+    );
     expect(req.request.method).toBe('GET');
     req.flush(mockPage);
   });

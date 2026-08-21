@@ -3,7 +3,7 @@
 
 export type TripVisibility = 'PUBLIC' | 'PRIVATE';
 
-export type TripStatus = 'DRAFT' | 'IN_PROGRESS' | 'COMPLETED';
+export type TripStatus = 'DRAFT' | 'PLANNED' | 'ACTIVE' | 'COMPLETED';
 
 export type StopStatus = 'PLANNED' | 'VISITED' | 'SKIPPED';
 
@@ -135,6 +135,17 @@ export interface TripOwnerSummaryResponse {
   coverPhotoUrl: string | null;
   visitedStopCount: number;
   completionPercentage: number;
+}
+
+// SEARCH-01: optional query params for GET /api/trips. All AND together; `search` is
+// independently optional. Mirrors backend TripSearchFilters + the `search` param.
+export interface TripListFilters {
+  search?: string;
+  status?: TripStatus;
+  visibility?: TripVisibility;
+  startDateFrom?: string; // "YYYY-MM-DD" LocalDate
+  startDateTo?: string; // "YYYY-MM-DD" LocalDate
+  durationDays?: number;
 }
 
 // Matches Spring Data's PagedModel shape: { content, page: { size, number, totalElements, totalPages } }

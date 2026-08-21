@@ -6,6 +6,7 @@ import { mapApiError } from '../http/api-error.mapper';
 import {
   TripResponse,
   TripOwnerSummaryResponse,
+  TripListFilters,
   PagedResponse,
   CreateTripRequest,
   UpdateTripRequest,
@@ -24,16 +25,31 @@ export class TripService {
 
   // ── READ ────────────────────────────────────────────────────────────────────
 
-  // SEARCH-01: search is appended only when non-blank, so an unfiltered request's URL
-  // (`?page=&size=`) stays exactly as it was before search existed.
+  // SEARCH-01: each filter entry is appended only when non-blank, so an unfiltered
+  // request's URL (`?page=&size=`) stays exactly as it was before filters existed.
   listTrips(
     page = 0,
     size = 20,
-    search?: string,
+    filters?: TripListFilters,
   ): Observable<PagedResponse<TripOwnerSummaryResponse>> {
     let params = new HttpParams().set('page', page).set('size', size);
-    if (search && search.trim()) {
-      params = params.set('search', search.trim());
+    if (filters?.search && filters.search.trim()) {
+      params = params.set('search', filters.search.trim());
+    }
+    if (filters?.status) {
+      params = params.set('status', filters.status);
+    }
+    if (filters?.visibility) {
+      params = params.set('visibility', filters.visibility);
+    }
+    if (filters?.startDateFrom) {
+      params = params.set('startDateFrom', filters.startDateFrom);
+    }
+    if (filters?.startDateTo) {
+      params = params.set('startDateTo', filters.startDateTo);
+    }
+    if (filters?.durationDays !== undefined && filters.durationDays !== null) {
+      params = params.set('durationDays', filters.durationDays);
     }
     return this.http
       .get<PagedResponse<TripOwnerSummaryResponse>>(this.baseUrl, { params })

@@ -4,7 +4,7 @@ import { Router } from '@angular/router';
 import { Subject, debounceTime, distinctUntilChanged, switchMap } from 'rxjs';
 import {
   IonHeader, IonToolbar, IonTitle, IonContent, IonButton, IonButtons,
-  IonList, IonItem, IonLabel, IonBadge, IonIcon, IonSearchbar,
+  IonList, IonItem, IonLabel, IonBadge, IonIcon, IonSearchbar, IonSelect, IonSelectOption,
   IonFab, IonFabButton, IonFabList, IonModal, IonSpinner, AlertController,IonThumbnail,
   ViewWillEnter
 } from '@ionic/angular/standalone';
@@ -12,7 +12,13 @@ import { addIcons } from 'ionicons';
 import { add, lockClosed, globeOutline, trash, create, sparkles, imageOutline, mapOutline } from 'ionicons/icons';
 import { TripService } from '../../../core/services/trip.service';
 import { ToastService } from '../../../core/services/toast.service';
-import { TripOwnerSummaryResponse, TripResponse } from '../../../core/models/trip.model';
+import {
+  TripOwnerSummaryResponse,
+  TripResponse,
+  TripListFilters,
+  TripStatus,
+  TripVisibility,
+} from '../../../core/models/trip.model';
 import { AiTripPromptComponent } from '../components/ai-trip-prompt/ai-trip-prompt.component';
 
 
@@ -22,7 +28,7 @@ import { AiTripPromptComponent } from '../components/ai-trip-prompt/ai-trip-prom
   styleUrls: ['dashboard.page.scss'],
   imports: [
     IonHeader, IonToolbar, IonTitle, IonContent, IonButton, IonButtons,
-    IonList, IonItem, IonLabel, IonBadge, IonIcon, IonSearchbar,
+    IonList, IonItem, IonLabel, IonBadge, IonIcon, IonSearchbar, IonSelect, IonSelectOption,
     IonFab, IonFabButton, IonFabList, IonModal, IonSpinner,
     AiTripPromptComponent,
     IonThumbnail,
@@ -40,11 +46,11 @@ export class DashboardPage implements ViewWillEnter {
   loading = true;
   error: string | null = null;
 
-  // D-15: term flows through a debounced/distinct/switchMap stream rather than firing a
-  // request per keystroke; switchMap ensures a slow earlier response can't overwrite a
-  // newer one.
-  searchTerm = '';
-  private searchTerms = new Subject<string>();
+  // D-15/SEARCH-01: the whole filter set (search + status/visibility/date/duration)
+  // flows through one debounced/distinct/switchMap stream, so a keystroke and a filter
+  // change share one request path and one in-flight-request policy rather than racing.
+  filters: TripListFilters = {};
+  private filterChanges = new Subject<TripListFilters>();
 
   // "Create with AI" modal (dashboard entry point for generating a whole new
   // trip from a free-text prompt), distinct from the SCRUM-67 ai-suggest
@@ -63,14 +69,14 @@ export class DashboardPage implements ViewWillEnter {
       'map-outline': mapOutline,
     });
 
-    this.searchTerms
+    this.filterChanges
       .pipe(
         debounceTime(350),
-        distinctUntilChanged(),
-        switchMap((term) => {
+        distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b)),
+        switchMap((filters) => {
           this.loading = true;
           this.error = null;
-          return this.tripService.listTrips(0, 20, term);
+          return this.tripService.listTrips(0, 20, filters);
         }),
         takeUntilDestroyed(),
       )
@@ -91,8 +97,38 @@ export class DashboardPage implements ViewWillEnter {
   }
 
   onSearchChange(term: string): void {
-    this.searchTerm = term;
-    this.searchTerms.next(term);
+    this.filters = { ...this.filters, search: term };
+    this.filterChanges.next(this.filters);
+  }
+
+  onStatusChange(value: TripStatus | null): void {
+    this.filters = { ...this.filters, status: value ?? undefined };
+    this.filterChanges.next(this.filters);
+  }
+
+  onVisibilityChange(value: TripVisibility | null): void {
+    this.filters = { ...this.filters, visibility: value ?? undefined };
+    this.filterChanges.next(this.filters);
+  }
+
+  onStartDateFromChange(value: string): void {
+    this.filters = { ...this.filters, startDateFrom: value || undefined };
+    this.filterChanges.next(this.filters);
+  }
+
+  onStartDateToChange(value: string): void {
+    this.filters = { ...this.filters, startDateTo: value || undefined };
+    this.filterChanges.next(this.filters);
+  }
+
+  onDurationDaysChange(value: string): void {
+    this.filters = { ...this.filters, durationDays: value === '' ? undefined : Number(value) };
+    this.filterChanges.next(this.filters);
+  }
+
+  clearFilters(): void {
+    this.filters = {};
+    this.filterChanges.next(this.filters);
   }
 
   loadTrips(): void {
@@ -181,18 +217,20 @@ export class DashboardPage implements ViewWillEnter {
 
   statusColor(status: string): string {
     switch (status) {
-      case 'IN_PROGRESS': return 'warning';
-      case 'COMPLETED':   return 'success';
-      default:            return 'medium';
+      case 'PLANNED':   return 'tertiary';
+      case 'ACTIVE':    return 'warning';
+      case 'COMPLETED': return 'success';
+      default:          return 'medium';
     }
   }
 
   statusLabel(status: string): string {
     switch (status) {
-      case 'IN_PROGRESS': return 'In progress';
-      case 'COMPLETED':   return 'Completed';
-      case 'DRAFT':        return 'Draft';
-      default:            return status;
+      case 'PLANNED':   return 'Planned';
+      case 'ACTIVE':    return 'Active';
+      case 'COMPLETED': return 'Completed';
+      case 'DRAFT':     return 'Draft';
+      default:          return status;
     }
   }
 

@@ -96,10 +96,18 @@ Missing, malformed, or expired token → `401 Unauthorized` with the standard `A
 
 ## Trips & Stops (SCRUM-52)
 
-### GET /api/trips (paginated — REF-21)
+### GET /api/trips (paginated — REF-21; search/filter — SEARCH-01)
 Returns a page of the authenticated user's trips as a card-sized projection — no `stops` array, just `stopCount` — so list reads never need the collection fetch join used by `GET /api/trips/{id}`. This is the canonical paging contract for all future top-level list endpoints (see `GET /api/discovery/trips` and `GET /api/discovery/search` below, which follow it): accept Spring `Pageable` (`?page=&size=&sort=`), return this same paged shape. **Exception:** the two nested-collection reads, `GET /api/trips/{tripId}/stops` and `GET /api/stops/{stopId}/photos`, intentionally return plain unbounded arrays instead — see their own sections for why.
 
-**Query params:** `page` (0-indexed, default 0), `size` (default 20), `sort` (default `createdAt,desc`, e.g. `?sort=title,asc`).
+**Query params:**
+- `page` (0-indexed, default 0), `size` (default 20), `sort` (default `createdAt,desc`, e.g. `?sort=title,asc`) — `sort` only applies to the plain (unfiltered, no-search) list; see ordering note below.
+- `search` (optional) — matches the trip's title, tags, or the place name of any of its stops. Independently optional from every filter below (D-12). A blank/absent `search` returns the full, unfiltered list rather than a 400 (unlike `GET /api/discovery/search`, where `q` is required) — a search matching nothing is a `200` with an empty `content` array and `totalElements: 0`, never a `404`.
+- `status` (optional) — one of `DRAFT | PLANNED | ACTIVE | COMPLETED`. A value outside this set is a `400` (see Standard Error Shape below), never a `500`.
+- `visibility` (optional) — `PRIVATE | PUBLIC`.
+- `startDateFrom` / `startDateTo` (optional, ISO `YYYY-MM-DD`) — filter on the trip's own `startDate` (when the trip happens), **not** `createdAt` (when the row was created).
+- `durationDays` (optional, integer) — the trip's day span, computed as `MAX(dayNumber)` across its stops, not a stored column. A trip with zero stops (or whose stops have never been scheduled by `/optimize`) reports duration `0` rather than being excluded outright — consistent with the zero-stops convention below. This is filter-only; it is not returned as a response field.
+
+All supplied filters AND together (e.g. `?search=paris&status=ACTIVE&visibility=PUBLIC&startDateFrom=2026-06-01&durationDays=3` narrows to trips matching every one of them). When `search` or any filter is present, result ordering is fixed at `createdAt DESC, id DESC` (the `id` tiebreaker keeps ordering stable and repeatable when two trips share a creation instant) — the plain, unfiltered path honours `sort` instead.
 
 **Success (200):**
 ```json
@@ -113,7 +121,9 @@ Returns a page of the authenticated user's trips as a card-sized projection — 
       "createdAt": "ISO-8601 datetime",
       "updatedAt": "ISO-8601 datetime",
       "stopCount": 3,
-      "coverPhotoUrl": null
+      "coverPhotoUrl": null,
+      "visitedStopCount": 1,
+      "completionPercentage": 0.3333333333333333
     }
   ],
   "page": {
@@ -125,6 +135,8 @@ Returns a page of the authenticated user's trips as a card-sized projection — 
 }
 ```
 `coverPhotoUrl` is always `null` — the Cloudinary photo feature (SCRUM-66/152/153) has shipped, but nothing computes a trip's cover photo from its stops' photos yet; `TripRepository.findSummariesByUserId`/`findSummariesByVisibility` both pass a literal `null` for this field. Treat it as reserved for a future feature, not currently wired up. Use `GET /api/trips/{id}` for the full itinerary including `stops`.
+
+`visitedStopCount`/`completionPercentage` (EXPORT-03) are owner-only — this endpoint's response is `TripOwnerSummaryResponse`, a sibling of the leaner `TripSummaryResponse` the public discovery feed uses (see Discovery below), so a stranger's `PUBLIC` trip never exposes another user's completion progress. `completionPercentage` is a `0.0`–`1.0` fraction (`visitedStopCount / stopCount`); only `StopStatus.VISITED` counts toward it, `SKIPPED` stays in the denominator but not the numerator. A zero-stop trip reports `completionPercentage: 0`, never `null`.
 
 ### POST /api/trips
 **Request:**
@@ -329,12 +341,14 @@ Reorders the trip's stops for shortest travel time via OpenRouteService VROOM. R
   "updatedAt": "2026-07-20T15:31:00Z",
   "routeGeometry": "{\"type\":\"LineString\",\"coordinates\":[[-79.38,43.65],[-79.40,43.66]]}",
   "startDate": "2026-08-10",
-  "likeCount": 0
+  "likeCount": 0,
+  "visitedStopCount": 0,
+  "completionPercentage": 0.0
 }
 ```
 `routeGeometry` is a **JSON-encoded GeoJSON `LineString` geometry** (`{"type": "LineString", "coordinates": [[lng, lat], ...]}`), stored and returned as a JSON string (`TripResponse.routeGeometry` is typed `String` — the client must `JSON.parse()` it, it is not pre-parsed) — **not an encoded polyline**, despite what earlier revisions of this doc said. Source: `RouteOptimizationService` does `objectMapper.writeValueAsString(geometry)` where `geometry` is ORS's own GeoJSON `Feature.geometry` from the directions response.
 
-(`orderIndex` in earlier revisions of this doc was wrong — the field has always been `stopOrder`, see `StopResponse.java`. `likeCount` was added by SCRUM-161, `startDate` by SCRUM-244a.)
+(`orderIndex` in earlier revisions of this doc was wrong — the field has always been `stopOrder`, see `StopResponse.java`. `likeCount` was added by SCRUM-161, `startDate` by SCRUM-244a, `visitedStopCount`/`completionPercentage` by SCRUM-EXPORT-03 — see the `GET /api/trips` section above for their exact semantics, which apply identically here.)
 
 **Scheduling (SCRUM-244a):** In addition to reordering stops and computing route geometry, this endpoint runs a heuristic day/time scheduler over the optimized stop order — no Gemini involvement, just a greedy walk assigning each stop a `dayNumber` and `plannedTime`, using the per-leg travel durations from the same ORS directions call already made for route geometry. Each stop is assumed to take `app.schedule.default-visit-duration` (default 1h) to visit; cumulative time rolls to the next day once it would exceed the configured day window (`app.schedule.day-start-time`/`app.schedule.day-end-time`, default `09:00`–`21:00`). This is a foundation for future AI-driven scheduling — see `docs/TripFlow_fall_Break_Plan.md` FB-17/FB-18 for what's planned on top of it.
 
@@ -414,6 +428,8 @@ Case-insensitive substring search over `PUBLIC` trip titles and tags. `q` is req
 **Success (200):** same paged shape as `GET /api/trips`.
 **Errors:**
 - 400 — `q` missing or blank
+
+**Both discovery endpoints deliberately keep the leaner `TripSummaryResponse` shape — no `visitedStopCount`/`completionPercentage` (D-08).** These endpoints are unauthenticated and cross-owner by nature (anyone browsing `PUBLIC` trips), so serving another user's completion progress here would leak it to strangers. `GET /api/trips`'s owner-only `TripOwnerSummaryResponse` is a separate DTO for exactly this reason — do not "fix" this asymmetry by adding the fields here; it is intentional, not an oversight.
 
 ---
 
@@ -515,6 +531,31 @@ Generates a standard `.ics` (RFC 5545 iCalendar) file from a trip's ordered stop
 
 **Errors:**
 - 404 — trip not found, **or** the trip is `PRIVATE` and requester is not the owner (same 404 either way — `IcsExportService` delegates its ownership/visibility check to `TripService.getTrip`, so it inherits that endpoint's no-403 existence-hiding behavior; this line previously said 403)
+
+All errors return the standard `ApiError` body.
+
+### GET /api/trips/{id}/export/pdf (EXPORT-02)
+Generates a formatted PDF itinerary — header (title, start date, stop count, description), an ordered stops table (name/address, day/time schedule, notes), and a best-effort route map snapshot.
+
+**Auth:** Bearer token required. Same visibility rule as `GET /api/trips/{id}`/`.ics` above — owner sees any trip, non-owners only see `PUBLIC` trips; `PdfExportService` delegates to the same `TripService.getTrip` ownership/visibility check.
+
+**Request:** No body.
+
+**Success (200):**
+- `Content-Type: application/pdf`
+- `Content-Disposition: attachment; filename="{sanitized-trip-title}.pdf"` — same `sanitizeFilename` convention as the `.ics` export above (letters/digits/spaces/dashes, capped at 100 chars), so the two exports never disagree on what a "safe" filename looks like for the same title.
+- Body: the PDF. Stops are rendered in `stopOrder`; a stop's schedule column is blank until the trip has been (re-)optimized (same `dayNumber`/`plannedTime` fields as everywhere else, SCRUM-244a).
+
+**The embedded map is best-effort (D-04) — never fails the download.** It is silently omitted (the rest of the PDF still generates normally) when any of the following is true:
+- the trip has zero stops (nothing to render);
+- the backend's Mapbox access token (`MAPBOX_TOKEN`/`mapbox.access-token`) is unprovisioned;
+- the Mapbox Static Images API call fails (network error, non-2xx response) — logged server-side, never surfaced to the client as a failed export;
+- the request URL would exceed Mapbox's documented length cap even after falling back from the route-line overlay to a marker-only overlay.
+
+When `Trip.routeGeometry` is present (the trip has been optimized at least once), the map shows the actual route line; otherwise it falls back to plain stop-location pins (D-04).
+
+**Errors:**
+- 404 — trip not found, **or** the trip is `PRIVATE` and requester is not the owner (same 404-not-403 convention as every other trip read in this file)
 
 All errors return the standard `ApiError` body.
 
