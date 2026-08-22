@@ -1,14 +1,16 @@
 ---
 phase: 02-exports-completion-search
 verified: 2026-08-21T22:15:00Z
-status: human_needed
+status: passed
 score: 4/4 roadmap success criteria verified (25/29 plan-level truths directly verified; 4 require CI's Testcontainers run to close)
 behavior_unverified: 0
 overrides_applied: 0
 human_verification:
+
   - test: "Push branch `docs/SCRUM-478-phase-2-planning-docs` (16 commits ahead of origin, unpushed) and let CI's `mvn -B verify -Pci` run the Testcontainers `*IT` suite: `TripExportControllerIT` (PDF 200/404), `TripRepositoryIT` (visited-count correlated subquery + `TripSummaryResponse` 8-component D-08 tripwire), `TripSearchRepositoryIT` (16 `searchOwnedTrips_*` methods — exactly-once matching, filter intersection, ordering stability, owner scoping), `TripControllerIT` (paged envelope + malformed-status 400)."
     expected: "All `*IT` methods pass against real Postgres, matching what the unit-level mocks and code inspection already indicate."
     why_human: "No Docker daemon on this machine (`docker info` reaches the client but the server pipe `dockerDesktopLinuxEngine` is not running) — matches CLAUDE.md's documented team-wide constraint. `*IT` files compile clean under `-Pci` (confirmed) but have never actually executed against Postgres for this phase's code, and the branch has not been pushed, so CI has not run on it either. This is the only mechanism that can prove the native-SQL correctness (EXISTS-based dedup, COALESCE duration-zero, ordering tiebreak, correlated-subquery counts) that unit tests cannot reach."
+
   - test: "Once `MAPBOX_TOKEN` is provisioned (Render + local `.env`), export the PDF of a trip that has been route-optimized and open it to confirm the embedded map snapshot is legible and matches the app's route line visually."
     expected: "A rendered, non-garbled map image with the correct route/pins."
     why_human: "Cannot provision a real Mapbox token or render/inspect a PDF image in this session; explicitly called out as outstanding in `02-02-SUMMARY.md`."
