@@ -74,7 +74,7 @@ public class GlobalExceptionHandlerIntegrationTest {
 				.andExpect(jsonPath("$.fieldErrors").isArray())
 				.andExpect(jsonPath("$.fieldErrors[0].field").value("name"));
 
-		assertApiErrorKeys(result.andReturn());
+		assertApiErrorKeys(result.andReturn(), true);
 	}
 
 	@Test
@@ -291,12 +291,20 @@ public class GlobalExceptionHandlerIntegrationTest {
 	}
 
 	private void assertApiErrorKeys(MvcResult result) throws Exception {
+		assertApiErrorKeys(result, false);
+	}
+
+	// fieldErrors is omitted (not serialized as null) on every non-validation error, per
+	// docs/api-contracts.md's "present only on 400 validation errors, null/omitted otherwise"
+	// and ApiError's @JsonInclude(NON_NULL) — so the expected key set varies by error kind.
+	private void assertApiErrorKeys(MvcResult result, boolean hasFieldErrors) throws Exception {
 		JsonNode body = objectMapper.readTree(result.getResponse().getContentAsString());
 
 		List<String> keys = new ArrayList<>();
 		body.fieldNames().forEachRemaining(keys::add);
-		assertThat(keys).containsExactlyInAnyOrder(
-				"timestamp", "status", "error", "message", "path", "fieldErrors");
+		List<String> expectedKeys = new ArrayList<>(List.of("timestamp", "status", "error", "message", "path"));
+		if (hasFieldErrors) expectedKeys.add("fieldErrors");
+		assertThat(keys).containsExactlyInAnyOrderElementsOf(expectedKeys);
 
 		assertThat(body.get("timestamp").isTextual()).isTrue();
 	}
