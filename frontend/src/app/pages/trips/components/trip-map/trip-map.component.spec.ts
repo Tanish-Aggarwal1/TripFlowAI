@@ -192,6 +192,35 @@ describe('TripMapComponent', () => {
       expect(component.mapFailed).toBeFalse();
       expect(component.map).toBe(mockMap);
     });
+
+    it('tears down and rebuilds the map when it emits an error event (regression: initMap() no-ops while this.map is still set)', () => {
+      spyOn(console, 'error');
+      component.trip = makeTrip();
+      fixture.detectChanges(false);
+      const failedMap = mockMap;
+
+      onHandlers['error']({ error: new Error('tile error') });
+      expect(component.mapFailed).toBeTrue();
+      expect(component.map).toBe(failedMap);
+
+      const rebuiltMap = jasmine.createSpyObj('Map', [
+        'remove', 'addControl', 'on', 'addLayer', 'addSource',
+        'getLayer', 'removeLayer', 'getSource', 'removeSource',
+        'setCenter', 'setZoom', 'fitBounds',
+      ]) as jasmine.SpyObj<mapboxgl.Map>;
+      (rebuiltMap.on as jasmine.Spy).and.callFake((event: string, cb: (arg?: unknown) => void) => {
+        onHandlers[event] = cb;
+        return rebuiltMap;
+      });
+      (mapboxgl.Map as unknown as jasmine.Spy).and.returnValue(rebuiltMap);
+
+      component.retry();
+
+      expect(failedMap.remove).toHaveBeenCalled();
+      expect(component.mapFailed).toBeFalse();
+      expect(component.map).toBe(rebuiltMap);
+      expect(component.map).not.toBe(failedMap);
+    });
   });
 
   describe('requestOptimize', () => {
