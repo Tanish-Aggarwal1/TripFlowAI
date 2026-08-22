@@ -9,6 +9,7 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.TimeZone;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -132,6 +133,29 @@ class IcsExportServiceTest {
 		assertThat(ics.split("BEGIN:VEVENT", -1)).hasSize(3); // 2 events -> 3 pieces when split
 		assertThat(ics).contains("SUMMARY:Stop A");
 		assertThat(ics).contains("SUMMARY:Stop B");
+	}
+
+	@Test
+	void exportIcs_scheduledStop_dtStartMatchesPlannedTimeVerbatimRegardlessOfJvmDefaultZone() {
+		// Regression for M10: DTSTART must equal the stop's floating-time wall clock exactly,
+		// not shift with whatever zone the JVM happens to default to. IcsExportService.ZONE
+		// must track TimeZone.getDefault() (not a fixed zone like UTC) because biweekly's
+		// floating-time writer always renders through TimeZone.getDefault() with no override —
+		// this proves that invariant holds under a JVM default far from this machine's own.
+		TimeZone original = TimeZone.getDefault();
+		TimeZone.setDefault(TimeZone.getTimeZone("Asia/Tokyo"));
+		try {
+			StopResponse scheduled = stop("St. Lawrence Market", "93 Front St E", 1, LocalTime.of(9, 0));
+			given(tripService.getTrip(TRIP_ID, REQUESTER_ID))
+					.willReturn(trip(LocalDate.of(2026, 8, 10), List.of(scheduled)));
+
+			String ics = service.exportIcs(TRIP_ID, REQUESTER_ID).icsContent();
+
+			assertThat(ics).contains("DTSTART:20260810T090000");
+			assertThat(ics).contains("DTEND:20260810T100000");
+		} finally {
+			TimeZone.setDefault(original);
+		}
 	}
 
 	@Test
