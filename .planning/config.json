@@ -1,6 +1,6 @@
 {
-  "model_profile": "balanced",
-  "commit_docs": false,
+  "model_profile": "adaptive",
+  "commit_docs": true,
   "parallelization": true,
   "search_gitignored": false,
   "brave_search": false,
@@ -42,12 +42,12 @@
     "plan_bounce": false,
     "plan_bounce_script": null,
     "plan_bounce_passes": 2,
-    "auto_prune_state": false,
+    "auto_prune_state": true,
     "post_planning_gaps": true,
     "security_enforcement": true,
     "security_asvs_level": 1,
     "security_block_on": "high",
-    "use_worktrees": false
+    "use_worktrees": true
   },
   "ship": {
     "pr_body_sections": [
