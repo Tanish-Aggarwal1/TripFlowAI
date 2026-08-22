@@ -17,7 +17,7 @@ PDF trip export, trip completion percentage, and search/filter on the owner's ow
 - **D-01:** PDF content = header + ordered stops + notes **+ a route map snapshot** image embedded in the document.
 - **D-02:** PDF library: OpenPDF (LGPL/MPL fork of iText 4) — new pom.xml dependency, no PDF lib exists today.
 - **D-03:** Map snapshot is rendered server-side via the Mapbox Static Images API, authenticated with a **new backend env var** (e.g. `MAPBOX_TOKEN` or equivalent) — mirrors the existing `client/{service}/` pattern (`OrsProperties`, `GeminiProperties`) rather than having the frontend render and upload an image. — **Reversibility:** costly — once shipped, switching to a client-rendered-image approach changes the request contract and removes a documented backend secret.
-- **D-04:** Map source: use `Trip.routeGeometry` (optimized route) when present; fall back to plain stop pins (no line) for trips never optimized.
+- **D-04:** Map source: use `Trip.routeGeometry` (optimized route) when present, combined with stop pin markers on top (z-ordered last, per Mapbox's overlay ordering); fall back to plain stop pins (no line) for trips never optimized. *(Revised 2026-08-22 during UAT: originally route-line-only for optimized trips — user found that visually confusing without the pins and asked for both together; Mapbox's Static Images API supports comma-separated combined overlays.)*
 - **D-05:** PDF filename uses the exact same `sanitizeFilename` convention already established for `.ics` (`TripExportController.sanitizeFilename` + its documented frontend duplicate in `trip-view.page.ts`) — same character-set/length rules, same dual-implementation-with-shared-fixture-tests pattern.
 
 ### Trip completion percentage (EXPORT-03)
