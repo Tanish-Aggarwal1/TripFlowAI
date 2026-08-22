@@ -98,4 +98,13 @@ class JwtServiceTest {
 				.isInstanceOf(IllegalStateException.class)
 				.hasMessageContaining("distinct characters");
 	}
+
+	@Test
+	void toString_masksSecret() {
+		String rendered = new JwtProperties(SECRET, EXPIRY_MS).toString();
+
+		assertThat(rendered).doesNotContain(SECRET);
+		assertThat(rendered).contains("****" + SECRET.substring(SECRET.length() - 4));
+		assertThat(rendered).contains("expirationMs=" + EXPIRY_MS);
+	}
 }
