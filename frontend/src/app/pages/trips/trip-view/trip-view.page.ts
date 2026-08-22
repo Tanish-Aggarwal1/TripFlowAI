@@ -324,8 +324,14 @@ function downloadBlob(blob: Blob, filename: string): void {
   const link = document.createElement('a');
   link.href = url;
   link.download = filename;
+  // Firefox requires the anchor to be in the document for a programmatic click() to
+  // trigger a download — a detached element is silently ignored.
+  document.body.appendChild(link);
   link.click();
-  window.URL.revokeObjectURL(url);
+  document.body.removeChild(link);
+  // click() initiates the download asynchronously; revoking on the same tick can invalidate
+  // the URL before the browser has read the blob (timing-dependent, unreliable on Safari).
+  setTimeout(() => window.URL.revokeObjectURL(url), 0);
 }
 
 // Matched pair with the backend's TripExportController#sanitizeFilename — the

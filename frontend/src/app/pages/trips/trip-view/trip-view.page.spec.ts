@@ -1,5 +1,5 @@
 import { Component, Input } from '@angular/core';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { ActivatedRoute, provideRouter, Router } from '@angular/router';
 import { ToastController } from '@ionic/angular/standalone';
 import { of, throwError, Subject } from 'rxjs';
@@ -231,7 +231,7 @@ describe('TripViewPage', () => {
       expect(tripServiceSpy.exportIcs).not.toHaveBeenCalled();
     });
 
-    it('triggers a download named after the trip title and resets exporting on success', async () => {
+    it('triggers a download named after the trip title and resets exporting on success', fakeAsync(() => {
       component.trip = trip({ id: 1, title: 'Weekend Getaway' });
       const blob = new Blob(['BEGIN:VCALENDAR'], { type: 'text/calendar' });
       tripServiceSpy.exportIcs.and.returnValue(of(blob));
@@ -244,18 +244,27 @@ describe('TripViewPage', () => {
         if (tag === 'a') capturedAnchor = el as HTMLAnchorElement;
         return el;
       });
-      spyOn(HTMLAnchorElement.prototype, 'click');
+      spyOn(HTMLAnchorElement.prototype, 'click').and.callFake(function (this: HTMLAnchorElement) {
+        // Regression (SCRUM-435): Firefox ignores a programmatic click() on a detached
+        // anchor, so the download only works if it's in the document at click time.
+        expect(document.body.contains(this)).toBeTrue();
+      });
 
       component.exportToCalendar();
-      await Promise.resolve();
 
       expect(tripServiceSpy.exportIcs).toHaveBeenCalledWith(1);
       expect(component.exporting).toBeFalse();
       expect(createObjectURLSpy).toHaveBeenCalledWith(blob);
       expect(capturedAnchor?.download).toBe('Weekend Getaway.ics');
       expect(HTMLAnchorElement.prototype.click).toHaveBeenCalled();
+      // Detached again once the click has fired.
+      expect(document.body.contains(capturedAnchor!)).toBeFalse();
+      // Not revoked synchronously with click() — that races the browser reading the blob.
+      expect(revokeObjectURLSpy).not.toHaveBeenCalled();
+
+      tick(0);
       expect(revokeObjectURLSpy).toHaveBeenCalledWith('blob:mock-url');
-    });
+    }));
 
     it('falls back to a generic filename when the trip title sanitizes to empty', async () => {
       component.trip = trip({ id: 1, title: '???' });
