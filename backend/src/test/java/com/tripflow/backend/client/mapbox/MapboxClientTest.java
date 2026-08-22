@@ -144,6 +144,29 @@ class MapboxClientTest {
 	}
 
 	@Test
+	void staticSnapshot_withSpacesInRouteGeometry_encodesSpacesAsPercentTwentyNotPlus() {
+		// G-02-2 (round 2): Jackson's default writer inserts a space after every ':' and ','
+		// — real stored route geometries are NOT compact, unlike this test file's other
+		// hand-written compact fixtures. URLEncoder.encode is application/x-www-form-urlencoded,
+		// which turns a space into a literal '+', not '%20'. Mapbox's server percent-decodes but
+		// never form-decodes, so an un-fixed-up '+' lands in the JSON text as a literal '+'
+		// character where a space used to be — corrupting the syntax and producing a real 422
+		// "Invalid GeoJSON" in production, even though the double-encoding and Feature-wrapping
+		// fixes were both already correct.
+		MapboxClient client = client("test-token-1234");
+		String routeGeometry = "{\"type\": \"LineString\", \"coordinates\": [[-79.4, 43.7], [-79.5, 43.8]]}";
+
+		server.expect(requestTo(not(containsString("+"))))
+				.andExpect(requestTo(containsString("%20")))
+				.andRespond(withSuccess(IMAGE_BYTES, MediaType.IMAGE_PNG));
+
+		Optional<byte[]> result = client.staticSnapshot(routeGeometry, List.of());
+
+		assertThat(result).isPresent();
+		server.verify();
+	}
+
+	@Test
 	void staticSnapshot_overLengthGeometry_fallsBackToMarkerOnlyOverlay() {
 		MapboxClient client = client("test-token-1234");
 		// A route geometry with thousands of coordinate pairs pushes the request URL
