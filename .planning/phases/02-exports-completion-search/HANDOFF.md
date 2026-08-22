@@ -64,3 +64,25 @@ Committed all `.planning/` execution artifacts (`1460e35`) and pushed the branch
 - `workflow.research: true` (was `false`) — **intentional, keep.**
 - `workflow.use_worktrees: false` (was unset/default `true`) — **workaround, reconsider later.**
 - `workflow._auto_chain_active` — may have been touched by auto-advance sync logic; not manually set.
+
+## Final outcome (2026-08-22)
+
+Phase 2 shipped via **PR #278** (merged `55816d9`). `/gsd-verify-work 2` then ran the remaining
+human UAT: item 1 (CI Testcontainers) passed after a real bug fix (`0a6c335` — a missing `CAST`
+on the search pattern's `IS NULL` check, caught by the first-ever real-Postgres run of
+`TripSearchRepositoryIT`). Item 2 (Mapbox map snapshot on an optimized route) found a real gap
+(G-02-2, `.planning/debug/mapbox-snapshot-missing-on-optimized-route.md`): Mapbox's `auto`
+extent needs a `Feature`-shaped GeoJSON, and `Trip.routeGeometry` is a bare Geometry — fixed.
+
+**Repeated gotcha, twice in one session:** pushing new commits to a branch whose PR has *already
+merged* does NOT reopen the PR or add them to `main` — they just sit stranded on the (now
+divergent) branch. This happened to PR #277 earlier this session and again to PR #278 (I pushed
+the CI fix and the Mapbox gap fix after #278 had already merged). **The fix commit landed in a
+separate PR #279** (`fix/SCRUM-328-mapbox-geojson-feature-wrapper`, cherry-picked cleanly onto
+fresh `main`) rather than #278. **Lesson for next time:** after any push, check
+`gh pr view <N> --json state` before assuming more commits will land in that PR — if `state` is
+already `MERGED`, cut a fresh branch off `origin/main` immediately instead of pushing further.
+
+PR #279 still needs a human to merge — never do this yourself. Not independently verified against
+the live Mapbox API (no token/network in this session) — ask the user to re-export a PDF for an
+optimized trip once #279 merges and confirm the map renders.

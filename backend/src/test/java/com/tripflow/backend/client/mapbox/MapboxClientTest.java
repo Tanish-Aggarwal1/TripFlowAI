@@ -104,7 +104,8 @@ class MapboxClientTest {
 	void staticSnapshot_withRouteGeometry_requestUriIsSinglyEncodedNotDoubleEncoded() {
 		MapboxClient client = client("test-token-1234");
 		String routeGeometry = "{\"type\":\"LineString\",\"coordinates\":[[-79.4,43.7],[-79.5,43.8]]}";
-		String expectedOverlay = "geojson(" + java.net.URLEncoder.encode(routeGeometry, StandardCharsets.UTF_8) + ")";
+		String expectedFeature = "{\"type\":\"Feature\",\"properties\":{},\"geometry\":" + routeGeometry + "}";
+		String expectedOverlay = "geojson(" + java.net.URLEncoder.encode(expectedFeature, StandardCharsets.UTF_8) + ")";
 		String expectedUri = BASE_URL + "/styles/v1/mapbox/streets-v12/static/" + expectedOverlay
 				+ "/auto/600x400?access_token=test-token-1234";
 		// An exact match here (rather than containsString) is the point: if the request
@@ -118,6 +119,27 @@ class MapboxClientTest {
 
 		assertThat(result).isPresent();
 		assertThat(result.get()).isEqualTo(IMAGE_BYTES);
+		server.verify();
+	}
+
+	@Test
+	void staticSnapshot_withRouteGeometry_overlayWrapsBareGeometryInAFeature() {
+		// G-02-2: Mapbox's `auto` position/zoom (used on every request here) computes its
+		// bounding box from the overlay's `features` — a bare Geometry has none, so Mapbox
+		// rejects it with a 422 "Invalid GeoJSON". Confirmed against a real optimized-trip
+		// payload. The overlay must wrap Trip.routeGeometry's bare Geometry in a Feature.
+		MapboxClient client = client("test-token-1234");
+		String routeGeometry = "{\"type\":\"LineString\",\"coordinates\":[[-79.4,43.7],[-79.5,43.8]]}";
+
+		server.expect(requestTo(containsString(
+				java.net.URLEncoder.encode("\"type\":\"Feature\"", StandardCharsets.UTF_8))))
+				.andExpect(requestTo(containsString(
+						java.net.URLEncoder.encode("\"geometry\":" + routeGeometry, StandardCharsets.UTF_8))))
+				.andRespond(withSuccess(IMAGE_BYTES, MediaType.IMAGE_PNG));
+
+		Optional<byte[]> result = client.staticSnapshot(routeGeometry, List.of());
+
+		assertThat(result).isPresent();
 		server.verify();
 	}
 
