@@ -20,6 +20,14 @@ describe('AuthService', () => {
     return `${base64url({ alg: 'none' })}.${base64url(payload)}.sig`;
   }
 
+  // Real JWTs are base64url: btoa() alone never emits '-'/'_', so makeJwt() above can't
+  // reproduce the bug where atob() throws InvalidCharacterError on those characters.
+  function makeJwtBase64Url(payload: Record<string, unknown>): string {
+    const base64url = (obj: unknown) =>
+      btoa(JSON.stringify(obj)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    return `${base64url({ alg: 'none' })}.${base64url(payload)}.sig`;
+  }
+
   beforeEach(() => {
     localStorage.clear();
     TestBed.configureTestingModule({
@@ -51,6 +59,18 @@ describe('AuthService', () => {
       localStorage.setItem(TOKEN_KEY, makeJwt({ exp: Math.floor(Date.now() / 1000) - 3600 }));
       const service = TestBed.inject(AuthService);
       expect(service.isAuthenticated()).toBeFalse();
+    });
+
+    it('valid base64url token containing "-"/"_" -> isAuthenticated starts true (regression for atob() InvalidCharacterError)', () => {
+      // "sub" is fixed filler verified to produce '+'/'/' in standard base64, so the base64url
+      // encoding contains '-'/'_' — this is what makeJwt()'s btoa()-only fixtures can never do.
+      const token = makeJwtBase64Url({
+        exp: Math.floor(Date.now() / 1000) + 3600,
+        sub: 'Ym-a.b:<EGOA21+w?|6jR-Sk',
+      });
+      expect(() => localStorage.setItem(TOKEN_KEY, token)).not.toThrow();
+      const service = TestBed.inject(AuthService);
+      expect(service.isAuthenticated()).toBeTrue();
     });
 
     it('malformed token -> isAuthenticated starts false and construction does not throw', () => {
