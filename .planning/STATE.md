@@ -1,19 +1,19 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.0
-current_phase: 02
-current_phase_name: Exports, Completion & Search
-status: executing
-stopped_at: Phase 2 execution in progress — Wave 1 (02-02 PDF export) executor running, Waves 2-3 not started
-last_updated: "2026-08-21T06:04:18.537Z"
-last_activity: 2026-08-21
-last_activity_desc: Phase 02 execution started
-state_head: 626c7129b82080a2af660a2b264d690acef1d98a
+current_phase: 06
+current_phase_name: Community & Social
+status: planning
+stopped_at: Phase 02 complete, ready to plan Phase 06
+last_updated: "2026-08-22T04:20:29.407Z"
+last_activity: 2026-08-22
+last_activity_desc: Phase 02 complete, transitioned to Phase 06
+state_head: 53aea20176783ce8bda99c0e76122fb2a1d59521
 progress:
   total_phases: 9
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 7
-  completed_plans: 4
+  completed_plans: 7
 milestone_name: Semester 5 → Semester 6 Fall Break Implementation
 ---
 
@@ -21,25 +21,25 @@ milestone_name: Semester 5 → Semester 6 Fall Break Implementation
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-08-06)
+See: .planning/PROJECT.md (updated 2026-08-22)
 
 **Core value:** AI-assisted, route-optimized multi-stop itineraries that feel like a real, usable travel product
-**Current focus:** Phase 02 — Exports, Completion & Search
+**Current focus:** Phase 06 — Community & Social
 
 ## Current Position
 
-Phase: 02 (Exports, Completion & Search) — EXECUTING
-Plan: 1 of 3
-Status: Executing Phase 02
-Last activity: 2026-08-21 — Phase 02 execution started
+Phase: 06 — Community & Social
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-08-22 — Phase 02 complete, transitioned to Phase 06
 
-Progress: [██████████] 100% — 4 of 4 Phase 1 plans complete (01-01, 01-02, 01-03, 01-04). Milestone-wide this is 7/36 plan items; several more are PARTIAL — see ROADMAP.md — but aren't counted here.
+Progress: [░░░░░░░░░░░░░░░░░░░░] 7/7 plans — Phases 1 and 2 both fully complete (7 plans total: 01-01..04, 02-02..04; 02-01 shipped pre-GSD). Milestone-wide this is 7/36 plan items; several more are PARTIAL — see ROADMAP.md — but aren't counted here.
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 4
+- Total plans completed: 7
 - Average duration: 18 min
 - Total execution time: 1.2 hours
 
@@ -47,7 +47,6 @@ Progress: [██████████] 100% — 4 of 4 Phase 1 plans complet
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01 | 4 | - | - |
 
 **Recent Trend:**
 
@@ -72,7 +71,7 @@ Progress: [██████████] 100% — 4 of 4 Phase 1 plans complet
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
-- Onboarding: `.planning/` kept local-only (gitignored) — team doesn't use GSD
+- Onboarding: `.planning/` originally kept local-only (gitignored) — team doesn't use GSD. **Superseded 2026-08-21 (SCRUM-478): now tracked in git**, `.planning/audit/` stays gitignored on its own.
 - Onboarding: brownfield synthesis chosen over deep interactive questioning — extensive existing docs (fall/winter plans, architecture, risk register) already answered what questioning would have asked
 - Milestone v1.0 spans both fall-break and winter phases (1-8) in one continuous roadmap rather than two separate milestones — winter is explicitly de-risked *by* fall break per the plan docs' own framing
 - Plan 01-01 (2026-08-14): filter-layer `ApiError` conforms to `docs/api-contracts.md` (`fieldErrors: null` off the validation path) rather than amending the doc to permit `[]` — `GlobalExceptionHandler` already emitted null on every non-validation path, so `SecurityErrorWriter` was the single divergent producer
@@ -110,7 +109,7 @@ None yet.
 - **[UPDATE 2026-08-14, plan 01-03 — its "only the frontend remains" clause is closed by 01-04 on 2026-08-17]** The backend half of refresh tokens is complete: issuance, single-use rotation, reuse detection with the D-03 user-wide revoke, D-04 single-device logout, cookie clearing, and the refresh rate limit all ship. **Only the frontend remains (01-04):** the proactive silent-refresh timer (D-05), logout wiring, and the two-stage session-expiry experience (D-06).
 - **[2026-08-14, plan 01-02 — superseded by the note above]** The audit's "01-04 (refresh tokens) is the only confirmed-unbuilt Phase 1 item" is now partly closed: `V12__create_refresh_tokens.sql` exists, and issuance + single-use rotation ship in `RefreshTokenService` / `POST /api/auth/refresh`. Still unbuilt: logout revocation, reuse-detection family revoke, refresh rate limiting (all 01-03), and the frontend silent-refresh mechanism (01-04).
 - **[2026-08-10, historical — see resolved note above]** Original provisional finding that flagged 01-01/01-02 as likely done and 01-03 as likely-but-unverified. Kept for session history; superseded by the 2026-08-14 confirmation.
-- **[NEW 2026-08-14] Phase 2 is 1/4 done, not 0/4.** 02-01 (.ics export) re-confirmed shipped (`TripExportController`/`IcsExportService`). 02-02 (PDF export), 02-03 (completion percentage), 02-04 (search/filter) are all confirmed genuinely unstarted — no partial credit anywhere in Phase 2 beyond 02-01.
+- **[RESOLVED 2026-08-22] Phase 2 is now 4/4 done.** 02-01 (.ics export, pre-GSD), 02-02 (PDF export + Mapbox map snapshot), 02-03 (completion percentage), 02-04 (search/filter) all shipped, code-reviewed, UAT-passed, security-verified (14/14 threats closed). Live UAT against real production data caught and fixed three real bugs beyond what unit tests found: a Postgres type-inference gap in `TripSearchRepositoryImpl` (fixed pre-merge), and two Mapbox map-snapshot bugs only reachable with a real optimized-trip payload (bare-Geometry-vs-Feature for `auto` extent, and `URLEncoder`'s space-to-`+` corruption) — both fixed post-merge in follow-up PRs (#279, #280) plus a scope revision (#281, route line + markers combined per live user feedback, D-04 revised). Full history: `.planning/phases/02-exports-completion-search/HANDOFF.md`, `02-UAT.md`, `.planning/debug/mapbox-snapshot-missing-on-optimized-route.md`.
 - **[NEW 2026-08-14] Phase 3 and Phase 4 each have one PARTIAL item not previously recorded.** 03-02: `SuggestedItinerary.SuggestedStop` already carries a `reason` field (reasoning), but day/time/stopType/meal-suggestion fields are absent — don't re-plan from scratch, extend the existing record. 04-01: `trip-map.component.ts` already renders the route polyline and per-stop markers; only marker clustering (e.g. supercluster, `cluster: true` GeoJSON source) is missing.
 - **[NEW 2026-08-14] Phase 6 partials unchanged since 2026-08-06** — re-verified, not stale: 06-01 backend still done/frontend still unwired (`trip.service.ts` has zero `/api/discovery` references), 06-03 like+clone backend still done/save+bookmark still entirely missing.
 - **[NEW 2026-08-14] Phases 5, 7, 8 confirmed zero code footprint** — no partial credit anywhere; these start from a genuinely clean slate when planned.
@@ -125,6 +124,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-21T06:04:18.270Z
-Stopped at: Phase 2 execution in progress — Wave 1 (02-02 PDF export) executor running, Waves 2-3 not started
-Resume file: .planning/phases/02-exports-completion-search/HANDOFF.md
+Last session: 2026-08-22T04:20:29.407Z
+Stopped at: Phase 02 fully complete and merged (PRs #278-#281); ready to plan Phase 06
+Resume file: none — Phase 02's HANDOFF.md is historical record only, not an open resume point

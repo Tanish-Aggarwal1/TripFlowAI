@@ -39,14 +39,15 @@ See `.planning/ROADMAP.md` for the 8-phase breakdown and `.planning/RISKS.md` fo
 - ✓ Manual stop-visited tracking (`Stop.status`) — existing
 - ✓ Rate limiting (Bucket4j) on optimize/AI endpoints — existing
 - ✓ CI (backend + frontend), Flyway-managed schema, Testcontainers IT suite (CI-only, no local Docker) — existing
+- ✓ PDF itinerary export with embedded Mapbox route-map snapshot (route line + stop markers) — Phase 2
+- ✓ Trip completion percentage (owner list + detail view), structurally walled off from the public discovery feed — Phase 2
+- ✓ Trip list search and filter (title/tags/place-names, status/visibility/date-range/duration) — Phase 2
 
 ### Active
 
 <!-- Fall-break scope (docs/TripFlow_fall_Break_Plan.md, FB-01..FB-26) and winter scope (docs/TripFlow_Winter_Plan.md, WP-01..WP-08) -->
 
 - [ ] Auth hardening: typed 401 vs 403 entry point, `UserPrincipal` typed seam, refresh token flow (FB-01, FB-02, FB-03, FB-16)
-- [ ] Export features: PDF itinerary export, calendar export polish, trip completion percentage (FB-04, FB-05, FB-06)
-- [ ] Search and filter on trip list (FB-07)
 - [ ] AI quality: Gemini prompt engineering pass, day/time/reasoning + meal-aware itinerary scheduling, alternative-suggestion popups (FB-08, FB-17, FB-18)
 - [ ] Notifications: signup confirmation + trip reminder emails (FB-09)
 - [ ] Frontend polish: advanced Mapbox route rendering/clustering, dark mode, Mapbox place search for stop input, editable stop coordinates (FB-10, FB-11, FB-15)
@@ -72,7 +73,7 @@ See `.planning/ROADMAP.md` for the 8-phase breakdown and `.planning/RISKS.md` fo
 - `docs/social-features-traceability-audit.md` found real gaps between what Jira's social-feature tickets claimed and what's actually shipped (discovery feed, like, clone, ratings) — FB-19/20/21/24 exist specifically to close those gaps.
 - `docs/risk-register.md` tracks 13 risks (R1-R13); most mitigated. R2 (JWT filter misconfiguration locking out all endpoints) and R9 (GitHub Actions outages) remain open and recurring concerns.
 - No Docker on any team machine — `*IT` integration tests only run in CI under the `-Pci` Maven profile; local dev is `mvn verify` (unit tests only).
-- `.planning/` (this GSD workspace) is deliberately gitignored — the rest of the team doesn't use GSD, so planning artifacts stay local to this session/machine, not in the shared repo.
+- `.planning/` (this GSD workspace) is now tracked in git (SCRUM-478, 2026-08-21) — the repo is public, and the team decided the roadmap/state should be visible rather than local-only. `.planning/audit/` (pre-built security-review notes) stays gitignored on its own.
 - **Jira backlog reviewed live (2026-08-06, 233 issues in project `SCRUM`)** for this milestone: confirmed `SCRUM-244` (day/time scheduling) and `SCRUM-110`/REF-21 (pagination) are already Done, unblocking FB-17/FB-04a and FB-07 respectively. Found the fall plan's epic-mapping table is stale for `SCRUM-83` (not AUTH — it's "REFACTOR: Database & Schema Integrity") and `SCRUM-87` (Done/closed, not usable for new config tickets) — must be corrected before any ticket creation. Also found two real, unreferenced Jira tickets: `SCRUM-248` (Dockerize + Neon Postgres deploy) and `SCRUM-274` (404 existence-hiding standardization, directly relevant to Phase 6). Full detail in `.planning/RISKS.md`.
 
 ## Constraints
@@ -96,6 +97,9 @@ See `.planning/ROADMAP.md` for the 8-phase breakdown and `.planning/RISKS.md` fo
 | Front-load Phases 1-7 (all feature work) into fall break; Phase 8 (winter) is hardening/regression only | User explicit call (2026-08-06): 4.5-month fall break vs. 3-month winter term — most functionality should land while there's more runway, leaving winter for polish/sign-off rather than net-new features | — Pending |
 | Phase 6 "For You" feed restyled as TikTok-style full-screen swipe (not Instagram-post-list); user profile page + interest-based ranking folded into Phase 6 rather than deferred | User explicit design call during Phase 6 discussion — profile page is small and directly needed as the data source for personalized ranking and for the feed's owner-username display | — Pending |
 | Created 8 new `v2` epics (`SCRUM-275`-`SCRUM-282`: AUTH, TRIP, ROUTE, AI, SOCIAL, DEVOPS, DOCS, TESTING) rather than reopening/reusing any semester-5 epic | All semester-5 epics close 2026-08-17 alongside the presentation wrap-up, before official fall-break work starts (per user); `SCRUM-83` was also actively a different, mislabeled epic. Reopening closed epics blurs the "shipped" signal for an academic project that gets reviewed. Resolves RISK-J1/RISK-J2 | ✓ Good |
+| `.planning/` tracked in git (SCRUM-478) instead of staying local-only | Repo is public; team wants roadmap/state visible without requiring GSD | ✓ Good |
+| PDF map snapshot combines route line + stop markers (D-04 revised from route-OR-markers) | Original plan was route-line-only for optimized trips; user found that visually confusing once they saw it live and asked for both together — Mapbox's Static Images API supports comma-separated combined overlays | ✓ Good |
+| PDF export's Mapbox geojson overlay wraps the route geometry in a GeoJSON Feature and fixes `URLEncoder`'s space-to-`+` corruption | Two real production bugs found via live UAT against real optimized-trip data (not caught by hand-written compact-JSON test fixtures): Mapbox's `auto` extent needs a `features` key (bare Geometry has none), and `URLEncoder.encode` is form-encoding, not RFC 3986 — a literal `+` where a space belongs corrupts the JSON Mapbox receives | ✓ Good |
 
 ## Evolution
 
@@ -115,4 +119,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-06 after brownfield onboarding initialization*
+*Last updated: 2026-08-22 after Phase 2*
