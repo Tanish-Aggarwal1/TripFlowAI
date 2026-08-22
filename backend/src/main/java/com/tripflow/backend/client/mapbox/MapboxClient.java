@@ -1,5 +1,6 @@
 package com.tripflow.backend.client.mapbox;
 
+import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -76,8 +77,13 @@ public class MapboxClient {
 			}
 		}
 
-		String finalPath = path;
-		byte[] bytes = execute(() -> mapboxRestClient.get().uri(finalPath).retrieve().body(byte[].class),
+		// Built as a URI object, not a String, so RestClient's UriBuilderFactory never sees
+		// this as a template to re-encode — geojsonOverlay's URLEncoder pass is the ONLY
+		// encoding pass the '%'/'{'/'}' characters in a GeoJSON payload ever go through.
+		// .uri(String) would run it through UriComponentsBuilder's template encoder too,
+		// double-encoding every '%' (and mis-parsing '{'/'}' as template variable syntax).
+		URI uri = URI.create(props.baseUrl() + path);
+		byte[] bytes = execute(() -> mapboxRestClient.get().uri(uri).retrieve().body(byte[].class),
 				"Mapbox static image request failed");
 		return Optional.ofNullable(bytes);
 	}

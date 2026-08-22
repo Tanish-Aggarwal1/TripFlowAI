@@ -360,6 +360,18 @@ public class TripServiceTest {
         verify(tripRepository).searchOwnedTrips(eq(1L), eq("%paris%"), eq(filters), eq(pageable));
     }
 
+    @Test
+    void searchOwnedTrips_searchContainingWildcardChars_escapesThemInThePattern() {
+        Pageable pageable = PageRequest.of(0, 20);
+        TripSearchFilters filters = TripSearchFilters.none();
+        when(tripRepository.searchOwnedTrips(eq(1L), eq("%50\\% off\\_deal%"), eq(filters), eq(pageable)))
+                .thenReturn(new PageImpl<>(List.of(), pageable, 0));
+
+        tripService.searchOwnedTrips(1L, "50% off_deal", filters, pageable);
+
+        verify(tripRepository).searchOwnedTrips(eq(1L), eq("%50\\% off\\_deal%"), eq(filters), eq(pageable));
+    }
+
     // ---------- updateTrip ----------
 
     @Test

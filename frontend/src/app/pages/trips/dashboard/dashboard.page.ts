@@ -134,7 +134,7 @@ export class DashboardPage implements ViewWillEnter {
   loadTrips(): void {
     this.loading = true;
     this.error = null;
-    this.tripService.listTrips().subscribe({
+    this.tripService.listTrips(0, 20, this.filters).subscribe({
       next: (page) => {
         this.trips = page.content;
         this.loading = false;

@@ -101,6 +101,27 @@ class MapboxClientTest {
 	}
 
 	@Test
+	void staticSnapshot_withRouteGeometry_requestUriIsSinglyEncodedNotDoubleEncoded() {
+		MapboxClient client = client("test-token-1234");
+		String routeGeometry = "{\"type\":\"LineString\",\"coordinates\":[[-79.4,43.7],[-79.5,43.8]]}";
+		String expectedOverlay = "geojson(" + java.net.URLEncoder.encode(routeGeometry, StandardCharsets.UTF_8) + ")";
+		String expectedUri = BASE_URL + "/styles/v1/mapbox/streets-v12/static/" + expectedOverlay
+				+ "/auto/600x400?access_token=test-token-1234";
+		// An exact match here (rather than containsString) is the point: if the request
+		// URI were double-encoded, every literal '%' in expectedOverlay would come back
+		// as '%25' and this exact-string match would fail.
+		server.expect(requestTo(expectedUri))
+				.andExpect(method(HttpMethod.GET))
+				.andRespond(withSuccess(IMAGE_BYTES, MediaType.IMAGE_PNG));
+
+		Optional<byte[]> result = client.staticSnapshot(routeGeometry, List.of());
+
+		assertThat(result).isPresent();
+		assertThat(result.get()).isEqualTo(IMAGE_BYTES);
+		server.verify();
+	}
+
+	@Test
 	void staticSnapshot_overLengthGeometry_fallsBackToMarkerOnlyOverlay() {
 		MapboxClient client = client("test-token-1234");
 		// A route geometry with thousands of coordinate pairs pushes the request URL

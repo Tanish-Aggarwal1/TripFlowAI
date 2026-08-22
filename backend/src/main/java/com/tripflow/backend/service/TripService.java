@@ -20,6 +20,7 @@ import com.tripflow.backend.exception.InvalidRequestException;
 import com.tripflow.backend.exception.ResourceNotFoundException;
 import com.tripflow.backend.mapper.TripMapper;
 import com.tripflow.backend.repository.TripRepository;
+import com.tripflow.backend.repository.TripSearchRepositoryImpl;
 import com.tripflow.backend.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -58,7 +59,7 @@ public class TripService {
     public Page<TripOwnerSummaryResponse> searchOwnedTrips(
             Long ownerId, String search, TripSearchFilters filters, Pageable pageable) {
         String trimmed = search == null ? "" : search.trim();
-        String pattern = trimmed.isEmpty() ? null : "%" + trimmed + "%";
+        String pattern = trimmed.isEmpty() ? null : TripSearchRepositoryImpl.likePattern(trimmed);
         return tripRepository.searchOwnedTrips(ownerId, pattern, filters, pageable);
     }
 

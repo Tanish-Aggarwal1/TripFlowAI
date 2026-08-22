@@ -42,15 +42,30 @@ public class TripSearchRepositoryImpl implements TripSearchRepository {
      * tags arm already uses EXISTS over unnest.
      */
     private static final String TEXT_MATCH_SQL = """
-            (:pattern IS NULL OR t.title ILIKE :pattern
-             OR EXISTS (SELECT 1 FROM unnest(t.tags) tag WHERE tag ILIKE :pattern)
+            (:pattern IS NULL OR t.title ILIKE :pattern ESCAPE '\\'
+             OR EXISTS (SELECT 1 FROM unnest(t.tags) tag WHERE tag ILIKE :pattern ESCAPE '\\')
              OR EXISTS (
                  SELECT 1 FROM stops s JOIN places p ON p.id = s.place_id
-                 WHERE s.trip_id = t.id AND p.name ILIKE :pattern))""";
+                 WHERE s.trip_id = t.id AND p.name ILIKE :pattern ESCAPE '\\'))""";
+
+    /**
+     * Wraps raw user search text into an {@code ILIKE ... ESCAPE '\'} pattern, escaping
+     * {@code \}, {@code %} and {@code _} first so a query like {@code "50% off"} or
+     * {@code "a_b"} matches its literal text rather than being reinterpreted as wildcards
+     * — the value is always bound as a parameter (never concatenated into SQL), so this is
+     * a correctness fix, not an injection concern.
+     */
+    public static String likePattern(String raw) {
+        if (raw == null) {
+            return null;
+        }
+        String escaped = raw.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
+        return "%" + escaped + "%";
+    }
 
     @Override
     public Page<TripSummaryResponse> searchPublicTrips(String query, Pageable pageable) {
-        String pattern = "%" + query + "%";
+        String pattern = likePattern(query);
 
         List<Long> ids = matchingIds(pattern, pageable);
         long total = countMatches(pattern);

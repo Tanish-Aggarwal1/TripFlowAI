@@ -108,6 +108,15 @@ describe('DashboardPage', () => {
     expect(component.loadTrips).toHaveBeenCalled();
   });
 
+  it('loadTrips passes the active filters, so returning to the dashboard does not silently drop them', () => {
+    component.filters = { search: 'paris' };
+    tripServiceSpy.listTrips.calls.reset();
+
+    component.loadTrips();
+
+    expect(tripServiceSpy.listTrips).toHaveBeenCalledWith(0, 20, { search: 'paris' });
+  });
+
   it('openTrip navigates to the trip detail route', () => {
     component.openTrip(summary);
 
