@@ -19,12 +19,12 @@ Requirements for this milestone (fall break through winter presentation). Each m
 ### Export (EXPORT)
 
 - [x] **EXPORT-01**: Users can export a trip's ordered stops as a valid `.ics` calendar file with correct `DTSTART`/`DTEND` from `dayNumber`/`plannedTime` (FB-04) — **Done, confirmed 2026-08-14**
-- [ ] **EXPORT-02**: Users can export a trip as a formatted PDF itinerary (header, ordered stops, notes) (FB-05)
-- [ ] **EXPORT-03**: Trip responses expose enough data (visited/total stop counts) to compute a completion percentage, handling the zero-stops case without dividing by zero (FB-06)
+- [x] **EXPORT-02**: Users can export a trip as a formatted PDF itinerary (header, ordered stops, notes) (FB-05)
+- [x] **EXPORT-03**: Trip responses expose enough data (visited/total stop counts) to compute a completion percentage, handling the zero-stops case without dividing by zero (FB-06)
 
 ### Search (SEARCH)
 
-- [ ] **SEARCH-01**: Users can search (by title/destination) and filter (by status, date range, visibility) their trip list, using the paged response convention from REF-21/SCRUM-110 (FB-07)
+- [x] **SEARCH-01**: Users can search (by title/destination) and filter (by status, date range, visibility) their trip list, using the paged response convention from REF-21/SCRUM-110 (FB-07)
 
 ### AI Quality (AI)
 
@@ -96,9 +96,9 @@ None — fall-break and winter scope are already fully enumerated above; nothing
 | AUTH-03 | Phase 1 | Done |
 | AUTH-04 | Phase 1 | Complete in code (01-02 issuance/rotation, 01-03 revocation, 01-04 frontend) — banner/dialog human-check outstanding |
 | EXPORT-01 | Phase 2 | Done |
-| EXPORT-02 | Phase 2 | Pending |
-| EXPORT-03 | Phase 2 | Pending |
-| SEARCH-01 | Phase 2 | Pending |
+| EXPORT-02 | Phase 2 | Complete |
+| EXPORT-03 | Phase 2 | Complete |
+| SEARCH-01 | Phase 2 | Complete |
 | AI-01 | Phase 3 | Pending |
 | AI-02 | Phase 3 | Partial (reasoning field only) |
 | AI-03 | Phase 3 | Pending |

@@ -7,7 +7,7 @@ This milestone covers the semester-5→semester-6 break (fall, ~4.5 months: 2026
 ## Phases
 
 - [x] **Phase 1: Auth Seam Hardening** (Fall) - Typed 401/403, `UserPrincipal` seam, refresh tokens, closed gap tests — 4/4 plans executed, 4/4 success criteria verified, UAT passed, 27/27 threats closed (completed 2026-08-17)
-- [ ] **Phase 2: Exports, Completion & Search** (Fall) - .ics/PDF export, completion percentage, trip list search/filter
+- [x] **Phase 2: Exports, Completion & Search** (Fall) - .ics/PDF export, completion percentage, trip list search/filter (completed 2026-08-22)
 - [ ] **Phase 3: AI Quality & Scheduling** (Fall) - Gemini prompt pass, day/time/meal-aware itineraries, alternative suggestions
 - [ ] **Phase 4: Frontend & Map Polish** (Fall) - Route polyline + clustering, dark mode, Mapbox place search
 - [ ] **Phase 5: Notifications, Observability & PWA** (Fall) - Email notifications, Sentry, offline caching, native build spike
@@ -74,15 +74,15 @@ Plans:
 **Wave 1**
 
 - [x] 02-01: Backend .ics generation endpoint + frontend export button — FB-04a/04b (EXPORT-01) — **confirmed done** (2026-08-14 audit, re-verified): `GET /api/trips/{id}/calendar.ics` (`TripExportController`/`IcsExportService`) + frontend download button in `trip-view.page.ts`, tracked Done as SCRUM-175/SCRUM-176 under legacy SOCIAL epic SCRUM-9 (not TRIP v2 SCRUM-276 — reparent or leave, team call). **Pre-existing code, never GSD-planned — there is deliberately no `02-01-PLAN.md`.**
-- [ ] 02-02-PLAN.md — PDF export: `com.github.librepdf:openpdf` dependency, `PdfExportService`, `GET /api/trips/{id}/export/pdf`, a new `client/mapbox/` triple for the server-side route-map snapshot (D-01/D-02/D-03/D-04), `sanitizeFilename` reuse (D-05), frontend download button — FB-05a/05b (EXPORT-02) · wave 1 · **needs a new backend `MAPBOX_TOKEN`** (non-blocking: absent token degrades to a map-less PDF)
+- [x] 02-02-PLAN.md — PDF export: `com.github.librepdf:openpdf` dependency, `PdfExportService`, `GET /api/trips/{id}/export/pdf`, a new `client/mapbox/` triple for the server-side route-map snapshot (D-01/D-02/D-03/D-04), `sanitizeFilename` reuse (D-05), frontend download button — FB-05a/05b (EXPORT-02) · wave 1 · **needs a new backend `MAPBOX_TOKEN`** (non-blocking: absent token degrades to a map-less PDF)
 
 **Wave 2** *(blocked on Wave 1 — file ownership of `trip.service.ts`, not a logical dependency)*
 
-- [ ] 02-03-PLAN.md — Trip completion percentage: shared `TripCompletion.percentage` helper (D-06/D-07), new `TripOwnerSummaryResponse` for the owner list with `TripSummaryResponse` left untouched for the discovery feed (D-08), `visitedStopCount`/`completionPercentage` on `TripResponse`, dashboard completion badge — FB-06 (EXPORT-03) · wave 2
+- [x] 02-03-PLAN.md — Trip completion percentage: shared `TripCompletion.percentage` helper (D-06/D-07), new `TripOwnerSummaryResponse` for the owner list with `TripSummaryResponse` left untouched for the discovery feed (D-08), `visitedStopCount`/`completionPercentage` on `TripResponse`, dashboard completion badge — FB-06 (EXPORT-03) · wave 2
 
 **Wave 3** *(blocked on Wave 2 — `searchOwnedTrips` re-fetches through the `TripOwnerSummaryResponse` projection 02-03 creates)*
 
-- [ ] 02-04-PLAN.md — Trip list search + filter on `GET /api/trips`: `searchOwnedTrips` on the existing `TripSearchRepository` (D-09/D-11) matching title, tags and stop place-names (D-10), status/visibility/start-date-range/duration filters ANDed (D-12/D-13/D-14), debounced dashboard search + filter bar (D-15), stale frontend `TripStatus` union fixed, and the phase's `docs/api-contracts.md` pass — FB-07 (SEARCH-01) · wave 3. (Search exists only for the public discovery feed at `/api/discovery/search`, not the owner's trip list — do not confuse the two)
+- [x] 02-04-PLAN.md — Trip list search + filter on `GET /api/trips`: `searchOwnedTrips` on the existing `TripSearchRepository` (D-09/D-11) matching title, tags and stop place-names (D-10), status/visibility/start-date-range/duration filters ANDed (D-12/D-13/D-14), debounced dashboard search + filter bar (D-15), stale frontend `TripStatus` union fixed, and the phase's `docs/api-contracts.md` pass — FB-07 (SEARCH-01) · wave 3. (Search exists only for the public discovery feed at `/api/discovery/search`, not the owner's trip list — do not confuse the two)
 
 ### Phase 3: AI Quality & Scheduling
 
@@ -253,7 +253,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | Phase | Plans Complete | Status | Completed |
 |-------|-----------------|--------|-----------|
 | 1. Auth Seam Hardening | 4/4 | Complete    | 2026-08-17 |
-| 2. Exports, Completion & Search | 1/4 (pre-existing code, 2026-08-14 audit) | In progress — only 02-01 (.ics export) done | - |
+| 2. Exports, Completion & Search | 3/3 | Complete    | 2026-08-22 |
 | 3. AI Quality & Scheduling | 0/3 (03-02 partial: `reason` field exists) | Not started | - |
 | 4. Frontend & Map Polish | 0/3 (04-01 partial: polyline yes, clustering no) | Not started | - |
 | 5. Notifications, Observability & PWA | 0/4 | Not started | - |
