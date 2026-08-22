@@ -40,12 +40,16 @@ public class MapboxClient {
 	private final MapboxProperties props;
 
 	/**
-	 * Renders a static snapshot of the trip's route (when {@code routeGeometryJson} is
-	 * present) or plain stop pins (D-04, when the trip has never been optimized).
+	 * Renders a static snapshot of the trip: the route line plus stop pins when the trip
+	 * has been optimized ({@code routeGeometryJson} present and stops available), the route
+	 * line alone if stops aren't available, or plain stop pins (D-04) when the trip has
+	 * never been optimized. If a combined route+markers request would exceed Mapbox's URL
+	 * cap, it degrades to markers-only rather than failing outright.
 	 *
 	 * @param routeGeometryJson the trip's stored GeoJSON LineString, or null
-	 * @param stopCoordinates   {@code [longitude, latitude]} pairs, used for the marker
-	 *                          fallback and as the "is there anything to render" check
+	 * @param stopCoordinates   {@code [longitude, latitude]} pairs, drawn as markers
+	 *                          alongside the route line and used as the marker-only
+	 *                          fallback and the "is there anything to render" check
 	 * @return the raw image bytes, or empty when there's nothing to render, no token is
 	 *         configured, or even a marker-only request would exceed the URL length cap
 	 */
@@ -59,7 +63,16 @@ public class MapboxClient {
 			return Optional.empty();
 		}
 
-		String overlay = hasRoute ? geojsonOverlay(routeGeometryJson) : markerOverlay(stopCoordinates);
+		// Mapbox z-orders overlays by list position (last = on top) — markers go last so
+		// the route line never obscures a stop pin.
+		String overlay;
+		if (hasRoute && hasStops) {
+			overlay = geojsonOverlay(routeGeometryJson) + "," + markerOverlay(stopCoordinates);
+		} else if (hasRoute) {
+			overlay = geojsonOverlay(routeGeometryJson);
+		} else {
+			overlay = markerOverlay(stopCoordinates);
+		}
 		String path = requestPath(overlay);
 
 		if ((props.baseUrl() + path).length() > MAX_URL_LENGTH) {

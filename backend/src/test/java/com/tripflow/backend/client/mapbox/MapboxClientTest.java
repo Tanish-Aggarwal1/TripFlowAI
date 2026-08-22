@@ -167,6 +167,27 @@ class MapboxClientTest {
 	}
 
 	@Test
+	void staticSnapshot_withRouteGeometryAndStops_combinesRouteLineAndMarkersInOneOverlay() {
+		// User-reported follow-up to G-02-2: once the route line rendered, an optimized
+		// trip's PDF showed only the line, no stop pins — D-04 originally specified
+		// route-OR-markers, but the user wants both together. Mapbox combines overlays via
+		// comma-separation in one path segment, z-ordered by list position (last = on top),
+		// so markers are appended after the geojson overlay to stay visible over the line.
+		MapboxClient client = client("test-token-1234");
+		String routeGeometry = "{\"type\":\"LineString\",\"coordinates\":[[-79.4,43.7],[-79.5,43.8]]}";
+		List<double[]> stops = List.of(new double[] { -79.4, 43.7 }, new double[] { -79.5, 43.8 });
+
+		server.expect(requestTo(containsString("geojson(")))
+				.andExpect(requestTo(containsString(",pin-s+3b82f6(-79.4,43.7),pin-s+3b82f6(-79.5,43.8)/")))
+				.andRespond(withSuccess(IMAGE_BYTES, MediaType.IMAGE_PNG));
+
+		Optional<byte[]> result = client.staticSnapshot(routeGeometry, stops);
+
+		assertThat(result).isPresent();
+		server.verify();
+	}
+
+	@Test
 	void staticSnapshot_overLengthGeometry_fallsBackToMarkerOnlyOverlay() {
 		MapboxClient client = client("test-token-1234");
 		// A route geometry with thousands of coordinate pairs pushes the request URL
