@@ -1,18 +1,14 @@
 ---
-status: testing
+status: complete
 phase: 02-exports-completion-search
 source: [02-VERIFICATION.md]
 started: 2026-08-21T22:15:00Z
-updated: 2026-08-22T02:35:00Z
+updated: 2026-08-22T02:50:00Z
 ---
 
 ## Current Test
 
-number: 2
-name: Visually confirm the Mapbox map snapshot in an exported PDF
-expected: |
-  A rendered, non-garbled map image with the correct route/pins.
-awaiting: user response
+[testing complete]
 
 ## Tests
 
@@ -22,15 +18,26 @@ result: PASS — first CI run (commit `1460e35`) caught a real pre-existing bug:
 
 ### 2. Visually confirm the Mapbox map snapshot in an exported PDF
 expected: Once `MAPBOX_TOKEN` is provisioned (Render + local `.env`), export the PDF of a trip that has been route-optimized and open it to confirm the embedded map snapshot is legible and matches the app's route line visually — a rendered, non-garbled map image with the correct route/pins. Why human: cannot provision a real Mapbox token or render/inspect a PDF image in this session; explicitly called out as outstanding in `02-02-SUMMARY.md`.
-result: [pending]
+result: issue
+reported: "it passes when i export a pdf with a unoptimized route but after i optimize a route it does not show the map"
+severity: major
 
 ## Summary
 
 total: 2
 passed: 1
-issues: 0
-pending: 1
+issues: 1
+pending: 0
 skipped: 0
 blocked: 0
 
 ## Gaps
+
+- gap_id: G-02-2
+  truth: "A rendered, non-garbled map image with the correct route/pins."
+  status: failed
+  reason: "User reported: it passes when i export a pdf with a unoptimized route but after i optimize a route it does not show the map"
+  severity: major
+  test: 2
+  artifacts: []
+  missing: []
