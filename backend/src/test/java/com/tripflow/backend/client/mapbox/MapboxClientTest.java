@@ -1,0 +1,153 @@
+package com.tripflow.backend.client.mapbox;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
+
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.util.List;
+import java.util.Optional;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.web.client.RestClient;
+
+import com.tripflow.backend.exception.MapboxClientException;
+
+class MapboxClientTest {
+
+	private static final String BASE_URL = "https://mapbox.test";
+	private static final byte[] IMAGE_BYTES = "fake-png-bytes".getBytes(StandardCharsets.UTF_8);
+
+	private MockRestServiceServer server;
+	private RestClient.Builder builder;
+
+	@BeforeEach
+	void setUp() {
+		builder = RestClient.builder().baseUrl(BASE_URL);
+		server = MockRestServiceServer.bindTo(builder).build();
+	}
+
+	private MapboxProperties props(String accessToken) {
+		return new MapboxProperties(BASE_URL, accessToken, "streets-v12", Duration.ofSeconds(5), Duration.ofSeconds(10));
+	}
+
+	private MapboxClient client(String accessToken) {
+		return new MapboxClient(builder.build(), props(accessToken));
+	}
+
+	@Test
+	void staticSnapshot_success_returnsRawImageBytes() {
+		MapboxClient client = client("test-token-1234");
+		server.expect(requestTo(containsString("/styles/v1/mapbox/streets-v12/static/")))
+				.andExpect(method(HttpMethod.GET))
+				.andExpect(requestTo(containsString("access_token=test-token-1234")))
+				.andRespond(withSuccess(IMAGE_BYTES, MediaType.IMAGE_PNG));
+
+		Optional<byte[]> result = client.staticSnapshot(null, List.of(new double[] { -79.4, 43.7 }));
+
+		assertThat(result).isPresent();
+		assertThat(result.get()).isEqualTo(IMAGE_BYTES);
+		server.verify();
+	}
+
+	@Test
+	void staticSnapshot_serverError_throwsMapboxClientExceptionNeverRawRestClientException() {
+		MapboxClient client = client("test-token-1234");
+		server.expect(requestTo(containsString("/styles/v1/mapbox/streets-v12/static/")))
+				.andRespond(withServerError());
+
+		assertThatThrownBy(() -> client.staticSnapshot(null, List.of(new double[] { -79.4, 43.7 })))
+				.isInstanceOf(MapboxClientException.class);
+	}
+
+	@Test
+	void staticSnapshot_blankToken_returnsEmptyAndMakesZeroHttpCalls() {
+		MapboxClient client = client("");
+
+		Optional<byte[]> result = client.staticSnapshot(null, List.of(new double[] { -79.4, 43.7 }));
+
+		assertThat(result).isEmpty();
+		server.verify(); // no expectations were set up — any request would fail this test
+	}
+
+	@Test
+	void staticSnapshot_absentToken_returnsEmptyAndMakesZeroHttpCalls() {
+		MapboxClient client = client(null);
+
+		Optional<byte[]> result = client.staticSnapshot(null, List.of(new double[] { -79.4, 43.7 }));
+
+		assertThat(result).isEmpty();
+		server.verify();
+	}
+
+	@Test
+	void staticSnapshot_noRouteAndNoStops_returnsEmptyAndMakesZeroHttpCalls() {
+		MapboxClient client = client("test-token-1234");
+
+		Optional<byte[]> result = client.staticSnapshot(null, List.of());
+
+		assertThat(result).isEmpty();
+		server.verify();
+	}
+
+	@Test
+	void staticSnapshot_withRouteGeometry_requestUriIsSinglyEncodedNotDoubleEncoded() {
+		MapboxClient client = client("test-token-1234");
+		String routeGeometry = "{\"type\":\"LineString\",\"coordinates\":[[-79.4,43.7],[-79.5,43.8]]}";
+		String expectedOverlay = "geojson(" + java.net.URLEncoder.encode(routeGeometry, StandardCharsets.UTF_8) + ")";
+		String expectedUri = BASE_URL + "/styles/v1/mapbox/streets-v12/static/" + expectedOverlay
+				+ "/auto/600x400?access_token=test-token-1234";
+		// An exact match here (rather than containsString) is the point: if the request
+		// URI were double-encoded, every literal '%' in expectedOverlay would come back
+		// as '%25' and this exact-string match would fail.
+		server.expect(requestTo(expectedUri))
+				.andExpect(method(HttpMethod.GET))
+				.andRespond(withSuccess(IMAGE_BYTES, MediaType.IMAGE_PNG));
+
+		Optional<byte[]> result = client.staticSnapshot(routeGeometry, List.of());
+
+		assertThat(result).isPresent();
+		assertThat(result.get()).isEqualTo(IMAGE_BYTES);
+		server.verify();
+	}
+
+	@Test
+	void staticSnapshot_overLengthGeometry_fallsBackToMarkerOnlyOverlay() {
+		MapboxClient client = client("test-token-1234");
+		// A route geometry with thousands of coordinate pairs pushes the request URL
+		// well over the 8,192-char Mapbox cap once URL-encoded.
+		StringBuilder coords = new StringBuilder("[");
+		for (int i = 0; i < 2000; i++) {
+			if (i > 0) coords.append(",");
+			coords.append("[-79.4,43.7]");
+		}
+		coords.append("]");
+		String hugeGeometry = "{\"type\":\"LineString\",\"coordinates\":" + coords + "}";
+
+		server.expect(requestTo(containsString("pin-")))
+				.andExpect(requestTo(not(containsString("geojson("))))
+				.andRespond(withSuccess(IMAGE_BYTES, MediaType.IMAGE_PNG));
+
+		Optional<byte[]> result = client.staticSnapshot(hugeGeometry, List.of(new double[] { -79.4, 43.7 }));
+
+		assertThat(result).isPresent();
+		server.verify();
+	}
+
+	@Test
+	void mapboxProperties_toString_doesNotContainTheFullAccessToken() {
+		MapboxProperties props = props("super-secret-token-value");
+
+		assertThat(props.toString()).doesNotContain("super-secret-token-value");
+	}
+}

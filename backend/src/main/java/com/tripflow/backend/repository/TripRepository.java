@@ -11,6 +11,7 @@ import org.springframework.data.repository.query.Param;
 
 import com.tripflow.backend.domain.Trip;
 import com.tripflow.backend.domain.enums.TripVisibility;
+import com.tripflow.backend.dto.TripOwnerSummaryResponse;
 import com.tripflow.backend.dto.TripSummaryResponse;
 
 public interface TripRepository extends JpaRepository<Trip, Long>, TripSearchRepository {
@@ -39,15 +40,21 @@ public interface TripRepository extends JpaRepository<Trip, Long>, TripSearchRep
      * entity query — pairing Pageable with a collection fetch join (e.g. {@code stops})
      * makes Hibernate paginate in memory (HHH90003004), which defeats pagination entirely.
      * This is a flat, single-row-per-trip projection so paging happens in SQL.
+     *
+     * <p>Owner-only: targets {@link TripOwnerSummaryResponse}, which carries a
+     * {@code visitedStopCount} that {@link TripSummaryResponse} does not (D-08). The
+     * public-feed queries below stay on {@code TripSummaryResponse} — this is the fork
+     * that keeps a user's completion progress out of the discovery feed.
      */
     @Query("""
-            SELECT new com.tripflow.backend.dto.TripSummaryResponse(
+            SELECT new com.tripflow.backend.dto.TripOwnerSummaryResponse(
                 t.id, t.title, t.visibility, t.status, t.createdAt, t.updatedAt,
-                (SELECT COUNT(s) FROM Stop s WHERE s.trip = t), null)
+                (SELECT COUNT(s) FROM Stop s WHERE s.trip = t), null,
+                (SELECT COUNT(s) FROM Stop s WHERE s.trip = t AND s.status = com.tripflow.backend.domain.enums.StopStatus.VISITED))
             FROM Trip t
             WHERE t.user.id = :userId
             """)
-    Page<TripSummaryResponse> findSummariesByUserId(@Param("userId") Long userId, Pageable pageable);
+    Page<TripOwnerSummaryResponse> findSummariesByUserId(@Param("userId") Long userId, Pageable pageable);
 
     /**
      * Card-projection list read for GET /api/discovery/trips (SCRUM-160). Same flat

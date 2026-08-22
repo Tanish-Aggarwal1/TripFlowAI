@@ -5,7 +5,8 @@ import { environment } from '../../../environments/environment';
 import { mapApiError } from '../http/api-error.mapper';
 import {
   TripResponse,
-  TripSummaryResponse,
+  TripOwnerSummaryResponse,
+  TripListFilters,
   PagedResponse,
   CreateTripRequest,
   UpdateTripRequest,
@@ -24,10 +25,34 @@ export class TripService {
 
   // ── READ ────────────────────────────────────────────────────────────────────
 
-  listTrips(page = 0, size = 20): Observable<PagedResponse<TripSummaryResponse>> {
-    const params = new HttpParams().set('page', page).set('size', size);
+  // SEARCH-01: each filter entry is appended only when non-blank, so an unfiltered
+  // request's URL (`?page=&size=`) stays exactly as it was before filters existed.
+  listTrips(
+    page = 0,
+    size = 20,
+    filters?: TripListFilters,
+  ): Observable<PagedResponse<TripOwnerSummaryResponse>> {
+    let params = new HttpParams().set('page', page).set('size', size);
+    if (filters?.search && filters.search.trim()) {
+      params = params.set('search', filters.search.trim());
+    }
+    if (filters?.status) {
+      params = params.set('status', filters.status);
+    }
+    if (filters?.visibility) {
+      params = params.set('visibility', filters.visibility);
+    }
+    if (filters?.startDateFrom) {
+      params = params.set('startDateFrom', filters.startDateFrom);
+    }
+    if (filters?.startDateTo) {
+      params = params.set('startDateTo', filters.startDateTo);
+    }
+    if (filters?.durationDays !== undefined && filters.durationDays !== null) {
+      params = params.set('durationDays', filters.durationDays);
+    }
     return this.http
-      .get<PagedResponse<TripSummaryResponse>>(this.baseUrl, { params })
+      .get<PagedResponse<TripOwnerSummaryResponse>>(this.baseUrl, { params })
       .pipe(catchError((err: HttpErrorResponse) => this.handleError(err)));
   }
 
@@ -107,6 +132,13 @@ export class TripService {
   exportIcs(tripId: number): Observable<Blob> {
     return this.http
       .get(`${this.baseUrl}/${tripId}/calendar.ics`, { responseType: 'blob' })
+      .pipe(catchError((err: HttpErrorResponse) => this.handleError(err)));
+  }
+
+  // EXPORT-02: same blob-download shape as exportIcs above.
+  exportPdf(tripId: number): Observable<Blob> {
+    return this.http
+      .get(`${this.baseUrl}/${tripId}/export/pdf`, { responseType: 'blob' })
       .pipe(catchError((err: HttpErrorResponse) => this.handleError(err)));
   }
 

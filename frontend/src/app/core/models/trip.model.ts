@@ -3,7 +3,7 @@
 
 export type TripVisibility = 'PUBLIC' | 'PRIVATE';
 
-export type TripStatus = 'DRAFT' | 'IN_PROGRESS' | 'COMPLETED';
+export type TripStatus = 'DRAFT' | 'PLANNED' | 'ACTIVE' | 'COMPLETED';
 
 export type StopStatus = 'PLANNED' | 'VISITED' | 'SKIPPED';
 
@@ -101,6 +101,10 @@ export interface TripResponse {
   updatedAt: string;
   routeGeometry: string | null; //// JSON-encoded GeoJSON LineString; JSON.parse before use. Null pre-optimization.
   startDate: string | null; // "YYYY-MM-DD" LocalDate (SCRUM-244a)
+  // EXPORT-03: visited-of-total stop counts. completionPercentage is a 0.0-1.0 fraction,
+  // mirroring the backend TripCompletion convention.
+  visitedStopCount: number;
+  completionPercentage: number;
 }
 
 // Card-sized projection returned by the paginated GET /api/trips list endpoint (REF-21) —
@@ -114,6 +118,34 @@ export interface TripSummaryResponse {
   updatedAt: string;
   stopCount: number;
   coverPhotoUrl: string | null;
+}
+
+// EXPORT-03/D-08: owner-only sibling of TripSummaryResponse, returned by GET /api/trips.
+// completionPercentage is a 0.0-1.0 fraction, mirroring the backend TripCompletion
+// convention. Never served on the public discovery feed — that stays on
+// TripSummaryResponse so a stranger's PUBLIC trip never exposes another user's progress.
+export interface TripOwnerSummaryResponse {
+  id: number;
+  title: string;
+  visibility: TripVisibility;
+  status: TripStatus;
+  createdAt: string;
+  updatedAt: string;
+  stopCount: number;
+  coverPhotoUrl: string | null;
+  visitedStopCount: number;
+  completionPercentage: number;
+}
+
+// SEARCH-01: optional query params for GET /api/trips. All AND together; `search` is
+// independently optional. Mirrors backend TripSearchFilters + the `search` param.
+export interface TripListFilters {
+  search?: string;
+  status?: TripStatus;
+  visibility?: TripVisibility;
+  startDateFrom?: string; // "YYYY-MM-DD" LocalDate
+  startDateTo?: string; // "YYYY-MM-DD" LocalDate
+  durationDays?: number;
 }
 
 // Matches Spring Data's PagedModel shape: { content, page: { size, number, totalElements, totalPages } }

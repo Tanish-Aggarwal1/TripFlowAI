@@ -19,7 +19,9 @@ import com.tripflow.backend.domain.Place;
 import com.tripflow.backend.domain.Stop;
 import com.tripflow.backend.domain.Trip;
 import com.tripflow.backend.domain.User;
+import com.tripflow.backend.domain.enums.StopStatus;
 import com.tripflow.backend.domain.enums.TripVisibility;
+import com.tripflow.backend.dto.TripOwnerSummaryResponse;
 import com.tripflow.backend.dto.TripSummaryResponse;
 import com.tripflow.backend.testsupport.PostgresTestcontainersConfiguration;
 
@@ -206,5 +208,144 @@ class TripRepositoryIT {
 		Trip found = tripRepository.findWithStopsById(savedTrip.getId()).orElseThrow();
 
 		assertThat(found.getStops()).isEmpty();
+	}
+
+	// ---------- findSummariesByUserId: completion (EXPORT-03) ----------
+
+	private User savedUser(String username) {
+		User user = new User();
+		user.setUsername(username);
+		user.setEmail(username + "@tripflow.com");
+		user.setPasswordHash("hashedpassword123");
+		return userRepository.save(user);
+	}
+
+	private void addStop(Trip trip, int index, StopStatus status) {
+		Place place = new Place();
+		place.setName("Place " + index);
+		place.setLatitude(43.0 + index * 0.01);
+		place.setLongitude(-79.0 - index * 0.01);
+		Place savedPlace = placeRepository.save(place);
+
+		Stop stop = new Stop();
+		stop.setTrip(trip);
+		stop.setPlace(savedPlace);
+		stop.setStopOrder(index);
+		stop.setStatus(status);
+		trip.getStops().add(stop);
+	}
+
+	@Test
+	void findSummariesByUserId_fiveStopsThreeVisited_returnsVisitedAndStopCounts() {
+		User user = savedUser("completionowner1");
+		Trip trip = new Trip();
+		trip.setUser(user);
+		trip.setTitle("Five Stop Trip");
+		addStop(trip, 0, StopStatus.VISITED);
+		addStop(trip, 1, StopStatus.VISITED);
+		addStop(trip, 2, StopStatus.VISITED);
+		addStop(trip, 3, StopStatus.PLANNED);
+		addStop(trip, 4, StopStatus.SKIPPED);
+		tripRepository.save(trip);
+		entityManager.flush();
+		entityManager.clear();
+
+		Page<TripOwnerSummaryResponse> page = tripRepository.findSummariesByUserId(user.getId(), PageRequest.of(0, 20));
+
+		assertThat(page.getContent()).hasSize(1);
+		TripOwnerSummaryResponse summary = page.getContent().get(0);
+		assertThat(summary.stopCount()).isEqualTo(5L);
+		assertThat(summary.visitedStopCount()).isEqualTo(3L);
+		assertThat(summary.completionPercentage()).isCloseTo(0.6, org.assertj.core.data.Offset.offset(0.0001));
+	}
+
+	@Test
+	void findSummariesByUserId_allStopsSkipped_visitedZeroWithFullStopCount() {
+		// D-06: SKIPPED stops count in the denominator only — proven here against real SQL,
+		// not just the mapper's in-memory arithmetic.
+		User user = savedUser("completionowner2");
+		Trip trip = new Trip();
+		trip.setUser(user);
+		trip.setTitle("All Skipped Trip");
+		addStop(trip, 0, StopStatus.SKIPPED);
+		addStop(trip, 1, StopStatus.SKIPPED);
+		addStop(trip, 2, StopStatus.SKIPPED);
+		tripRepository.save(trip);
+		entityManager.flush();
+		entityManager.clear();
+
+		Page<TripOwnerSummaryResponse> page = tripRepository.findSummariesByUserId(user.getId(), PageRequest.of(0, 20));
+
+		TripOwnerSummaryResponse summary = page.getContent().get(0);
+		assertThat(summary.visitedStopCount()).isZero();
+		assertThat(summary.stopCount()).isEqualTo(3L);
+	}
+
+	@Test
+	void findSummariesByUserId_zeroStops_completionIsZero() {
+		// D-07: zero-stop trips must never null-pointer or divide-by-zero at the SQL layer.
+		User user = savedUser("completionowner3");
+		Trip trip = new Trip();
+		trip.setUser(user);
+		trip.setTitle("Empty Trip");
+		tripRepository.save(trip);
+		entityManager.flush();
+		entityManager.clear();
+
+		Page<TripOwnerSummaryResponse> page = tripRepository.findSummariesByUserId(user.getId(), PageRequest.of(0, 20));
+
+		TripOwnerSummaryResponse summary = page.getContent().get(0);
+		assertThat(summary.stopCount()).isZero();
+		assertThat(summary.visitedStopCount()).isZero();
+		assertThat(summary.completionPercentage()).isEqualTo(0.0);
+	}
+
+	@Test
+	void findSummariesByUserId_twoTripsDifferentVisitedCounts_countsAreIndependentPerRow() {
+		// Proves the correlated subquery correlates per Trip row rather than aggregating
+		// across the whole page.
+		User user = savedUser("completionowner4");
+
+		Trip tripA = new Trip();
+		tripA.setUser(user);
+		tripA.setTitle("Trip A");
+		addStop(tripA, 0, StopStatus.VISITED);
+		addStop(tripA, 1, StopStatus.PLANNED);
+		tripRepository.save(tripA);
+
+		Trip tripB = new Trip();
+		tripB.setUser(user);
+		tripB.setTitle("Trip B");
+		addStop(tripB, 0, StopStatus.VISITED);
+		addStop(tripB, 1, StopStatus.VISITED);
+		addStop(tripB, 2, StopStatus.VISITED);
+		tripRepository.save(tripB);
+
+		entityManager.flush();
+		entityManager.clear();
+
+		Page<TripOwnerSummaryResponse> page = tripRepository.findSummariesByUserId(user.getId(), PageRequest.of(0, 20));
+
+		assertThat(page.getContent()).hasSize(2);
+		TripOwnerSummaryResponse a = page.getContent().stream()
+				.filter(s -> s.title().equals("Trip A")).findFirst().orElseThrow();
+		TripOwnerSummaryResponse b = page.getContent().stream()
+				.filter(s -> s.title().equals("Trip B")).findFirst().orElseThrow();
+		assertThat(a.visitedStopCount()).isEqualTo(1L);
+		assertThat(a.stopCount()).isEqualTo(2L);
+		assertThat(b.visitedStopCount()).isEqualTo(3L);
+		assertThat(b.stopCount()).isEqualTo(3L);
+	}
+
+	/**
+	 * D-08 tripwire: {@link TripSummaryResponse} backs both discovery-feed queries
+	 * (findSummariesByVisibility, searchPublicTrips). If a future change adds a completion
+	 * field to it, every user's progress starts leaking to strangers via the public feed.
+	 * This assertion is the first thing that breaks if that happens — fix the leak (fork
+	 * onto TripOwnerSummaryResponse-shaped record instead), don't bump this constant.
+	 */
+	@Test
+	void tripSummaryResponse_recordComponentCount_staysAtEightForD08() {
+		assertThat(TripSummaryResponse.class.getRecordComponents()).hasSize(8);
 	}
 }

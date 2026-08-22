@@ -70,7 +70,7 @@ class AiTripGenerationServiceTest {
         when(responseParser.parse("{}", GeneratedTripPlan.class)).thenReturn(plan);
         TripResponse expected = new TripResponse(
                 1L, "Kyoto Trip", "A great trip", null, TripVisibility.PRIVATE, null, 1L,
-                List.of(), null, null, null, null, 0);
+                List.of(), null, null, null, null, 0, 0);
         when(tripService.createTrip(eq(1L), any())).thenReturn(expected);
 
         TripResponse result = service.generateTrip(1L, request);
@@ -97,7 +97,7 @@ class AiTripGenerationServiceTest {
         when(geminiClient.generateContent("rendered prompt")).thenReturn(geminiResponseWithText("{}"));
         when(responseParser.parse("{}", GeneratedTripPlan.class)).thenReturn(plan);
         when(tripService.createTrip(any(), any())).thenReturn(
-                new TripResponse(1L, "My Custom Title", null, null, TripVisibility.PRIVATE, null, 1L, List.of(), null, null, null, null, 0));
+                new TripResponse(1L, "My Custom Title", null, null, TripVisibility.PRIVATE, null, 1L, List.of(), null, null, null, null, 0, 0));
 
         service.generateTrip(1L, request);
 

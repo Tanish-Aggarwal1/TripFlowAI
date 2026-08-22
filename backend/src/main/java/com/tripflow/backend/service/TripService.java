@@ -11,13 +11,16 @@ import com.tripflow.backend.domain.Trip;
 import com.tripflow.backend.domain.User;
 import com.tripflow.backend.domain.enums.TripVisibility;
 import com.tripflow.backend.dto.CreateTripRequest;
+import com.tripflow.backend.dto.TripOwnerSummaryResponse;
 import com.tripflow.backend.dto.TripResponse;
+import com.tripflow.backend.dto.TripSearchFilters;
 import com.tripflow.backend.dto.TripSummaryResponse;
 import com.tripflow.backend.dto.UpdateTripRequest;
 import com.tripflow.backend.exception.InvalidRequestException;
 import com.tripflow.backend.exception.ResourceNotFoundException;
 import com.tripflow.backend.mapper.TripMapper;
 import com.tripflow.backend.repository.TripRepository;
+import com.tripflow.backend.repository.TripSearchRepositoryImpl;
 import com.tripflow.backend.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -43,8 +46,21 @@ public class TripService {
     private final StopService stopService;
 
     @Transactional(readOnly = true)
-    public Page<TripSummaryResponse> listTrips(Long ownerId, Pageable pageable) {
+    public Page<TripOwnerSummaryResponse> listTrips(Long ownerId, Pageable pageable) {
         return tripRepository.findSummariesByUserId(ownerId, pageable);
+    }
+
+    /**
+     * SEARCH-01/D-09: search + filter over the owner's own trips only. Unlike
+     * {@link #searchPublicTrips}, a blank {@code search} is not an error — it means
+     * "show me everything", so it returns the owner's full list rather than a 400.
+     */
+    @Transactional(readOnly = true)
+    public Page<TripOwnerSummaryResponse> searchOwnedTrips(
+            Long ownerId, String search, TripSearchFilters filters, Pageable pageable) {
+        String trimmed = search == null ? "" : search.trim();
+        String pattern = trimmed.isEmpty() ? null : TripSearchRepositoryImpl.likePattern(trimmed);
+        return tripRepository.searchOwnedTrips(ownerId, pattern, filters, pageable);
     }
 
     /**

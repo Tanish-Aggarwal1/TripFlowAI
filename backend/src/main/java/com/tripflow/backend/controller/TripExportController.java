@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.tripflow.backend.security.UserPrincipal;
 import com.tripflow.backend.service.IcsExportService;
+import com.tripflow.backend.service.PdfExportService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -18,8 +19,8 @@ import lombok.RequiredArgsConstructor;
 
 /**
  * Trip export endpoints (SCRUM-176) — kept separate from {@link TripController} since
- * this is expected to grow (PDF export is planned next, see the fall break plan) and
- * each format is its own concern, not trip CRUD.
+ * this is expected to grow (calendar and PDF export both live here, see the fall break
+ * plan) and each format is its own concern, not trip CRUD.
  */
 @Tag(name = "Trip Export", description = "Calendar/PDF export of a trip's itinerary")
 @RestController
@@ -30,6 +31,7 @@ public class TripExportController {
 	private static final MediaType TEXT_CALENDAR = MediaType.parseMediaType("text/calendar");
 
 	private final IcsExportService icsExportService;
+	private final PdfExportService pdfExportService;
 
 	@Operation(summary = "Export a trip as an .ics calendar file",
 			description = "One VEVENT per stop. Owner sees any trip; non-owners only see PUBLIC trips — "
@@ -44,6 +46,22 @@ public class TripExportController {
 				.header(HttpHeaders.CONTENT_DISPOSITION,
 						"attachment; filename=\"" + sanitizeFilename(export.tripTitle()) + ".ics\"")
 				.body(export.icsContent());
+	}
+
+	@Operation(summary = "Export a trip as a formatted PDF itinerary",
+			description = "Header, ordered stops with notes, and (when available) a route-map "
+					+ "snapshot. Owner sees any trip; non-owners only see PUBLIC trips — "
+					+ "same rule as GET /api/trips/{id}.")
+	@GetMapping(value = "/{id}/export/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
+	public ResponseEntity<byte[]> exportPdf(
+			@PathVariable Long id, @AuthenticationPrincipal UserPrincipal principal) {
+		PdfExportService.PdfExport export = pdfExportService.exportPdf(id, principal.userId());
+
+		return ResponseEntity.ok()
+				.contentType(MediaType.APPLICATION_PDF)
+				.header(HttpHeaders.CONTENT_DISPOSITION,
+						"attachment; filename=\"" + sanitizeFilename(export.tripTitle()) + ".pdf\"")
+				.body(export.pdfBytes());
 	}
 
 	/**

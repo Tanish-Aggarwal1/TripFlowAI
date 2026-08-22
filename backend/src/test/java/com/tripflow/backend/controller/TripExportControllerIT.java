@@ -150,6 +150,28 @@ class TripExportControllerIT {
 						org.hamcrest.Matchers.containsString("filename=\"" + "a".repeat(100) + ".ics\"")));
 	}
 
+	@Test
+	void exportPdf_owner_returnsPdfFileWithContentDispositionEndingInPdf() throws Exception {
+		User owner = createTestUser("pdfowner");
+		Long tripId = createTrip(owner, "Ottawa Weekend", TripVisibility.PRIVATE);
+
+		mockMvc.perform(get("/api/trips/" + tripId + "/export/pdf").with(asUser(owner)))
+				.andExpect(status().isOk())
+				.andExpect(header().string("Content-Type", "application/pdf"))
+				.andExpect(header().string("Content-Disposition",
+						org.hamcrest.Matchers.endsWith(".pdf\"")));
+	}
+
+	@Test
+	void exportPdf_privateTripNonOwner_returns404() throws Exception {
+		User owner = createTestUser("pdfowner2");
+		User other = createTestUser("pdfother2");
+		Long tripId = createTrip(owner, "Private Trip", TripVisibility.PRIVATE);
+
+		mockMvc.perform(get("/api/trips/" + tripId + "/export/pdf").with(asUser(other)))
+				.andExpect(status().isNotFound());
+	}
+
 	private static void assertThatIcsIsValid(String ics) {
 		org.assertj.core.api.Assertions.assertThat(ics).contains("BEGIN:VCALENDAR");
 		org.assertj.core.api.Assertions.assertThat(ics).contains("VERSION:2.0");

@@ -1,10 +1,10 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, fakeAsync, TestBed, tick } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { AlertController, ToastController } from '@ionic/angular/standalone';
 import { of, throwError } from 'rxjs';
 import { DashboardPage } from './dashboard.page';
 import { TripService } from '../../../core/services/trip.service';
-import { PagedResponse, TripSummaryResponse } from '../../../core/models/trip.model';
+import { PagedResponse, TripOwnerSummaryResponse } from '../../../core/models/trip.model';
 
 describe('DashboardPage', () => {
   let component: DashboardPage;
@@ -14,7 +14,7 @@ describe('DashboardPage', () => {
   let alertCtrlSpy: jasmine.SpyObj<AlertController>;
   let toastCtrlSpy: jasmine.SpyObj<ToastController>;
 
-  const summary: TripSummaryResponse = {
+  const summary: TripOwnerSummaryResponse = {
     id: 1,
     title: 'Trip A',
     visibility: 'PRIVATE',
@@ -23,6 +23,8 @@ describe('DashboardPage', () => {
     updatedAt: '2026-01-01T00:00:00Z',
     stopCount: 2,
     coverPhotoUrl: null,
+    visitedStopCount: 1,
+    completionPercentage: 0.5,
   };
 
   beforeEach(async () => {
@@ -36,7 +38,7 @@ describe('DashboardPage', () => {
       of({
         content: [summary],
         page: { size: 20, number: 0, totalElements: 1, totalPages: 1 },
-      } as PagedResponse<TripSummaryResponse>),
+      } as PagedResponse<TripOwnerSummaryResponse>),
     );
 
     await TestBed.configureTestingModule({
@@ -106,6 +108,15 @@ describe('DashboardPage', () => {
     expect(component.loadTrips).toHaveBeenCalled();
   });
 
+  it('loadTrips passes the active filters, so returning to the dashboard does not silently drop them', () => {
+    component.filters = { search: 'paris' };
+    tripServiceSpy.listTrips.calls.reset();
+
+    component.loadTrips();
+
+    expect(tripServiceSpy.listTrips).toHaveBeenCalledWith(0, 20, { search: 'paris' });
+  });
+
   it('openTrip navigates to the trip detail route', () => {
     component.openTrip(summary);
 
@@ -171,36 +182,112 @@ describe('DashboardPage', () => {
     });
   });
 
-  describe('statusColor', () => {
-    it('maps IN_PROGRESS to warning', () => {
-      expect(component.statusColor('IN_PROGRESS')).toBe('warning');
+  describe('completionPercent', () => {
+    it('rounds a 3-of-5 trip to 60%', () => {
+      const trip = { ...summary, stopCount: 5, visitedStopCount: 3, completionPercentage: 0.6 };
+
+      expect(component.completionPercent(trip)).toBe(60);
     });
 
-    it('maps COMPLETED to success', () => {
+    it('returns 0 for a zero-stop trip', () => {
+      const trip = { ...summary, stopCount: 0, visitedStopCount: 0, completionPercentage: 0 };
+
+      expect(component.completionPercent(trip)).toBe(0);
+    });
+  });
+
+  describe('statusColor', () => {
+    it('maps each of the four real backend statuses to a distinct color', () => {
+      expect(component.statusColor('DRAFT')).toBe('medium');
+      expect(component.statusColor('PLANNED')).toBe('tertiary');
+      expect(component.statusColor('ACTIVE')).toBe('warning');
       expect(component.statusColor('COMPLETED')).toBe('success');
     });
 
-    it('maps any other status to medium', () => {
-      expect(component.statusColor('DRAFT')).toBe('medium');
+    it('never returns a color for the removed IN_PROGRESS value', () => {
+      expect(component.statusColor('IN_PROGRESS')).toBe('medium');
     });
   });
 
   describe('statusLabel', () => {
-    it('maps IN_PROGRESS to a display label', () => {
-      expect(component.statusLabel('IN_PROGRESS')).toBe('In progress');
-    });
+    it('maps each of the four real backend statuses to a distinct, non-fallback label', () => {
+      const labels = ['DRAFT', 'PLANNED', 'ACTIVE', 'COMPLETED'].map((s) => component.statusLabel(s));
 
-    it('maps COMPLETED to a display label', () => {
-      expect(component.statusLabel('COMPLETED')).toBe('Completed');
-    });
-
-    it('maps DRAFT to a display label', () => {
-      expect(component.statusLabel('DRAFT')).toBe('Draft');
+      expect(labels).toEqual(['Draft', 'Planned', 'Active', 'Completed']);
+      expect(new Set(labels).size).toBe(4);
     });
 
     it('falls back to the raw value for an unrecognized status', () => {
       expect(component.statusLabel('UNKNOWN')).toBe('UNKNOWN');
     });
+  });
+
+  describe('search and filters', () => {
+    beforeEach(() => {
+      fixture.detectChanges();
+      tripServiceSpy.listTrips.calls.reset();
+      tripServiceSpy.listTrips.and.returnValue(
+        of({
+          content: [],
+          page: { size: 20, number: 0, totalElements: 0, totalPages: 0 },
+        } as PagedResponse<TripOwnerSummaryResponse>),
+      );
+    });
+
+    it('debounces rapid keystrokes into exactly one HTTP call carrying the final term', fakeAsync(() => {
+      component.onSearchChange('p');
+      tick(100);
+      component.onSearchChange('pa');
+      tick(100);
+      component.onSearchChange('par');
+      tick(350);
+
+      expect(tripServiceSpy.listTrips).toHaveBeenCalledTimes(1);
+      expect(tripServiceSpy.listTrips).toHaveBeenCalledWith(0, 20, { search: 'par' });
+    }));
+
+    it('an identical term repeated back-to-back does not issue a second request', fakeAsync(() => {
+      component.onSearchChange('paris');
+      tick(350);
+      component.onSearchChange('paris');
+      tick(350);
+
+      expect(tripServiceSpy.listTrips).toHaveBeenCalledTimes(1);
+    }));
+
+    it('changing a filter issues exactly one debounced request carrying that filter', fakeAsync(() => {
+      component.onStatusChange('ACTIVE');
+      tick(350);
+
+      expect(tripServiceSpy.listTrips).toHaveBeenCalledTimes(1);
+      expect(tripServiceSpy.listTrips).toHaveBeenCalledWith(0, 20, { status: 'ACTIVE' });
+    }));
+
+    it('combines a search term and a filter into one request', fakeAsync(() => {
+      component.onSearchChange('paris');
+      tick(350);
+      component.onVisibilityChange('PUBLIC');
+      tick(350);
+
+      expect(tripServiceSpy.listTrips).toHaveBeenCalledTimes(2);
+      expect(tripServiceSpy.listTrips).toHaveBeenCalledWith(0, 20, {
+        search: 'paris',
+        visibility: 'PUBLIC',
+      });
+    }));
+
+    it('clearFilters empties every filter and re-requests', fakeAsync(() => {
+      component.onSearchChange('paris');
+      tick(350);
+      tripServiceSpy.listTrips.calls.reset();
+
+      component.clearFilters();
+      tick(350);
+
+      expect(component.filters).toEqual({});
+      expect(tripServiceSpy.listTrips).toHaveBeenCalledTimes(1);
+      expect(tripServiceSpy.listTrips).toHaveBeenCalledWith(0, 20, {});
+    }));
   });
 
   describe('confirmDelete', () => {

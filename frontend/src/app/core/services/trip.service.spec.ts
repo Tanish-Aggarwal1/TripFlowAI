@@ -25,7 +25,7 @@ describe('TripService', () => {
 
   it('should list trips', (done) => {
     const mockSummaries = [
-      { id: 1, title: 'Trip 1', visibility: 'PUBLIC' as const, status: 'DRAFT' as const, createdAt: '2026-07-22T00:00:00Z', updatedAt: '2026-07-22T00:00:00Z', stopCount: 0, coverPhotoUrl: null },
+      { id: 1, title: 'Trip 1', visibility: 'PUBLIC' as const, status: 'DRAFT' as const, createdAt: '2026-07-22T00:00:00Z', updatedAt: '2026-07-22T00:00:00Z', stopCount: 0, coverPhotoUrl: null, visitedStopCount: 0, completionPercentage: 0 },
     ];
     const mockPage = {
       content: mockSummaries,
@@ -38,6 +38,46 @@ describe('TripService', () => {
     });
 
     const req = httpMock.expectOne('http://localhost:8080/api/trips?page=0&size=20');
+    expect(req.request.method).toBe('GET');
+    req.flush(mockPage);
+  });
+
+  it('should leave the plain request URL unchanged for an all-empty filter object', (done) => {
+    const mockPage = { content: [], page: { size: 20, number: 0, totalElements: 0, totalPages: 0 } };
+
+    service.listTrips(0, 20, { search: '  ' }).subscribe(() => done());
+
+    const req = httpMock.expectOne('http://localhost:8080/api/trips?page=0&size=20');
+    expect(req.request.method).toBe('GET');
+    req.flush(mockPage);
+  });
+
+  it('should list trips filtered by a trimmed search term', (done) => {
+    const mockPage = { content: [], page: { size: 20, number: 0, totalElements: 0, totalPages: 0 } };
+
+    service.listTrips(0, 20, { search: '  paris  ' }).subscribe(() => done());
+
+    const req = httpMock.expectOne('http://localhost:8080/api/trips?page=0&size=20&search=paris');
+    expect(req.request.method).toBe('GET');
+    req.flush(mockPage);
+  });
+
+  it('should list trips filtered by status, visibility, date range and duration together', (done) => {
+    const mockPage = { content: [], page: { size: 20, number: 0, totalElements: 0, totalPages: 0 } };
+
+    service
+      .listTrips(0, 20, {
+        status: 'ACTIVE',
+        visibility: 'PUBLIC',
+        startDateFrom: '2026-06-01',
+        startDateTo: '2026-06-30',
+        durationDays: 3,
+      })
+      .subscribe(() => done());
+
+    const req = httpMock.expectOne(
+      'http://localhost:8080/api/trips?page=0&size=20&status=ACTIVE&visibility=PUBLIC&startDateFrom=2026-06-01&startDateTo=2026-06-30&durationDays=3',
+    );
     expect(req.request.method).toBe('GET');
     req.flush(mockPage);
   });
@@ -139,6 +179,8 @@ describe('TripService', () => {
       updatedAt: '2026-07-22T00:00:00Z',
       routeGeometry: null,
       startDate: null,
+      visitedStopCount: 0,
+      completionPercentage: 0,
     };
 
     service.createTrip({ title: 'New Trip', description: undefined, tags: undefined, visibility: 'PUBLIC', stops: [] }).subscribe((trip) => {
@@ -165,6 +207,8 @@ describe('TripService', () => {
       updatedAt: '2026-07-22T00:00:00Z',
       routeGeometry: null,
       startDate: null,
+      visitedStopCount: 0,
+      completionPercentage: 0,
     };
 
     service.generateTripWithAi({ prompt: '3 days in Kyoto, food and temples' }).subscribe((trip) => {
@@ -362,6 +406,8 @@ describe('TripService', () => {
       updatedAt: '2026-07-22T00:00:00Z',
       routeGeometry: null,
       startDate: null,
+      visitedStopCount: 0,
+      completionPercentage: 0,
     };
 
     service.getTrip(5).subscribe((trip) => {
@@ -388,6 +434,8 @@ describe('TripService', () => {
       updatedAt: '2026-07-23T00:00:00Z',
       routeGeometry: null,
       startDate: null,
+      visitedStopCount: 0,
+      completionPercentage: 0,
     };
 
     service.updateTrip(3, { title: 'New title', visibility: 'PUBLIC', stops: [] }).subscribe((trip) => {
@@ -424,6 +472,8 @@ describe('TripService', () => {
       updatedAt: '2026-07-23T00:00:00Z',
       routeGeometry: '{"type":"LineString","coordinates":[]}',
       startDate: null,
+      visitedStopCount: 0,
+      completionPercentage: 0,
     };
 
     service.optimizeTrip(9).subscribe((trip) => {
@@ -445,6 +495,20 @@ describe('TripService', () => {
     });
 
     const req = httpMock.expectOne('http://localhost:8080/api/trips/11/calendar.ics');
+    expect(req.request.method).toBe('GET');
+    expect(req.request.responseType).toBe('blob');
+    req.flush(mockBlob);
+  });
+
+  it('should export a trip PDF as a blob', (done) => {
+    const mockBlob = new Blob(['%PDF-'], { type: 'application/pdf' });
+
+    service.exportPdf(11).subscribe((blob) => {
+      expect(blob).toEqual(mockBlob);
+      done();
+    });
+
+    const req = httpMock.expectOne('http://localhost:8080/api/trips/11/export/pdf');
     expect(req.request.method).toBe('GET');
     expect(req.request.responseType).toBe('blob');
     req.flush(mockBlob);

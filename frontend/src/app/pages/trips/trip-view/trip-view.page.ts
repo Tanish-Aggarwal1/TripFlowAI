@@ -16,7 +16,15 @@ import {
   IonLabel,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { create, calendarOutline, sparkles, checkmark, checkmarkCircle, camera } from 'ionicons/icons';
+import {
+  create,
+  calendarOutline,
+  sparkles,
+  checkmark,
+  checkmarkCircle,
+  camera,
+  documentTextOutline,
+} from 'ionicons/icons';
 import { TripService } from '../../../core/services/trip.service';
 import { ToastService } from '../../../core/services/toast.service';
 import {
@@ -81,6 +89,7 @@ export class TripViewPage implements OnInit {
   error: string | null = null;
   optimizing = false;
   exporting = false;
+  exportingPdf = false;
   // SCRUM-67 wiring: hosts the SCRUM-155 preferences form, then swaps to the
   // SCRUM-156 suggestion cards once a response comes back.
   aiModalOpen = false;
@@ -99,7 +108,15 @@ export class TripViewPage implements OnInit {
   private tripId = 0;
 
   constructor() {
-    addIcons({ create, calendarOutline, sparkles, checkmark, 'checkmark-circle': checkmarkCircle, camera });
+    addIcons({
+      create,
+      calendarOutline,
+      sparkles,
+      checkmark,
+      'checkmark-circle': checkmarkCircle,
+      camera,
+      'document-text-outline': documentTextOutline,
+    });
   }
 
   ngOnInit(): void {
@@ -280,6 +297,23 @@ export class TripViewPage implements OnInit {
       error: (err) => {
         this.exporting = false;
         this.toastService.showError(err, 'Could not export calendar.');
+      },
+    });
+  }
+
+  exportToPdf(): void {
+    if (!this.trip || this.exportingPdf) return;
+    this.exportingPdf = true;
+    const filename = `${sanitizeFilename(this.trip.title)}.pdf`;
+
+    this.tripService.exportPdf(this.trip.id).subscribe({
+      next: (blob) => {
+        this.exportingPdf = false;
+        downloadBlob(blob, filename);
+      },
+      error: (err) => {
+        this.exportingPdf = false;
+        this.toastService.showError(err, 'Could not export PDF.');
       },
     });
   }

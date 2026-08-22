@@ -88,7 +88,13 @@ public class GlobalExceptionHandler {
 	    log.error("502 Bad Gateway on {}: {}", req.getRequestURI(), ex.getMessage(), ex);
 	    return error(HttpStatus.BAD_GATEWAY, "AI itinerary service is temporarily unavailable", req, null);
 	}
-	
+
+	@ExceptionHandler(MapboxClientException.class)
+	public ResponseEntity<ApiError> handleMapboxFailure(MapboxClientException ex, HttpServletRequest req) {
+	    log.error("502 Bad Gateway on {}: {}", req.getRequestURI(), ex.getMessage(), ex);
+	    return error(HttpStatus.BAD_GATEWAY, "Map snapshot service is temporarily unavailable", req, null);
+	}
+
 	@ExceptionHandler(OrsRateLimitException.class)
 	public ResponseEntity<ApiError> handleOrsRateLimit(OrsRateLimitException ex, HttpServletRequest req) {
 		log.warn("429 Too Many Requests on {}: {}", req.getRequestURI(), ex.getMessage());

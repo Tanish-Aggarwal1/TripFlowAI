@@ -68,14 +68,21 @@ Source task breakdown (FB-01/02/03/16) and 2026-08-14 audit evidence:
   3. Trip responses expose enough data to compute completion percentage without a divide-by-zero on empty trips
   4. Users can search and filter their trip list using the shared paged-response convention
 
-**Plans**: 4 plans (task breakdown from FB-04/05/06/07)
+**Plans**: 4 plan items — `02-01` shipped pre-GSD (no PLAN.md exists or is needed); `/gsd-plan-phase 2` (2026-08-21) produced 3 PLAN.md files for the remaining work, numbered to match these items 1:1
 
 Plans:
+**Wave 1**
 
-- [x] 02-01: Backend .ics generation endpoint + frontend export button — FB-04a/04b — **confirmed done** (2026-08-14 audit, re-verified): `GET /api/trips/{id}/calendar.ics` (`TripExportController`/`IcsExportService`) + frontend download button in `trip-view.page.ts`, tracked Done as SCRUM-175/SCRUM-176 under legacy SOCIAL epic SCRUM-9 (not TRIP v2 SCRUM-276 — reparent or leave, team call).
-- [ ] 02-02: Backend PDF generation endpoint (`GET /api/trips/{id}/export/pdf`) + frontend download button — FB-05a/05b — **confirmed NOT started** (2026-08-14 audit): `TripExportController` javadoc explicitly says "PDF export is planned next"; no PDF service/controller/frontend button anywhere
-- [ ] 02-03: Trip completion percentage — derived `visitedStopCount`/`stopCount` on `TripResponse`, zero-stops handling — FB-06 — **confirmed NOT started** (2026-08-14 audit): `TripSummaryResponse` has `stopCount` only, no `visitedStopCount`/`completionPercentage` field anywhere
-- [ ] 02-04: Trip list search (title/destination) + filter (status/date/visibility) query params on `GET /api/trips` — FB-07 — **confirmed NOT started** (2026-08-14 audit): `TripController.listTrips` takes only `Pageable`, no search/filter params. (Search exists only for the public discovery feed at `/api/discovery/search`, not the owner's trip list — do not confuse the two)
+- [x] 02-01: Backend .ics generation endpoint + frontend export button — FB-04a/04b (EXPORT-01) — **confirmed done** (2026-08-14 audit, re-verified): `GET /api/trips/{id}/calendar.ics` (`TripExportController`/`IcsExportService`) + frontend download button in `trip-view.page.ts`, tracked Done as SCRUM-175/SCRUM-176 under legacy SOCIAL epic SCRUM-9 (not TRIP v2 SCRUM-276 — reparent or leave, team call). **Pre-existing code, never GSD-planned — there is deliberately no `02-01-PLAN.md`.**
+- [ ] 02-02-PLAN.md — PDF export: `com.github.librepdf:openpdf` dependency, `PdfExportService`, `GET /api/trips/{id}/export/pdf`, a new `client/mapbox/` triple for the server-side route-map snapshot (D-01/D-02/D-03/D-04), `sanitizeFilename` reuse (D-05), frontend download button — FB-05a/05b (EXPORT-02) · wave 1 · **needs a new backend `MAPBOX_TOKEN`** (non-blocking: absent token degrades to a map-less PDF)
+
+**Wave 2** *(blocked on Wave 1 — file ownership of `trip.service.ts`, not a logical dependency)*
+
+- [ ] 02-03-PLAN.md — Trip completion percentage: shared `TripCompletion.percentage` helper (D-06/D-07), new `TripOwnerSummaryResponse` for the owner list with `TripSummaryResponse` left untouched for the discovery feed (D-08), `visitedStopCount`/`completionPercentage` on `TripResponse`, dashboard completion badge — FB-06 (EXPORT-03) · wave 2
+
+**Wave 3** *(blocked on Wave 2 — `searchOwnedTrips` re-fetches through the `TripOwnerSummaryResponse` projection 02-03 creates)*
+
+- [ ] 02-04-PLAN.md — Trip list search + filter on `GET /api/trips`: `searchOwnedTrips` on the existing `TripSearchRepository` (D-09/D-11) matching title, tags and stop place-names (D-10), status/visibility/start-date-range/duration filters ANDed (D-12/D-13/D-14), debounced dashboard search + filter bar (D-15), stale frontend `TripStatus` union fixed, and the phase's `docs/api-contracts.md` pass — FB-07 (SEARCH-01) · wave 3. (Search exists only for the public discovery feed at `/api/discovery/search`, not the owner's trip list — do not confuse the two)
 
 ### Phase 3: AI Quality & Scheduling
 

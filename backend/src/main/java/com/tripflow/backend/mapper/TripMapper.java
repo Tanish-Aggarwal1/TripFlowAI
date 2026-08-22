@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 
 import com.tripflow.backend.domain.Trip;
 import com.tripflow.backend.domain.User;
+import com.tripflow.backend.domain.enums.StopStatus;
 import com.tripflow.backend.domain.enums.TripStatus;
 import com.tripflow.backend.dto.CreateTripRequest;
 import com.tripflow.backend.dto.StopResponse;
@@ -36,6 +37,7 @@ public class TripMapper {
         List<StopResponse> stopResponses = trip.getStops().stream()
                 .map(stopMapper::toResponse)
                 .toList();
+        long visited = stopResponses.stream().filter(s -> s.status() == StopStatus.VISITED).count();
 
         return new TripResponse(
                 trip.getId(),
@@ -50,7 +52,8 @@ public class TripMapper {
                 trip.getUpdatedAt(),
                 trip.getRouteGeometry(),
                 trip.getStartDate(),
-                trip.getLikeCount()
+                trip.getLikeCount(),
+                visited
         );
     }
 }

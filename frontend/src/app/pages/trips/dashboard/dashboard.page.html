@@ -2,6 +2,68 @@
   <ion-toolbar color="primary">
     <ion-title>My Trips</ion-title>
   </ion-toolbar>
+  <ion-toolbar>
+    <ion-searchbar
+      [debounce]="0"
+      placeholder="Search your trips"
+      [value]="filters.search ?? ''"
+      (ionInput)="onSearchChange($event.detail.value ?? '')"
+    ></ion-searchbar>
+  </ion-toolbar>
+  <ion-toolbar>
+    <div class="filter-bar">
+      <ion-select
+        placeholder="Status"
+        aria-label="Filter by status"
+        [value]="filters.status ?? null"
+        (ionChange)="onStatusChange($event.detail.value)"
+      >
+        <ion-select-option [value]="null">Any status</ion-select-option>
+        <ion-select-option value="DRAFT">Draft</ion-select-option>
+        <ion-select-option value="PLANNED">Planned</ion-select-option>
+        <ion-select-option value="ACTIVE">Active</ion-select-option>
+        <ion-select-option value="COMPLETED">Completed</ion-select-option>
+      </ion-select>
+
+      <ion-select
+        placeholder="Visibility"
+        aria-label="Filter by visibility"
+        [value]="filters.visibility ?? null"
+        (ionChange)="onVisibilityChange($event.detail.value)"
+      >
+        <ion-select-option [value]="null">Any visibility</ion-select-option>
+        <ion-select-option value="PRIVATE">Private</ion-select-option>
+        <ion-select-option value="PUBLIC">Public</ion-select-option>
+      </ion-select>
+
+      <input
+        type="date"
+        aria-label="Start date from"
+        class="date-filter"
+        [value]="filters.startDateFrom ?? ''"
+        (change)="onStartDateFromChange($any($event.target).value)"
+      />
+      <input
+        type="date"
+        aria-label="Start date to"
+        class="date-filter"
+        [value]="filters.startDateTo ?? ''"
+        (change)="onStartDateToChange($any($event.target).value)"
+      />
+
+      <input
+        type="number"
+        min="0"
+        placeholder="Duration (days)"
+        aria-label="Filter by duration in days"
+        class="duration-filter"
+        [value]="filters.durationDays ?? ''"
+        (change)="onDurationDaysChange($any($event.target).value)"
+      />
+
+      <ion-button fill="clear" size="small" (click)="clearFilters()">Clear filters</ion-button>
+    </div>
+  </ion-toolbar>
 </ion-header>
 
 <ion-content class="ion-padding">
@@ -25,7 +87,12 @@
   @if (!loading && !error && trips.length === 0) {
   <div class="centered empty-state">
     <ion-icon name="map-outline"></ion-icon>
+    @if (filters.search?.trim()) {
+    <p>No trips match "{{ filters.search?.trim() }}".</p>
+    <ion-button fill="outline" (click)="clearFilters()">Clear search</ion-button>
+    } @else {
     <p>No trips yet. Tap + to create your first trip!</p>
+    }
   </div>
   }
 
@@ -47,6 +114,9 @@
       <ion-label>
         <h2>{{ trip.title }}</h2>
         <p>{{ trip.stopCount }} stop{{ trip.stopCount !== 1 ? 's' : '' }}</p>
+        @if (trip.stopCount > 0) {
+        <p class="completion">{{ completionLabel(trip) }}</p>
+        }
       </ion-label>
 
       <ion-badge slot="end" [color]="statusColor(trip.status)">

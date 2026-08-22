@@ -55,6 +55,8 @@ describe('TripEditPage', () => {
     updatedAt: '2026-01-01T00:00:00Z',
     routeGeometry: null,
     startDate: '2026-06-01',
+    visitedStopCount: 1,
+    completionPercentage: 0.5,
   };
 
   function configure(id: string | null): void {

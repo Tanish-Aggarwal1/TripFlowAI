@@ -18,7 +18,7 @@
     "quick_branch_template": null
   },
   "workflow": {
-    "research": false,
+    "research": true,
     "plan_check": true,
     "verifier": true,
     "nyquist_validation": true,
@@ -46,7 +46,8 @@
     "post_planning_gaps": true,
     "security_enforcement": true,
     "security_asvs_level": 1,
-    "security_block_on": "high"
+    "security_block_on": "high",
+    "use_worktrees": false
   },
   "ship": {
     "pr_body_sections": [

@@ -55,6 +55,8 @@ describe('TripViewPage', () => {
       updatedAt: '2026-01-01T00:00:00Z',
       routeGeometry: null,
       startDate: null,
+      visitedStopCount: 0,
+      completionPercentage: 0,
       ...overrides,
     };
   }
@@ -64,6 +66,7 @@ describe('TripViewPage', () => {
       'getTrip',
       'optimizeTrip',
       'exportIcs',
+      'exportPdf',
       'updateStop',
     ]);
     toastCtrlSpy = jasmine.createSpyObj('ToastController', ['create']);
@@ -282,6 +285,53 @@ describe('TripViewPage', () => {
       await Promise.resolve();
 
       expect(component.exporting).toBeFalse();
+      expect(toastCtrlSpy.create).toHaveBeenCalledWith(
+        jasmine.objectContaining({ message: 'Export failed.', color: 'danger' }),
+      );
+    });
+  });
+
+  describe('exportToPdf', () => {
+    it('does nothing when no trip is loaded', () => {
+      component.trip = null;
+
+      component.exportToPdf();
+
+      expect(tripServiceSpy.exportPdf).not.toHaveBeenCalled();
+    });
+
+    it('does nothing when already exporting', () => {
+      component.ngOnInit();
+      component.exportingPdf = true;
+
+      component.exportToPdf();
+
+      expect(tripServiceSpy.exportPdf).not.toHaveBeenCalled();
+    });
+
+    it('calls TripService.exportPdf with the trip id and resets exportingPdf on success', async () => {
+      component.trip = trip({ id: 1, title: 'Weekend Getaway' });
+      const blob = new Blob(['%PDF-'], { type: 'application/pdf' });
+      tripServiceSpy.exportPdf.and.returnValue(of(blob));
+      spyOn(window.URL, 'createObjectURL').and.returnValue('blob:mock-url');
+      spyOn(window.URL, 'revokeObjectURL');
+      spyOn(HTMLAnchorElement.prototype, 'click');
+
+      component.exportToPdf();
+      await Promise.resolve();
+
+      expect(tripServiceSpy.exportPdf).toHaveBeenCalledWith(1);
+      expect(component.exportingPdf).toBeFalse();
+    });
+
+    it('leaves exportingPdf false when the call fails', async () => {
+      component.ngOnInit();
+      tripServiceSpy.exportPdf.and.returnValue(throwError(() => new Error('Export failed.')));
+
+      component.exportToPdf();
+      await Promise.resolve();
+
+      expect(component.exportingPdf).toBeFalse();
       expect(toastCtrlSpy.create).toHaveBeenCalledWith(
         jasmine.objectContaining({ message: 'Export failed.', color: 'danger' }),
       );
