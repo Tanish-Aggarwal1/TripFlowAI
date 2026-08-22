@@ -90,15 +90,25 @@ public class MapboxClient {
 
 	/**
 	 * Wraps the stored route geometry (a bare GeoJSON Geometry — {@code {"type":"LineString",...}},
-	 * never a Feature) in a minimal Feature before encoding. Mapbox's {@code auto} position/zoom —
-	 * which every request here uses — computes its bounding box from the overlay's {@code features};
-	 * a bare Geometry has none, so Mapbox rejects it outright with a 422 "Invalid GeoJSON" (confirmed
-	 * against a real optimized-trip payload — UAT gap G-02-2). The Point example in Mapbox's own docs
-	 * that DOES send a bare Geometry pairs it with an explicit center/zoom, never {@code auto}.
+	 * never a Feature) in a minimal Feature before encoding — Mapbox's {@code auto} position/zoom,
+	 * used on every request here, computes its bounding box from the overlay's {@code features};
+	 * a bare Geometry has none.
+	 *
+	 * <p>{@link URLEncoder#encode} is {@code application/x-www-form-urlencoded}, not RFC 3986
+	 * percent-encoding — it turns a space into a literal {@code +}, not {@code %20}. Mapbox's server
+	 * decodes {@code %XX} triples but never form-decodes, so an un-fixed-up {@code +} passes straight
+	 * into the JSON text where the space used to be, corrupting the syntax (e.g.
+	 * {@code {"type":+"LineString"}). Real stored geometries are NOT compact — Jackson's default
+	 * writer inserts a space after every {@code :} and {@code ,} — so this bites every real request
+	 * (confirmed against a live optimized-trip payload; Mapbox rejects it with a 422 "Invalid
+	 * GeoJSON" — UAT gap G-02-2). {@code +} is otherwise a legal, unreserved path-segment character,
+	 * so re-encoding it to {@code %20} after the fact is the standard, minimal fix for this exact
+	 * Java gotcha.
 	 */
 	private static String geojsonOverlay(String routeGeometryJson) {
 		String feature = "{\"type\":\"Feature\",\"properties\":{},\"geometry\":" + routeGeometryJson + "}";
-		return "geojson(" + URLEncoder.encode(feature, StandardCharsets.UTF_8) + ")";
+		String encoded = URLEncoder.encode(feature, StandardCharsets.UTF_8).replace("+", "%20");
+		return "geojson(" + encoded + ")";
 	}
 
 	private static String markerOverlay(List<double[]> stopCoordinates) {
