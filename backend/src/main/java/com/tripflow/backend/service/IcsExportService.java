@@ -34,8 +34,6 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class IcsExportService {
 
-	private static final ZoneId ZONE = ZoneId.systemDefault();
-
 	private final TripService tripService;
 	private final RouteScheduleProperties scheduleProperties;
 
@@ -88,7 +86,15 @@ public class IcsExportService {
 		return event;
 	}
 
+	// Deliberately ZoneId.systemDefault(), NOT a fixed zone like UTC, and looked up fresh here
+	// rather than cached in a static field. biweekly's floating-time writer (enabled above via
+	// setGlobalFloatingTime) has no override for which zone it renders a Date's wall-clock
+	// digits in — it always resolves TimeZone.getDefault() itself, at write time (see
+	// ICalPropertyScribe.DateWriter#tz). This is the other half of that same round trip, so it
+	// must resolve the identical zone the same way, or DTSTART/DTEND silently drifts by the
+	// offset between whatever this used and the JVM's actual default at write time — hardcoding
+	// UTC only "works" on the coincidence that the JVM's default already happens to be UTC.
 	private static Date toDate(LocalDateTime dateTime) {
-		return Date.from(dateTime.atZone(ZONE).toInstant());
+		return Date.from(dateTime.atZone(ZoneId.systemDefault()).toInstant());
 	}
 }
