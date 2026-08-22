@@ -133,11 +133,19 @@ export class AuthService {
     const token = localStorage.getItem(TOKEN_KEY);
     if (!token) return null;
     try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
+      const payload = JSON.parse(atob(this.base64UrlToBase64(token.split('.')[1])));
       const expiresAtMs = payload.exp * 1000;
-      return expiresAtMs > Date.now() ? new Date(expiresAtMs).toISOString() : null;
+      // 30s clock-skew allowance so a token expiring mid-flight doesn't force a mid-action logout.
+      return expiresAtMs > Date.now() - 30_000 ? new Date(expiresAtMs).toISOString() : null;
     } catch {
       return null;
     }
+  }
+
+  // JWTs are base64url (RFC 4648 §5: '-'/'_', no padding), not base64 — atob() throws
+  // InvalidCharacterError on '-'/'_' whenever the payload happens to contain them.
+  private base64UrlToBase64(segment: string): string {
+    const base64 = segment.replace(/-/g, '+').replace(/_/g, '/');
+    return base64.padEnd(Math.ceil(base64.length / 4) * 4, '=');
   }
 }
