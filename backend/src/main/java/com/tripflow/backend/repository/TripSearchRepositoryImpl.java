@@ -42,7 +42,7 @@ public class TripSearchRepositoryImpl implements TripSearchRepository {
      * tags arm already uses EXISTS over unnest.
      */
     private static final String TEXT_MATCH_SQL = """
-            (:pattern IS NULL OR t.title ILIKE :pattern ESCAPE '\\'
+            (CAST(:pattern AS text) IS NULL OR t.title ILIKE :pattern ESCAPE '\\'
              OR EXISTS (SELECT 1 FROM unnest(t.tags) tag WHERE tag ILIKE :pattern ESCAPE '\\')
              OR EXISTS (
                  SELECT 1 FROM stops s JOIN places p ON p.id = s.place_id
