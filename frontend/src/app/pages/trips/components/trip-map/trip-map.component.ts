@@ -65,6 +65,12 @@ export class TripMapComponent implements AfterViewInit, OnChanges, OnDestroy {
   }
 
   retry(): void {
+    // initMap() no-ops when this.map is already set — the common failure path (a tile/style
+    // error from map.on('error')) leaves a live, broken map instance, so it must be torn down
+    // before initMap() will rebuild anything.
+    this.clearMarkers();
+    this.map?.remove();
+    this.map = null;
     this.mapFailed = false;
     this.initMap();
   }
