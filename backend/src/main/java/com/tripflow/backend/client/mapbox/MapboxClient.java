@@ -88,8 +88,17 @@ public class MapboxClient {
 		return Optional.ofNullable(bytes);
 	}
 
+	/**
+	 * Wraps the stored route geometry (a bare GeoJSON Geometry — {@code {"type":"LineString",...}},
+	 * never a Feature) in a minimal Feature before encoding. Mapbox's {@code auto} position/zoom —
+	 * which every request here uses — computes its bounding box from the overlay's {@code features};
+	 * a bare Geometry has none, so Mapbox rejects it outright with a 422 "Invalid GeoJSON" (confirmed
+	 * against a real optimized-trip payload — UAT gap G-02-2). The Point example in Mapbox's own docs
+	 * that DOES send a bare Geometry pairs it with an explicit center/zoom, never {@code auto}.
+	 */
 	private static String geojsonOverlay(String routeGeometryJson) {
-		return "geojson(" + URLEncoder.encode(routeGeometryJson, StandardCharsets.UTF_8) + ")";
+		String feature = "{\"type\":\"Feature\",\"properties\":{},\"geometry\":" + routeGeometryJson + "}";
+		return "geojson(" + URLEncoder.encode(feature, StandardCharsets.UTF_8) + ")";
 	}
 
 	private static String markerOverlay(List<double[]> stopCoordinates) {
