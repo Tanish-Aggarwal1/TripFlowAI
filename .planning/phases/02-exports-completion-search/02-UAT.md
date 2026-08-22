@@ -1,9 +1,9 @@
 ---
-status: complete
+status: diagnosed
 phase: 02-exports-completion-search
 source: [02-VERIFICATION.md]
 started: 2026-08-21T22:15:00Z
-updated: 2026-08-22T02:50:00Z
+updated: 2026-08-22T03:10:00Z
 ---
 
 ## Current Test
@@ -18,7 +18,7 @@ result: PASS — first CI run (commit `1460e35`) caught a real pre-existing bug:
 
 ### 2. Visually confirm the Mapbox map snapshot in an exported PDF
 expected: Once `MAPBOX_TOKEN` is provisioned (Render + local `.env`), export the PDF of a trip that has been route-optimized and open it to confirm the embedded map snapshot is legible and matches the app's route line visually — a rendered, non-garbled map image with the correct route/pins. Why human: cannot provision a real Mapbox token or render/inspect a PDF image in this session; explicitly called out as outstanding in `02-02-SUMMARY.md`.
-result: issue
+result: issue (fix applied, awaiting re-verification against a live optimized-route export)
 reported: "it passes when i export a pdf with a unoptimized route but after i optimize a route it does not show the map"
 severity: major
 
@@ -35,9 +35,16 @@ blocked: 0
 
 - gap_id: G-02-2
   truth: "A rendered, non-garbled map image with the correct route/pins."
-  status: failed
+  status: fix_applied
   reason: "User reported: it passes when i export a pdf with a unoptimized route but after i optimize a route it does not show the map"
   severity: major
   test: 2
-  artifacts: []
-  missing: []
+  root_cause: "Mapbox's `auto` position/zoom (used on every request) computes its bounding box from the overlay's `features`. Trip.routeGeometry is stored as a bare GeoJSON Geometry (no Feature wrapper, deliberately per D-04), so geojsonOverlay sent Mapbox a payload with no `features` key — Mapbox rejected it with a 422 'Invalid GeoJSON'. Confirmed via the user's production log line and Mapbox's own docs (one documented 422 case is exactly 'Auto extent cannot be determined when GeoJSON has no features'; their own bare-Geometry example pairs it only with an explicit center/zoom, never `auto`). Marker overlays also use `auto` but succeed because Mapbox computes marker auto-extent through a different, non-GeoJSON code path."
+  artifacts:
+    - path: "backend/src/main/java/com/tripflow/backend/client/mapbox/MapboxClient.java"
+      issue: "geojsonOverlay encoded the bare Geometry directly instead of wrapping it in a Feature"
+  missing:
+    - "Wrap routeGeometryJson in {\"type\":\"Feature\",\"properties\":{},\"geometry\":<geometry>} before encoding"
+  debug_session: ".planning/debug/mapbox-snapshot-missing-on-optimized-route.md"
+  fix_commit: "(next commit on docs/SCRUM-478-phase-2-planning-docs)"
+  fix_verified_live: false
