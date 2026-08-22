@@ -1,18 +1,18 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.0
-current_phase: 06
-current_phase_name: Community & Social
-status: planning
-stopped_at: Phase 2 context gathered
-last_updated: "2026-08-21T03:54:34.633Z"
-last_activity: 2026-08-17
-last_activity_desc: "Plan 01-04 executed (3 tasks, 5 commits: 2d4532d, 39f409a, dfa287a, 6fe8b2c, 0d468db), resumed after the first session died mid-task-2 on a usage limit. AUTH-04 is now user-observable: AuthService gained a credentialed refresh() and a server-revoking logout(); SessionStateService arms a self-rearming setTimeout off an effect on AuthService.expiresAt, renewing about a minute before each 15-minute expiry, with a visibilitychange resume check and no re-arm after a failure; sessionExpiryInterceptor stopped logging users out on a 401 and now only flips the session status, with AppComponent owning the D-06 banner and the first-post-expiry-click dialog. 335 frontend specs pass, lint clean, coverage above every karma floor. Zero new dependencies, no new interceptor. **Phase 1 is 4/4 plans executed but not fully signed off: plan 01-04 task 3's <human-check> (banner-then-dialog manual QA against a running backend with a lowered JWT_EXPIRY_MS) was not run and was deliberately not fabricated.** Previous entry: Plan 01-03 executed (3 tasks, 4 commits: 8930bf4, 8af3374, 4f36cae, a64df7f). Reuse detection now revokes every session that user holds (D-03, checkpoint resolved as option-c: mass revoke plus a greppable REFRESH_TOKEN_REUSE_DETECTED WARN), POST /api/auth/logout revokes only the presented token and always returns 204, and /api/auth/refresh is capped at 60/hour per client IP. Caught and fixed a bug that would have made D-03 ship as a no-op: rotate's own thrown 401 rolled back the mass revoke under Spring's default rollback rule, invisible to every test the plan specified. Backend AUTH-04 is complete; only the frontend (01-04) remains. Previous entry: Full codebase audit (/gsd-progress --do, no code changes): checked all 9 phases' plan items against actual backend/frontend code. Confirmed Phase 1 is 3/4 done (only refresh tokens, 01-04, remains) and Phase 2 is 1/4 done (only .ics export, 02-01). Found partial credit in Phase 3 (03-02: AI reasoning field exists, day/time/stopType/meal do not) and Phase 4 (04-01: route polyline exists, marker clustering does not) not previously recorded. Confirmed Phase 6's known partials (06-01 backend-only, 06-03 like/clone done but save/bookmark missing) are unchanged since 2026-08-06. Phases 5, 7, 8 confirmed zero code footprint. ROADMAP.md updated with per-plan evidence citations; frontmatter progress counters corrected (were stale placeholders: total_phases was 2, should be 9; total_plans was 0, should be 36)."
-state_head: aae9464c02e61947e0ee8215afd9e9bcedc49651
+current_phase: 02
+current_phase_name: Exports, Completion & Search
+status: executing
+stopped_at: Phase 2 execution in progress — Wave 1 (02-02 PDF export) executor running, Waves 2-3 not started
+last_updated: "2026-08-21T06:04:18.537Z"
+last_activity: 2026-08-21
+last_activity_desc: Phase 02 execution started
+state_head: 626c7129b82080a2af660a2b264d690acef1d98a
 progress:
   total_phases: 9
   completed_phases: 1
-  total_plans: 4
+  total_plans: 7
   completed_plans: 4
 milestone_name: Semester 5 → Semester 6 Fall Break Implementation
 ---
@@ -24,14 +24,14 @@ milestone_name: Semester 5 → Semester 6 Fall Break Implementation
 See: .planning/PROJECT.md (updated 2026-08-06)
 
 **Core value:** AI-assisted, route-optimized multi-stop itineraries that feel like a real, usable travel product
-**Current focus:** Phase 01 — auth-seam-hardening
+**Current focus:** Phase 02 — Exports, Completion & Search
 
 ## Current Position
 
-Phase: 06 — Community & Social
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-08-17 — Phase 01 complete, transitioned to Phase 06
+Phase: 02 (Exports, Completion & Search) — EXECUTING
+Plan: 1 of 3
+Status: Executing Phase 02
+Last activity: 2026-08-21 — Phase 02 execution started
 
 Progress: [██████████] 100% — 4 of 4 Phase 1 plans complete (01-01, 01-02, 01-03, 01-04). Milestone-wide this is 7/36 plan items; several more are PARTIAL — see ROADMAP.md — but aren't counted here.
 
@@ -125,6 +125,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-21T03:54:34.538Z
-Stopped at: Phase 2 context gathered
-Resume file: .planning/phases/02-exports-completion-search/02-CONTEXT.md
+Last session: 2026-08-21T06:04:18.270Z
+Stopped at: Phase 2 execution in progress — Wave 1 (02-02 PDF export) executor running, Waves 2-3 not started
+Resume file: .planning/phases/02-exports-completion-search/HANDOFF.md
