@@ -4,6 +4,8 @@ import java.nio.charset.StandardCharsets;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+import com.tripflow.backend.config.SecretMask;
+
 /**
  * JWT signing configuration. Bound from app.jwt.secret / app.jwt.expiration-ms,
  * which resolve from the JWT_SECRET / JWT_EXPIRY_MS env vars (see backend/.env).
@@ -28,5 +30,15 @@ public record JwtProperties(String secret, long expirationMs) {
                     "app.jwt.secret has too little variety (" + distinctChars + " distinct characters) "
                             + "to be a real secret — generate one with `openssl rand -base64 48`, don't type one");
         }
+    }
+
+    /**
+     * Overridden so the HMAC signing secret can never leak via logs, actuator, or any
+     * future {@code log.debug("{}", jwtProperties)} call — records auto-generate a
+     * toString() that includes every field verbatim otherwise.
+     */
+    @Override
+    public String toString() {
+        return "JwtProperties[secret=" + SecretMask.mask(secret) + ", expirationMs=" + expirationMs + "]";
     }
 }
