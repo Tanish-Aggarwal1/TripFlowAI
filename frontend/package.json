@@ -47,7 +47,7 @@
     "@angular/compiler-cli": "20.3.28",
     "@angular/language-service": "20.3.28",
     "@capacitor/cli": "8.5.0",
-    "@ionic/angular-toolkit": "^12.0.0",
+    "@ionic/angular-toolkit": "^13.0.0",
     "@types/geojson": "^7946.0.16",
     "@types/jasmine": "~6.0.0",
     "@types/mapbox-gl": "^3.5.0",
