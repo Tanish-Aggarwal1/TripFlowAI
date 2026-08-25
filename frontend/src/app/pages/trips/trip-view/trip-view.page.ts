@@ -1,4 +1,5 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, DestroyRef, inject, OnInit } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
   IonHeader,
@@ -83,6 +84,7 @@ export class TripViewPage implements OnInit {
   private router = inject(Router);
   private tripService = inject(TripService);
   private toastService = inject(ToastService);
+  private destroyRef = inject(DestroyRef);
 
   trip: TripResponse | null = null;
   loading = true;
@@ -120,8 +122,14 @@ export class TripViewPage implements OnInit {
   }
 
   ngOnInit(): void {
-    this.tripId = Number(this.route.snapshot.paramMap.get('id'));
-    this.loadTrip();
+    // SCRUM-485: subscribe rather than read route.snapshot once — Angular reuses this
+    // component instance across navigations matched by the same route config (e.g.
+    // trip A's page to trip B's page), so a snapshot read in ngOnInit never re-fires
+    // and keeps showing trip A's data under trip B's URL.
+    this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
+      this.tripId = Number(params.get('id'));
+      this.loadTrip();
+    });
   }
 
   loadTrip(): void {
