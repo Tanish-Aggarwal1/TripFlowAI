@@ -22,7 +22,7 @@
 		<archunit.version>1.5.0</archunit.version>
 		<bucket4j.version>8.10.1</bucket4j.version>
 		<biweekly.version>0.6.8</biweekly.version>
-		<openpdf.version>2.2.2</openpdf.version>
+		<openpdf.version>2.4.0</openpdf.version>
 	</properties>
 
 	<dependencyManagement>
@@ -187,6 +187,13 @@
 			<groupId>com.bucket4j</groupId>
 			<artifactId>bucket4j-core</artifactId>
 			<version>${bucket4j.version}</version>
+		</dependency>
+
+		<!-- Bounds RateLimiterService's bucket cache (SCRUM-482) — version managed by
+		     spring-boot-starter-parent's BOM. -->
+		<dependency>
+			<groupId>com.github.ben-manes.caffeine</groupId>
+			<artifactId>caffeine</artifactId>
 		</dependency>
 
 		<!-- iCalendar (RFC 5545) generation for the .ics export endpoint (SCRUM-176).

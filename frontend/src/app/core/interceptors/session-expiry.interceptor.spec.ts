@@ -57,6 +57,13 @@ describe('sessionExpiryInterceptor', () => {
     expect(routerSpy.navigate).not.toHaveBeenCalled();
   });
 
+  it('SCRUM-486: does not mark the session expired on a 401 from register', () => {
+    flush401('/api/auth/register');
+
+    expect(sessionStateSpy.markExpired).not.toHaveBeenCalled();
+    expect(routerSpy.navigate).not.toHaveBeenCalled();
+  });
+
   it('does not double-handle a 401 from refresh — its caller already owns that', () => {
     flush401('/api/auth/refresh');
 

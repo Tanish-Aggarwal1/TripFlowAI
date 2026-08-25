@@ -3,19 +3,24 @@ package com.tripflow.backend.client.ors;
 import java.time.Duration;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.validation.annotation.Validated;
 
 import com.tripflow.backend.config.SecretMask;
+
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 
 /**
  * OpenRouteService client configuration.
  * API key lives in backend/.env (ORS_API_KEY) — never committed.
  */
+@Validated
 @ConfigurationProperties(prefix = "ors")
 public record OrsProperties(
-        String baseUrl,
-        String apiKey,
-        Duration connectTimeout,
-        Duration readTimeout
+        @NotBlank String baseUrl,
+        @NotBlank String apiKey,
+        @NotNull Duration connectTimeout,
+        @NotNull Duration readTimeout
 ) {
 
     /**

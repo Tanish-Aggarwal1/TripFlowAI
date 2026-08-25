@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ActivatedRoute, provideRouter, Router } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, provideRouter, Router } from '@angular/router';
 import { AlertController, ToastController } from '@ionic/angular';
-import { of, throwError } from 'rxjs';
+import { of, throwError, BehaviorSubject } from 'rxjs';
 import { TripEditPage } from './trip-edit.page';
 import { TripService } from '../../../core/services/trip.service';
 import { MAX_STOPS, TripResponse } from '../../../core/models/trip.model';
@@ -14,6 +14,7 @@ describe('TripEditPage', () => {
   let router: Router;
   let alertCtrlSpy: jasmine.SpyObj<AlertController>;
   let toastCtrlSpy: jasmine.SpyObj<ToastController>;
+  let paramMap: BehaviorSubject<ReturnType<typeof convertToParamMap>>;
 
   const existingTrip: TripResponse = {
     id: 5,
@@ -64,6 +65,7 @@ describe('TripEditPage', () => {
     alertCtrlSpy = jasmine.createSpyObj('AlertController', ['create']);
     toastCtrlSpy = jasmine.createSpyObj('ToastController', ['create']);
     toastCtrlSpy.create.and.returnValue(Promise.resolve({ present: () => Promise.resolve() } as any));
+    paramMap = new BehaviorSubject(convertToParamMap(id ? { id } : {}));
 
     TestBed.configureTestingModule({
       imports: [TripEditPage],
@@ -72,10 +74,7 @@ describe('TripEditPage', () => {
         { provide: TripService, useValue: tripServiceSpy },
         { provide: AlertController, useValue: alertCtrlSpy },
         { provide: ToastController, useValue: toastCtrlSpy },
-        {
-          provide: ActivatedRoute,
-          useValue: { snapshot: { paramMap: { get: () => id } } },
-        },
+        { provide: ActivatedRoute, useValue: { paramMap } },
       ],
     }).compileComponents();
 
@@ -294,6 +293,23 @@ describe('TripEditPage', () => {
       component.viewOnMap();
 
       expect(router.navigate).toHaveBeenCalledWith(['/trips', 5]);
+    });
+
+    it('SCRUM-485: reloads the correct trip when the route param changes without destroying the component', () => {
+      // Angular reuses this component instance for navigations matched by the same
+      // route config (e.g. one trip's edit page to another's) — a paramMap
+      // subscription must re-run loadTrip on every emission, not just once in ngOnInit.
+      tripServiceSpy.getTrip.and.returnValue(of(existingTrip));
+      component.ngOnInit();
+      expect(component.tripId).toBe(5);
+
+      const otherTrip: TripResponse = { ...existingTrip, id: 9, title: 'Other Trip' };
+      tripServiceSpy.getTrip.and.returnValue(of(otherTrip));
+      paramMap.next(convertToParamMap({ id: '9' }));
+
+      expect(tripServiceSpy.getTrip).toHaveBeenCalledWith(9);
+      expect(component.tripId).toBe(9);
+      expect(component.title).toBe('Other Trip');
     });
   });
 
