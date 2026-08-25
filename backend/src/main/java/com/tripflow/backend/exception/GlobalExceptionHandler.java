@@ -18,6 +18,7 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 import com.tripflow.backend.ratelimit.RateLimitExceededException;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -47,6 +48,15 @@ public class GlobalExceptionHandler {
 
 		List<ApiError.FieldError> fieldErrors = ex.getBindingResult().getFieldErrors().stream()
 				.map(fe -> new ApiError.FieldError(fe.getField(), fe.getDefaultMessage())).toList();
+		log.warn("400 Bad Request on {}: {} field error(s)", req.getRequestURI(), fieldErrors.size());
+		return error(HttpStatus.BAD_REQUEST, "Validation failed", req, fieldErrors);
+	}
+
+	@ExceptionHandler(ConstraintViolationException.class)
+	public ResponseEntity<ApiError> handleConstraintViolation(ConstraintViolationException ex, HttpServletRequest req) {
+		List<ApiError.FieldError> fieldErrors = ex.getConstraintViolations().stream()
+				.map(cv -> new ApiError.FieldError(lastPathSegment(cv.getPropertyPath().toString()), cv.getMessage()))
+				.toList();
 		log.warn("400 Bad Request on {}: {} field error(s)", req.getRequestURI(), fieldErrors.size());
 		return error(HttpStatus.BAD_REQUEST, "Validation failed", req, fieldErrors);
 	}
@@ -177,5 +187,11 @@ public class GlobalExceptionHandler {
             List<ApiError.FieldError> fieldErrors) {
         return ResponseEntity.status(status)
                 .body(new ApiError(status.value(), status.getReasonPhrase(), message, req.getRequestURI(), fieldErrors));
+	}
+
+	// "searchPublicTrips.q" -> "q" — @Validated path parameters carry the method name as a prefix.
+	private String lastPathSegment(String propertyPath) {
+		int lastDot = propertyPath.lastIndexOf('.');
+		return lastDot < 0 ? propertyPath : propertyPath.substring(lastDot + 1);
 	}
 }

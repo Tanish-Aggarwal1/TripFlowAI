@@ -89,6 +89,22 @@ void search_blankQParam_returns400() throws Exception {
 }
 
 @Test
+void search_qOverMaxLength_returns400WithoutQuerying() throws Exception {
+    // SCRUM-493: @Size(max = 100) on 'q' must reject before hitting the repository.
+    String tooLong = "a".repeat(101);
+    mockMvc.perform(get("/api/discovery/search").param("q", tooLong))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.fieldErrors[0].field").value("q"));
+}
+
+@Test
+void search_qAtMaxLength_returns200() throws Exception {
+    String exactly100 = "a".repeat(100);
+    mockMvc.perform(get("/api/discovery/search").param("q", exactly100))
+            .andExpect(status().isOk());
+}
+
+@Test
 void search_noAuth_titleMatch_returnsPublicTripsOnly() throws Exception {
     User owner = createTestUser("owner1");
 
