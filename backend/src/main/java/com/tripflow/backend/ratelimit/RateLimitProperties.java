@@ -3,16 +3,22 @@ package com.tripflow.backend.ratelimit;
 import java.time.Duration;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.validation.annotation.Validated;
+
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 
 /**
  * Per-user request caps on the endpoints that call paid external APIs (SCRUM-173),
  * bound from app.ratelimit.ai-suggest.* / app.ratelimit.optimize.* / app.ratelimit.ai-generate.*
  * so limits can be tuned without a redeploy.
  */
+@Validated
 @ConfigurationProperties(prefix = "app.ratelimit")
-public record RateLimitProperties(Limit aiSuggest, Limit optimize, Limit aiGenerate, Limit login, Limit register,
-		Limit refresh) {
+public record RateLimitProperties(@NotNull @Valid Limit aiSuggest, @NotNull @Valid Limit optimize,
+		@NotNull @Valid Limit aiGenerate, @NotNull @Valid Limit login, @NotNull @Valid Limit register,
+		@NotNull @Valid Limit refresh) {
 
-	public record Limit(int capacity, Duration window) {
+	public record Limit(int capacity, @NotNull Duration window) {
 	}
 }
