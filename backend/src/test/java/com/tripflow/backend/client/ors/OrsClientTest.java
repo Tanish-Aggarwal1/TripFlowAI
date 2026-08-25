@@ -85,6 +85,28 @@ public class OrsClientTest {
     }
 
     @Test
+    void getDirections_missingProperties_throwsOrsClientException() {
+        // SCRUM-495: a well-formed-but-sparse response (properties absent on the first
+        // feature) must throw, not NPE downstream in RouteOptimizationService.
+        String body = """
+                {
+                  "features": [{
+                    "geometry": { "type": "LineString", "coordinates": [[-79.9, 45.0]] }
+                  }]
+                }
+                """;
+        server.expect(requestTo(BASE_URL + "/v2/directions/driving-car/geojson"))
+                .andRespond(withSuccess(body, MediaType.APPLICATION_JSON));
+
+        OrsDirectionsRequest request = OrsDirectionsRequest.of(List.of(new double[]{-79.9, 45.0}));
+
+        assertThatThrownBy(() -> orsClient.getDirections(request))
+                .isInstanceOf(OrsClientException.class)
+                .hasMessageContaining("properties");
+        server.verify();
+    }
+
+    @Test
     void getDirections_tooManyRequests_throwsOrsRateLimitException() {
         server.expect(requestTo(BASE_URL + "/v2/directions/driving-car/geojson"))
                 .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS)
@@ -162,6 +184,31 @@ public class OrsClientTest {
         assertThatThrownBy(() -> orsClient.optimize(request))
                 .isInstanceOf(OrsClientException.class)
                 .hasMessageContaining("no routes");
+        server.verify();
+    }
+
+    @Test
+    void optimize_missingSteps_throwsOrsClientException() {
+        // SCRUM-495: a well-formed-but-sparse response (steps absent on the first route)
+        // must throw, not NPE downstream in RouteOptimizationService.reorderStops.
+        String body = """
+                {
+                  "code": 0,
+                  "summary": { "cost": 100.0, "duration": 3600.0 },
+                  "routes": [{ "vehicle": 1, "duration": 3600.0 }]
+                }
+                """;
+        server.expect(requestTo(BASE_URL + "/optimization"))
+                .andRespond(withSuccess(body, MediaType.APPLICATION_JSON));
+
+        OrsOptimizationRequest request = new OrsOptimizationRequest(
+                List.of(new OrsOptimizationRequest.Job(1, List.of(-79.9, 45.0))),
+                List.of(new OrsOptimizationRequest.Vehicle(1, "driving-car",
+                        List.of(-79.4, 43.7), List.of(-79.4, 43.7))));
+
+        assertThatThrownBy(() -> orsClient.optimize(request))
+                .isInstanceOf(OrsClientException.class)
+                .hasMessageContaining("steps");
         server.verify();
     }
 

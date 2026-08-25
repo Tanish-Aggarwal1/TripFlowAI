@@ -39,6 +39,9 @@ public class OrsClient {
             if (response == null || response.features() == null || response.features().isEmpty()) {
                 throw new OrsClientException("ORS directions returned an empty response");
             }
+            if (response.features().get(0).properties() == null) {
+                throw new OrsClientException("ORS directions response is missing properties on its first feature");
+            }
             log.debug("ORS directions ok profile={} waypoints={}", profile, request.coordinates().size());
             return response;
         }, "OpenRouteService directions request failed");
@@ -59,6 +62,9 @@ public class OrsClient {
             if (response.routes() == null || response.routes().isEmpty()) {
                 throw new OrsClientException("ORS optimization returned no routes for "
                         + request.jobs().size() + " job(s)");
+            }
+            if (response.routes().get(0).steps() == null) {
+                throw new OrsClientException("ORS optimization response is missing steps on its first route");
             }
             log.debug("ORS optimization ok jobs={}", request.jobs().size());
             return response;
