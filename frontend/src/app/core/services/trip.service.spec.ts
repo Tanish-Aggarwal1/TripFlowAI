@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TripService } from './trip.service';
-import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
+import { HttpErrorResponse, provideHttpClient, withXhr } from '@angular/common/http';
 
 describe('TripService', () => {
   let service: TripService;
@@ -9,7 +9,7 @@ describe('TripService', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      providers: [TripService, provideHttpClient(), provideHttpClientTesting()],
+      providers: [TripService, provideHttpClient(withXhr()), provideHttpClientTesting()],
     });
     service = TestBed.inject(TripService);
     httpMock = TestBed.inject(HttpTestingController);

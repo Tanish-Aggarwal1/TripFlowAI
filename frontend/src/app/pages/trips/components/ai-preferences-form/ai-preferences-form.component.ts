@@ -1,4 +1,4 @@
-import { Component, EventEmitter, inject, Input, Output } from '@angular/core';
+import { Component, EventEmitter, inject, Input, Output, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
   IonItem,
@@ -27,6 +27,7 @@ import { ToastService } from '../../../../core/services/toast.service';
   selector: 'app-ai-preferences-form',
   templateUrl: 'ai-preferences-form.component.html',
   styleUrls: ['ai-preferences-form.component.scss'],
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [
     FormsModule,
     IonItem,

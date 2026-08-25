@@ -1,4 +1,4 @@
-import { Component, EventEmitter, inject, Input, OnInit, Output } from '@angular/core';
+import { Component, EventEmitter, inject, Input, OnInit, Output, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
   IonItem,
@@ -23,6 +23,7 @@ import { ToastService } from '../../../../core/services/toast.service';
   selector: 'app-edit-stop-form',
   templateUrl: 'edit-stop-form.component.html',
   styleUrls: ['edit-stop-form.component.scss'],
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [
     FormsModule,
     IonItem,

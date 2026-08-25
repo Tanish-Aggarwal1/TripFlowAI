@@ -1,4 +1,4 @@
-import { Component, EventEmitter, inject, Input, OnInit, Output } from '@angular/core';
+import { Component, EventEmitter, inject, Input, OnInit, Output, ChangeDetectionStrategy } from '@angular/core';
 import { IonButton, IonIcon, IonSpinner, AlertController } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import { add, trash } from 'ionicons/icons';
@@ -15,6 +15,7 @@ import { ToastService } from '../../../../core/services/toast.service';
   selector: 'app-stop-photo-gallery',
   templateUrl: 'stop-photo-gallery.component.html',
   styleUrls: ['stop-photo-gallery.component.scss'],
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [IonButton, IonIcon, IonSpinner, StopPhotoUploadComponent],
 })
 export class StopPhotoGalleryComponent implements OnInit {

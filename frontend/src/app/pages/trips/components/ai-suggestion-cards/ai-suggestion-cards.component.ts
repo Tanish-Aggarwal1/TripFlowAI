@@ -6,6 +6,7 @@ import {
   OnChanges,
   Output,
   SimpleChanges,
+  ChangeDetectionStrategy
 } from '@angular/core';
 import { IonButton, IonIcon, IonSpinner } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
@@ -32,6 +33,7 @@ interface SuggestionCardState {
   selector: 'app-ai-suggestion-cards',
   templateUrl: 'ai-suggestion-cards.component.html',
   styleUrls: ['ai-suggestion-cards.component.scss'],
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [IonButton, IonIcon, IonSpinner],
 })
 export class AiSuggestionCardsComponent implements OnChanges {

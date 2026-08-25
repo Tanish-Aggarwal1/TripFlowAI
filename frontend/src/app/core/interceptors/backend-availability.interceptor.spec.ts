@@ -1,5 +1,5 @@
 import { TestBed, fakeAsync, tick } from '@angular/core/testing';
-import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common/http';
+import { HttpClient, provideHttpClient, withInterceptors, withXhr } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Router } from '@angular/router';
 import { backendAvailabilityInterceptor } from './backend-availability.interceptor';
@@ -16,7 +16,7 @@ describe('backendAvailabilityInterceptor', () => {
 
     TestBed.configureTestingModule({
       providers: [
-        provideHttpClient(withInterceptors([backendAvailabilityInterceptor])),
+        provideHttpClient(withXhr(), withInterceptors([backendAvailabilityInterceptor])),
         provideHttpClientTesting(),
         { provide: Router, useValue: routerSpy },
       ],

@@ -1,4 +1,4 @@
-import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common/http';
+import { HttpClient, provideHttpClient, withInterceptors, withXhr } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
@@ -17,7 +17,7 @@ describe('sessionExpiryInterceptor', () => {
 
     TestBed.configureTestingModule({
       providers: [
-        provideHttpClient(withInterceptors([sessionExpiryInterceptor])),
+        provideHttpClient(withXhr(), withInterceptors([sessionExpiryInterceptor])),
         provideHttpClientTesting(),
         { provide: SessionStateService, useValue: sessionStateSpy },
         { provide: Router, useValue: routerSpy },

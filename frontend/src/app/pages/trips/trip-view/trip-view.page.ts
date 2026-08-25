@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
   IonHeader,
@@ -55,6 +55,7 @@ interface DayGroup {
   selector: 'app-trip-view',
   templateUrl: 'trip-view.page.html',
   styleUrls: ['trip-view.page.scss'],
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [
     IonHeader,
     IonToolbar,

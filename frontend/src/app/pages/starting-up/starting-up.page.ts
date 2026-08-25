@@ -1,4 +1,4 @@
-import { Component, inject, OnDestroy, OnInit } from '@angular/core';
+import { Component, inject, OnDestroy, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
 import { IonContent, IonSpinner } from '@ionic/angular/standalone';
@@ -14,6 +14,7 @@ const POLL_INTERVAL_MS = 4000;
   selector: 'app-starting-up',
   templateUrl: 'starting-up.page.html',
   styleUrls: ['starting-up.page.scss'],
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [IonContent, IonSpinner],
 })
 export class StartingUpPage implements OnInit, OnDestroy {

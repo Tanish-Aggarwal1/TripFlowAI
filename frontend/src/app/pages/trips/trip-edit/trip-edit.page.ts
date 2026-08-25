@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import {
@@ -36,6 +36,7 @@ import { StopListComponent } from '../components/stop-list/stop-list.component';
   selector: 'app-trip-edit',
   templateUrl: 'trip-edit.page.html',
   styleUrls: ['trip-edit.page.scss'],
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [
     FormsModule,
     IonHeader,

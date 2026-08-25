@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClient, withXhr } from '@angular/common/http';
 import { StopPhotoService } from './stop-photo.service';
 import { PhotoSignatureResponse, StopPhotoResponse } from '../models/trip.model';
 
@@ -27,7 +27,7 @@ describe('StopPhotoService', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      providers: [StopPhotoService, provideHttpClient(), provideHttpClientTesting()],
+      providers: [StopPhotoService, provideHttpClient(withXhr()), provideHttpClientTesting()],
     });
     service = TestBed.inject(StopPhotoService);
     httpMock = TestBed.inject(HttpTestingController);
