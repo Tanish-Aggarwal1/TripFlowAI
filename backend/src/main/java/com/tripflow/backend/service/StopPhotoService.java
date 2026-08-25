@@ -1,5 +1,7 @@
 package com.tripflow.backend.service;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -114,11 +116,34 @@ public class StopPhotoService {
      * that flow. Require it to at least point at the configured Cloudinary cloud,
      * so a caller can't attach an arbitrary hotlinked/tracking URL to a photo that
      * gets rendered to any viewer of a public trip.
+     *
+     * <p>SCRUM-496: a plain prefix match ("starts with .../{cloud}/") is not enough —
+     * Cloudinary's fetch delivery type (".../{cloud}/image/fetch/https://attacker...")
+     * satisfies any such prefix while proxying arbitrary attacker-controlled content.
+     * The signed-upload flow above only ever produces {@code upload}-delivery URLs
+     * (it always signs {@code folder}, and the frontend's upload call hits
+     * {@code /image/upload}), so the delivery-type path segment is checked structurally
+     * and only {@code upload} is allowlisted.
      */
     private void validateCloudinaryUrl(String url) {
-        String expectedHost = "res.cloudinary.com";
-        String expectedPrefix = "https://" + expectedHost + "/" + cloudinaryProperties.cloudName() + "/";
-        if (!url.startsWith(expectedPrefix)) {
+        URI uri;
+        try {
+            uri = new URI(url);
+        } catch (URISyntaxException ex) {
+            throw new InvalidPhotoUrlException("Photo url is not a valid URL");
+        }
+
+        String path = uri.getPath() == null ? "" : uri.getPath();
+        String[] segments = path.split("/");
+        // path is "/{cloud}/{resourceType}/{deliveryType}/..." -> split gives
+        // ["", cloud, resourceType, deliveryType, ...]
+        boolean valid = "https".equals(uri.getScheme())
+                && "res.cloudinary.com".equals(uri.getHost())
+                && segments.length >= 4
+                && cloudinaryProperties.cloudName().equals(segments[1])
+                && "upload".equals(segments[3]);
+
+        if (!valid) {
             throw new InvalidPhotoUrlException(
                     "Photo url must be a Cloudinary-hosted URL under the configured cloud");
         }

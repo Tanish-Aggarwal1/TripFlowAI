@@ -30,6 +30,7 @@ import com.tripflow.backend.dto.CreateStopPhotoRequest;
 import com.tripflow.backend.dto.PhotoSignatureResponse;
 import com.tripflow.backend.dto.StopPhotoResponse;
 import com.tripflow.backend.exception.ForbiddenException;
+import com.tripflow.backend.exception.InvalidPhotoUrlException;
 import com.tripflow.backend.exception.ResourceNotFoundException;
 import com.tripflow.backend.repository.StopPhotoRepository;
 import com.tripflow.backend.repository.StopRepository;
@@ -158,6 +159,32 @@ class StopPhotoServiceTest {
 
         assertThatThrownBy(() -> stopPhotoService.addPhoto(1L, 99L, request))
                 .isInstanceOf(ForbiddenException.class);
+    }
+
+    @Test
+    void addPhoto_fetchDeliveryUrl_throwsInvalidPhotoUrl() {
+        // SCRUM-496: a prefix match alone lets Cloudinary's fetch delivery type through,
+        // which proxies arbitrary attacker-controlled remote content.
+        Stop stop = stopOwnedBy(1L, 10L, TripVisibility.PRIVATE);
+        when(stopRepository.findWithTripAndOwnerById(1L)).thenReturn(Optional.of(stop));
+
+        CreateStopPhotoRequest request = new CreateStopPhotoRequest(
+                "https://res.cloudinary.com/demo/image/fetch/https://attacker.example/beacon.png", null, null);
+
+        assertThatThrownBy(() -> stopPhotoService.addPhoto(1L, 10L, request))
+                .isInstanceOf(InvalidPhotoUrlException.class);
+    }
+
+    @Test
+    void addPhoto_wrongCloudName_throwsInvalidPhotoUrl() {
+        Stop stop = stopOwnedBy(1L, 10L, TripVisibility.PRIVATE);
+        when(stopRepository.findWithTripAndOwnerById(1L)).thenReturn(Optional.of(stop));
+
+        CreateStopPhotoRequest request = new CreateStopPhotoRequest(
+                "https://res.cloudinary.com/some-other-cloud/image/upload/v1/mock.jpg", null, null);
+
+        assertThatThrownBy(() -> stopPhotoService.addPhoto(1L, 10L, request))
+                .isInstanceOf(InvalidPhotoUrlException.class);
     }
 
     // ---------- listPhotos (owner OR public-trip) ----------
