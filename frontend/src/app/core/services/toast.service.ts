@@ -1,5 +1,5 @@
 import { inject, Injectable } from '@angular/core';
-import { ToastController } from '@ionic/angular/standalone';
+import { ToastController } from '@ionic/angular';
 
 // SCRUM-260: the "clear busy flag, build a toast from err.message ?? fallback,
 // present it" pattern was duplicated across trip-view.page.ts and half a dozen

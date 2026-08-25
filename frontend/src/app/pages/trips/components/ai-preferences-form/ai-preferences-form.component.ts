@@ -9,7 +9,7 @@ import {
   IonIcon,
   IonSpinner,
   IonChip,
-} from '@ionic/angular/standalone';
+} from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import { sparkles, closeCircle } from 'ionicons/icons';
 import { TripService } from '../../../../core/services/trip.service';

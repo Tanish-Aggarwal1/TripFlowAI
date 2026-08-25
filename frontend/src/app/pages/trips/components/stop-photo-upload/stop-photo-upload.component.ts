@@ -8,7 +8,7 @@ import {
   IonIcon,
   IonSpinner,
   IonProgressBar,
-} from '@ionic/angular/standalone';
+} from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import { camera, checkmark, close } from 'ionicons/icons';
 import { StopPhotoService } from '../../../../core/services/stop-photo.service';

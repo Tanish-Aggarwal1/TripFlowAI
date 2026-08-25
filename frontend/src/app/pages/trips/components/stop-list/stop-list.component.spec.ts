@@ -1,6 +1,6 @@
 import { provideZoneChangeDetection } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ItemReorderEventDetail } from '@ionic/angular/standalone';
+import { ItemReorderEventDetail } from '@ionic/angular';
 import { StopListComponent } from './stop-list.component';
 import { expectNoA11yViolations, expectAllFormControlsLabeled } from '../../../../../testing/a11y';
 

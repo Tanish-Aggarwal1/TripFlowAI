@@ -7,7 +7,7 @@ import {
   IonRouterOutlet,
   IonTitle,
   IonToolbar,
-} from '@ionic/angular/standalone';
+} from '@ionic/angular';
 import { AuthService } from './core/services/auth.service';
 import { SessionStateService } from './core/services/session-state.service';
 

@@ -3,7 +3,7 @@ import { FormsModule } from '@angular/forms';
 import {
   IonItem, IonLabel, IonButton, IonIcon,
   IonInput, IonReorderGroup, IonReorder, ItemReorderEventDetail
-} from '@ionic/angular/standalone';
+} from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import { add, trash } from 'ionicons/icons';
 import { UpsertStopRequest } from '../../../../core/models/trip.model';

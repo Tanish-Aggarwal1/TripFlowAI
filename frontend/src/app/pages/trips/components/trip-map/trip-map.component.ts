@@ -3,7 +3,7 @@ import {
   ElementRef, ViewChild, OnChanges, OnDestroy, SimpleChanges, AfterViewInit,
   ChangeDetectionStrategy
 } from '@angular/core';
-import { IonButton, IonSpinner, IonIcon } from '@ionic/angular/standalone';
+import { IonButton, IonSpinner, IonIcon } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import { navigate } from 'ionicons/icons';
 import mapboxgl from 'mapbox-gl';

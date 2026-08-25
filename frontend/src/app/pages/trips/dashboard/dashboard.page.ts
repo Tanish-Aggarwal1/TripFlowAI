@@ -7,7 +7,7 @@ import {
   IonList, IonItem, IonLabel, IonBadge, IonIcon, IonSearchbar, IonSelect, IonSelectOption,
   IonFab, IonFabButton, IonFabList, IonModal, IonSpinner, AlertController,IonThumbnail,
   ViewWillEnter
-} from '@ionic/angular/standalone';
+} from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import { add, lockClosed, globeOutline, trash, create, sparkles, imageOutline, mapOutline } from 'ionicons/icons';
 import { TripService } from '../../../core/services/trip.service';

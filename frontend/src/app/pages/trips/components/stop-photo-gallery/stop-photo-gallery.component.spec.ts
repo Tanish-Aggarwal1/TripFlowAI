@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { AlertController, ToastController } from '@ionic/angular/standalone';
+import { AlertController, ToastController } from '@ionic/angular';
 import { of, throwError } from 'rxjs';
 import { StopPhotoGalleryComponent } from './stop-photo-gallery.component';
 import { StopPhotoService } from '../../../../core/services/stop-photo.service';

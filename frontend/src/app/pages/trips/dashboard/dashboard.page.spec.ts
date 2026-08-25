@@ -1,6 +1,6 @@
 import { ComponentFixture, fakeAsync, TestBed, tick } from '@angular/core/testing';
 import { Router } from '@angular/router';
-import { AlertController, ToastController } from '@ionic/angular/standalone';
+import { AlertController, ToastController } from '@ionic/angular';
 import { of, throwError } from 'rxjs';
 import { DashboardPage } from './dashboard.page';
 import { TripService } from '../../../core/services/trip.service';

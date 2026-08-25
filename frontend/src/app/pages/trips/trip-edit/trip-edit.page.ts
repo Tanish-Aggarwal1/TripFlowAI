@@ -17,7 +17,7 @@ import {
   IonButtons,
   IonIcon,
   AlertController,
-} from '@ionic/angular/standalone';
+} from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import { save, arrowBack, map as mapIcon } from 'ionicons/icons';
 import { TripService } from '../../../core/services/trip.service';

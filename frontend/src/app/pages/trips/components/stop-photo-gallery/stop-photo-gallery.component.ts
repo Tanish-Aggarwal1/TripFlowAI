@@ -1,5 +1,5 @@
 import { Component, EventEmitter, inject, Input, OnInit, Output, ChangeDetectionStrategy } from '@angular/core';
-import { IonButton, IonIcon, IonSpinner, AlertController } from '@ionic/angular/standalone';
+import { IonButton, IonIcon, IonSpinner, AlertController } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import { add, trash } from 'ionicons/icons';
 import { StopPhotoService } from '../../../../core/services/stop-photo.service';
