@@ -101,7 +101,14 @@ public class GlobalExceptionHandler {
 		return error(HttpStatus.TOO_MANY_REQUESTS,
 				"Route optimization is rate-limited, please try again shortly", req, null);
 	}
-	
+
+	@ExceptionHandler(GeminiRateLimitException.class)
+	public ResponseEntity<ApiError> handleGeminiRateLimit(GeminiRateLimitException ex, HttpServletRequest req) {
+		log.warn("429 Too Many Requests on {}: {}", req.getRequestURI(), ex.getMessage());
+		return error(HttpStatus.TOO_MANY_REQUESTS,
+				"AI itinerary service is rate-limited, please try again shortly", req, null);
+	}
+
 	@ExceptionHandler(GeminiParsingException.class)
 	public ResponseEntity<ApiError> handleGeminiParsing(GeminiParsingException ex, HttpServletRequest req) {
 	    log.error("502 Bad Gateway on {}: {}", req.getRequestURI(), ex.getMessage(), ex);
