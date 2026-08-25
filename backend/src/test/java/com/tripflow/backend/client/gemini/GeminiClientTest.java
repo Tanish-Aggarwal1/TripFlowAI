@@ -6,6 +6,7 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withBadRequest;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 import java.net.SocketTimeoutException;
@@ -15,11 +16,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
 import com.tripflow.backend.exception.GeminiClientException;
+import com.tripflow.backend.exception.GeminiRateLimitException;
 
 class GeminiClientTest {
 
@@ -105,5 +108,17 @@ class GeminiClientTest {
 		assertThatThrownBy(() -> geminiClient.generateContent("plan a trip"))
 				.isInstanceOf(GeminiClientException.class)
 				.hasMessageContaining("empty response");
+	}
+
+	@Test
+	void generateContent_tooManyRequests_throwsGeminiRateLimitException() {
+		server.expect(requestTo(ENDPOINT)).andExpect(method(HttpMethod.POST))
+				.andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS)
+						.body("{\"error\":\"quota exceeded\"}")
+						.contentType(MediaType.APPLICATION_JSON));
+
+		assertThatThrownBy(() -> geminiClient.generateContent("plan a trip"))
+				.isInstanceOf(GeminiRateLimitException.class);
+		server.verify();
 	}
 }

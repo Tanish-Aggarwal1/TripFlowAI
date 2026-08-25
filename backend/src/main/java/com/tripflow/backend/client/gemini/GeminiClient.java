@@ -1,10 +1,14 @@
 package com.tripflow.backend.client.gemini;
 
+import java.util.function.Supplier;
+
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
 import com.tripflow.backend.exception.GeminiClientException;
+import com.tripflow.backend.exception.GeminiRateLimitException;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,8 +27,8 @@ public class GeminiClient {
     private final GeminiProperties properties;
 
     public GeminiGenerateContentResponse generateContent(String promptText) {
-        GeminiGenerateContentRequest request = GeminiGenerateContentRequest.ofPrompt(promptText);
-        try {
+        return execute(() -> {
+            GeminiGenerateContentRequest request = GeminiGenerateContentRequest.ofPrompt(promptText);
             GeminiGenerateContentResponse response = geminiRestClient.post()
                     .uri("/v1beta/models/{model}:generateContent", properties.model())
                     .body(request)
@@ -36,6 +40,21 @@ public class GeminiClient {
             }
             log.debug("Gemini generateContent ok model={} promptChars={}", properties.model(), promptText.length());
             return response;
+        });
+    }
+
+    /**
+     * Shared call + exception translation (SCRUM-494, mirroring OrsClient.execute /
+     * SCRUM-221): a 429 from Gemini means the shared free-tier quota is exhausted, not
+     * that the service is down — always translate to {@link GeminiRateLimitException}
+     * (429), never let it fall through to the generic {@link GeminiClientException} (502).
+     */
+    private <T> T execute(Supplier<T> call) {
+        try {
+            return call.get();
+        } catch (HttpClientErrorException.TooManyRequests ex) {
+            log.warn("Gemini call rate-limited (429) model={}: {}", properties.model(), ex.getMessage());
+            throw new GeminiRateLimitException("Gemini quota exceeded", ex);
         } catch (RestClientException ex) {
             log.warn("Gemini generateContent call failed model={}: {}", properties.model(), ex.getMessage());
             throw new GeminiClientException("Gemini request failed", ex);

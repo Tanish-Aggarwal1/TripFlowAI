@@ -7,6 +7,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -26,6 +27,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.test.context.ActiveProfiles;
@@ -190,6 +192,26 @@ public class AiControllerIT {
 						.with(asUser(owner)))
 				.andExpect(status().isBadGateway())
 				.andExpect(jsonPath("$.status").value(502));
+	}
+
+	@Test
+	void suggestItinerary_geminiReturns429_propagates429NotOur502() throws Exception {
+		// SCRUM-494: a Gemini-side quota 429 must surface as 429, not fall through to the
+		// generic GeminiClientException -> 502 mapping every other Gemini failure gets.
+		User owner = createTestUser("geminiquota");
+		Long tripId = createTrip(owner);
+
+		geminiMockServer.expect(requestTo(ENDPOINT)).andExpect(method(HttpMethod.POST))
+				.andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS)
+						.body("{\"error\":\"quota exceeded\"}")
+						.contentType(MediaType.APPLICATION_JSON));
+
+		mockMvc.perform(post("/api/trips/" + tripId + "/ai-suggest").with(csrf())
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("{}")
+						.with(asUser(owner)))
+				.andExpect(status().isTooManyRequests())
+				.andExpect(jsonPath("$.status").value(429));
 	}
 
 	@Test
