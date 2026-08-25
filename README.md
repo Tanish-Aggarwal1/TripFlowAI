@@ -90,4 +90,4 @@ Detailed sequence diagrams:
 
 **Health check:** `GET /actuator/health` — no authentication required, returns `{"status":"UP"}` when the app and its dependencies are healthy. Configure this as the health check path in Render (or any platform requiring a deploy-verification probe).
 
-Only the `health` endpoint is exposed (`management.endpoints.web.exposure.include=health` in `application.properties`) — all other actuator endpoints (`env`, `beans`, `heapdump`, etc.) are intentionally never exposed.
+`health` and `metrics` are the only actuator endpoints exposed (`management.endpoints.web.exposure.include=health,metrics` in `application.properties`) — `metrics` is public deliberately, per SCRUM-174 (see `docs/auth.md`). All other actuator endpoints (`env`, `beans`, `heapdump`, etc.) are intentionally never exposed.
