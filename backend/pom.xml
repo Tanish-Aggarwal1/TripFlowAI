@@ -189,6 +189,13 @@
 			<version>${bucket4j.version}</version>
 		</dependency>
 
+		<!-- Bounds RateLimiterService's bucket cache (SCRUM-482) — version managed by
+		     spring-boot-starter-parent's BOM. -->
+		<dependency>
+			<groupId>com.github.ben-manes.caffeine</groupId>
+			<artifactId>caffeine</artifactId>
+		</dependency>
+
 		<!-- iCalendar (RFC 5545) generation for the .ics export endpoint (SCRUM-176).
 		     jackson-databind is an optional biweekly dependency (only used for its JSON
 		     (jCal) support, which this project doesn't use) so it's excluded to avoid a
