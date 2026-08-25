@@ -29,6 +29,14 @@ updates:
       - "dependencies"
       - "frontend"
     groups:
+      angular:
+        patterns:
+          - "@angular/*"
+          - "@angular-devkit/*"
+          - "@angular-eslint/*"
+        update-types:
+          - "minor"
+          - "patch"
       frontend-minor-patch:
         update-types:
           - "minor"
