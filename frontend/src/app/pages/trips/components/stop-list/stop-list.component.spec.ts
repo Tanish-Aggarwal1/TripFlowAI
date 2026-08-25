@@ -1,3 +1,4 @@
+import { provideZoneChangeDetection } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ItemReorderEventDetail } from '@ionic/angular/standalone';
 import { StopListComponent } from './stop-list.component';
@@ -10,6 +11,11 @@ describe('StopListComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [StopListComponent],
+      // TestBed defaults to zoneless change detection (Angular 21); this app
+      // still runs zone-based (see provideZoneChangeDetection() in main.ts),
+      // so match that here or plain field mutations on `component.stops`
+      // won't be picked up the way they are in the real app.
+      providers: [provideZoneChangeDetection()],
     }).compileComponents();
 
     fixture = TestBed.createComponent(StopListComponent);
