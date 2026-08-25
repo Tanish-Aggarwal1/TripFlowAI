@@ -1,8 +1,9 @@
 import {
   Component, Input, Output, EventEmitter,
-  ElementRef, ViewChild, OnChanges, OnDestroy, SimpleChanges, AfterViewInit
+  ElementRef, ViewChild, OnChanges, OnDestroy, SimpleChanges, AfterViewInit,
+  ChangeDetectionStrategy
 } from '@angular/core';
-import { IonButton, IonSpinner, IonIcon } from '@ionic/angular/standalone';
+import { IonButton, IonSpinner, IonIcon } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import { navigate } from 'ionicons/icons';
 import mapboxgl from 'mapbox-gl';
@@ -15,6 +16,7 @@ import { TripResponse, StopResponse } from '../../../../core/models/trip.model';
   selector: 'app-trip-map',
   imports: [IonButton, IonSpinner, IonIcon],
   templateUrl: './trip-map.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrls: ['./trip-map.component.scss'],
 })
 export class TripMapComponent implements AfterViewInit, OnChanges, OnDestroy {

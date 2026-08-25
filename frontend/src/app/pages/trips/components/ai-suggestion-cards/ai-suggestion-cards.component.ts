@@ -6,8 +6,9 @@ import {
   OnChanges,
   Output,
   SimpleChanges,
+  ChangeDetectionStrategy
 } from '@angular/core';
-import { IonButton, IonIcon, IonSpinner } from '@ionic/angular/standalone';
+import { IonButton, IonIcon, IonSpinner } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import { addCircleOutline, closeOutline } from 'ionicons/icons';
 import { TripService } from '../../../../core/services/trip.service';
@@ -32,6 +33,7 @@ interface SuggestionCardState {
   selector: 'app-ai-suggestion-cards',
   templateUrl: 'ai-suggestion-cards.component.html',
   styleUrls: ['ai-suggestion-cards.component.scss'],
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [IonButton, IonIcon, IonSpinner],
 })
 export class AiSuggestionCardsComponent implements OnChanges {

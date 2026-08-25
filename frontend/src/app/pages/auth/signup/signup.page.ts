@@ -1,7 +1,7 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { IonContent, IonItem, IonInput, IonButton, IonText } from '@ionic/angular/standalone';
+import { IonContent, IonItem, IonInput, IonButton, IonText } from '@ionic/angular';
 import { AuthService } from '../../../core/services/auth.service';
 import { FieldError } from '../../../core/models/auth.model';
 
@@ -9,6 +9,7 @@ import { FieldError } from '../../../core/models/auth.model';
   selector: 'app-signup',
   imports: [ReactiveFormsModule, RouterLink, IonContent, IonItem, IonInput, IonButton, IonText],
   templateUrl: './signup.page.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrls: ['./signup.page.scss'],
 })
 export class SignupPage {

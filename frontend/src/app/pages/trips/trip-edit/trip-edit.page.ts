@@ -1,4 +1,4 @@
-import { Component, DestroyRef, inject, OnInit } from '@angular/core';
+import { Component, ChangeDetectionStrategy, DestroyRef, inject, OnInit } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -18,7 +18,7 @@ import {
   IonButtons,
   IonIcon,
   AlertController,
-} from '@ionic/angular/standalone';
+} from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import { save, arrowBack, map as mapIcon } from 'ionicons/icons';
 import { TripService } from '../../../core/services/trip.service';
@@ -37,6 +37,7 @@ import { StopListComponent } from '../components/stop-list/stop-list.component';
   selector: 'app-trip-edit',
   templateUrl: 'trip-edit.page.html',
   styleUrls: ['trip-edit.page.scss'],
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [
     FormsModule,
     IonHeader,

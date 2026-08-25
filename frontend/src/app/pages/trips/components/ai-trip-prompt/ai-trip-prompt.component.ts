@@ -1,4 +1,4 @@
-import { Component, EventEmitter, inject, Output } from '@angular/core';
+import { Component, EventEmitter, inject, Output, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
   IonItem,
@@ -9,7 +9,7 @@ import {
   IonIcon,
   IonSpinner,
   IonChip,
-} from '@ionic/angular/standalone';
+} from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import { sparkles, closeCircle } from 'ionicons/icons';
 import { TripService } from '../../../../core/services/trip.service';
@@ -29,6 +29,7 @@ const MAX_INTERESTS = 10;
   selector: 'app-ai-trip-prompt',
   templateUrl: 'ai-trip-prompt.component.html',
   styleUrls: ['ai-trip-prompt.component.scss'],
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [
     FormsModule,
     IonItem,

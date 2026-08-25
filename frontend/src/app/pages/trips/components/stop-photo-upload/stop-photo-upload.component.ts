@@ -1,4 +1,4 @@
-import { Component, EventEmitter, inject, Input, Output } from '@angular/core';
+import { Component, EventEmitter, inject, Input, Output, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
   IonItem,
@@ -8,7 +8,7 @@ import {
   IonIcon,
   IonSpinner,
   IonProgressBar,
-} from '@ionic/angular/standalone';
+} from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import { camera, checkmark, close } from 'ionicons/icons';
 import { StopPhotoService } from '../../../../core/services/stop-photo.service';
@@ -23,6 +23,7 @@ import { ToastService } from '../../../../core/services/toast.service';
   selector: 'app-stop-photo-upload',
   templateUrl: 'stop-photo-upload.component.html',
   styleUrls: ['stop-photo-upload.component.scss'],
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [
     FormsModule,
     IonItem,

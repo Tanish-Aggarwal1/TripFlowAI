@@ -1,9 +1,9 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
   IonItem, IonLabel, IonButton, IonIcon,
   IonInput, IonReorderGroup, IonReorder, ItemReorderEventDetail
-} from '@ionic/angular/standalone';
+} from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import { add, trash } from 'ionicons/icons';
 import { UpsertStopRequest } from '../../../../core/models/trip.model';
@@ -12,6 +12,7 @@ import { UpsertStopRequest } from '../../../../core/models/trip.model';
   selector: 'app-stop-list',
   templateUrl: 'stop-list.component.html',
   styleUrls: ['stop-list.component.scss'],
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [
     FormsModule,
      IonItem, IonLabel, IonButton, IonIcon,

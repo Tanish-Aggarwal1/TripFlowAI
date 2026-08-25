@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { SimpleChange } from '@angular/core';
 import { TripMapComponent } from './trip-map.component';
-import { StopResponse, TripResponse } from 'src/app/core/models/trip.model';
+import { StopResponse, TripResponse } from '../../../../core/models/trip.model';
 import mapboxgl from 'mapbox-gl';
 
 function makeStop(overrides: Partial<StopResponse> = {}): StopResponse {

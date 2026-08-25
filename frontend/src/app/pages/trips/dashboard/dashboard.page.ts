@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { Subject, debounceTime, distinctUntilChanged, switchMap } from 'rxjs';
@@ -7,7 +7,7 @@ import {
   IonList, IonItem, IonLabel, IonBadge, IonIcon, IonSearchbar, IonSelect, IonSelectOption,
   IonFab, IonFabButton, IonFabList, IonModal, IonSpinner, AlertController,IonThumbnail,
   ViewWillEnter
-} from '@ionic/angular/standalone';
+} from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import { add, lockClosed, globeOutline, trash, create, sparkles, imageOutline, mapOutline } from 'ionicons/icons';
 import { TripService } from '../../../core/services/trip.service';
@@ -26,6 +26,7 @@ import { AiTripPromptComponent } from '../components/ai-trip-prompt/ai-trip-prom
   selector: 'app-dashboard',
   templateUrl: 'dashboard.page.html',
   styleUrls: ['dashboard.page.scss'],
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [
     IonHeader, IonToolbar, IonTitle, IonContent, IonButton, IonButtons,
     IonList, IonItem, IonLabel, IonBadge, IonIcon, IonSearchbar, IonSelect, IonSelectOption,

@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ToastController } from '@ionic/angular/standalone';
+import { ToastController } from '@ionic/angular';
 import { of, throwError } from 'rxjs';
 import { AiSuggestionCardsComponent } from './ai-suggestion-cards.component';
 import { TripService } from '../../../../core/services/trip.service';

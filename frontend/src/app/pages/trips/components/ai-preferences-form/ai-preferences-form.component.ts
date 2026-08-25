@@ -1,4 +1,4 @@
-import { Component, EventEmitter, inject, Input, Output } from '@angular/core';
+import { Component, EventEmitter, inject, Input, Output, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
   IonItem,
@@ -9,7 +9,7 @@ import {
   IonIcon,
   IonSpinner,
   IonChip,
-} from '@ionic/angular/standalone';
+} from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import { sparkles, closeCircle } from 'ionicons/icons';
 import { TripService } from '../../../../core/services/trip.service';
@@ -27,6 +27,7 @@ import { ToastService } from '../../../../core/services/toast.service';
   selector: 'app-ai-preferences-form',
   templateUrl: 'ai-preferences-form.component.html',
   styleUrls: ['ai-preferences-form.component.scss'],
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [
     FormsModule,
     IonItem,

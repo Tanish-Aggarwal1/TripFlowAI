@@ -1,4 +1,4 @@
-import { Component, DestroyRef, inject, OnInit } from '@angular/core';
+import { Component, ChangeDetectionStrategy, DestroyRef, inject, OnInit } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
@@ -15,7 +15,7 @@ import {
   IonItem,
   IonItemDivider,
   IonLabel,
-} from '@ionic/angular/standalone';
+} from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import {
   create,
@@ -36,7 +36,7 @@ import {
   StopPhotoResponse,
 } from '../../../core/models/trip.model';
 import { TripMapComponent } from '../components/trip-map/trip-map.component';
-import { IonModal } from '@ionic/angular/standalone';
+import { IonModal } from '@ionic/angular';
 import { AiPreferencesFormComponent } from '../components/ai-preferences-form/ai-preferences-form.component';
 import { AiSuggestionCardsComponent } from '../components/ai-suggestion-cards/ai-suggestion-cards.component';
 import { EditStopFormComponent } from '../components/edit-stop-form/edit-stop-form.component';
@@ -56,6 +56,7 @@ interface DayGroup {
   selector: 'app-trip-view',
   templateUrl: 'trip-view.page.html',
   styleUrls: ['trip-view.page.scss'],
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [
     IonHeader,
     IonToolbar,

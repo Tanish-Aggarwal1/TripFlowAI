@@ -1,4 +1,4 @@
-import { Component, HostListener, inject } from '@angular/core';
+import { Component, HostListener, inject, ChangeDetectionStrategy } from '@angular/core';
 import {
   AlertController,
   IonApp,
@@ -7,13 +7,14 @@ import {
   IonRouterOutlet,
   IonTitle,
   IonToolbar,
-} from '@ionic/angular/standalone';
+} from '@ionic/angular';
 import { AuthService } from './core/services/auth.service';
 import { SessionStateService } from './core/services/session-state.service';
 
 @Component({
   selector: 'app-root',
   templateUrl: 'app.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [IonApp, IonButton, IonButtons, IonRouterOutlet, IonTitle, IonToolbar],
 })
 export class AppComponent {

@@ -1,7 +1,7 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter, Router } from '@angular/router';
-import { ToastController } from '@ionic/angular/standalone';
+import { ToastController } from '@ionic/angular';
 import { of, throwError, Subject, BehaviorSubject } from 'rxjs';
 import { TripViewPage, sanitizeFilename } from './trip-view.page';
 import { TripService } from '../../../core/services/trip.service';
@@ -11,7 +11,8 @@ import { TripMapComponent } from '../components/trip-map/trip-map.component';
 // Renders in place of the real TripMapComponent, which would otherwise construct a
 // live mapboxgl.Map (network calls, WebGL) the moment TripViewPage's DOM is rendered
 // — see trip-map.component.spec.ts for why that constructor is normally spied on.
-@Component({ selector: 'app-trip-map', template: '', standalone: true })
+@Component({ selector: 'app-trip-map', template: '', changeDetection: ChangeDetectionStrategy.Eager,
+ standalone: true })
 class TripMapStubComponent {
   @Input() trip: TripResponse | null = null;
   @Input() optimizing = false;
