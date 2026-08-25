@@ -1,4 +1,5 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, DestroyRef, inject, OnInit } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import {
@@ -61,6 +62,7 @@ export class TripEditPage implements OnInit {
   private tripService = inject(TripService);
   private alertCtrl = inject(AlertController);
   private toastService = inject(ToastService);
+  private destroyRef = inject(DestroyRef);
 
   // ── Mode ──────────────────────────────────────────────────────────────────
   isEditMode = false;
@@ -86,12 +88,18 @@ export class TripEditPage implements OnInit {
   }
 
   ngOnInit(): void {
-    const id = this.route.snapshot.paramMap.get('id');
-    if (id) {
-      this.isEditMode = true;
-      this.tripId = Number(id);
-      this.loadTrip(this.tripId);
-    }
+    // SCRUM-485: subscribe rather than read route.snapshot once — Angular reuses this
+    // component instance across navigations matched by the same route config (e.g.
+    // trip A's edit page to trip B's edit page), so a snapshot read in ngOnInit never
+    // re-fires and keeps the previous trip's data in the form under the new URL.
+    this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
+      const id = params.get('id');
+      if (id) {
+        this.isEditMode = true;
+        this.tripId = Number(id);
+        this.loadTrip(this.tripId);
+      }
+    });
   }
 
   // ── Load existing trip (edit mode) ────────────────────────────────────────

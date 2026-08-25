@@ -1,8 +1,8 @@
 import { Component, Input } from '@angular/core';
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
-import { ActivatedRoute, provideRouter, Router } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, provideRouter, Router } from '@angular/router';
 import { ToastController } from '@ionic/angular/standalone';
-import { of, throwError, Subject } from 'rxjs';
+import { of, throwError, Subject, BehaviorSubject } from 'rxjs';
 import { TripViewPage, sanitizeFilename } from './trip-view.page';
 import { TripService } from '../../../core/services/trip.service';
 import { StopResponse, TripResponse } from '../../../core/models/trip.model';
@@ -23,6 +23,7 @@ describe('TripViewPage', () => {
   let tripServiceSpy: jasmine.SpyObj<TripService>;
   let toastCtrlSpy: jasmine.SpyObj<ToastController>;
   let router: Router;
+  let paramMap: BehaviorSubject<ReturnType<typeof convertToParamMap>>;
 
   function stop(overrides: Partial<StopResponse>): StopResponse {
     return {
@@ -74,6 +75,7 @@ describe('TripViewPage', () => {
       Promise.resolve({ present: () => Promise.resolve() } as any),
     );
     tripServiceSpy.getTrip.and.returnValue(of(trip({ id: 1 })));
+    paramMap = new BehaviorSubject(convertToParamMap({ id: '1' }));
 
     TestBed.overrideComponent(TripViewPage, {
       remove: { imports: [TripMapComponent] },
@@ -86,10 +88,7 @@ describe('TripViewPage', () => {
         provideRouter([]),
         { provide: TripService, useValue: tripServiceSpy },
         { provide: ToastController, useValue: toastCtrlSpy },
-        {
-          provide: ActivatedRoute,
-          useValue: { snapshot: { paramMap: { get: () => '1' } } },
-        },
+        { provide: ActivatedRoute, useValue: { paramMap } },
       ],
     }).compileComponents();
 
@@ -145,6 +144,21 @@ describe('TripViewPage', () => {
       expect(component.error).toBe('Trip not found.');
       expect(component.loading).toBeFalse();
       expect(component.trip).toBeNull();
+    });
+
+    it('SCRUM-485: reloads the correct trip when the route param changes without destroying the component', () => {
+      // Angular reuses this component instance for navigations matched by the same
+      // route config (e.g. one trip's detail page to another's) — a paramMap
+      // subscription must re-run loadTrip on every emission, not just once in ngOnInit.
+      tripServiceSpy.getTrip.and.returnValue(of(trip({ id: 1, title: 'Trip One' })));
+      component.ngOnInit();
+      expect(component.trip?.title).toBe('Trip One');
+
+      tripServiceSpy.getTrip.and.returnValue(of(trip({ id: 2, title: 'Trip Two' })));
+      paramMap.next(convertToParamMap({ id: '2' }));
+
+      expect(tripServiceSpy.getTrip).toHaveBeenCalledWith(2);
+      expect(component.trip?.title).toBe('Trip Two');
     });
   });
 
