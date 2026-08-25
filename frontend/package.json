@@ -67,5 +67,11 @@
     "karma-jasmine-html-reporter": "~2.3.0",
     "typescript": "~5.9.0"
   },
-  "description": "TripFlowAI — AI-powered multi-stop trip planning PWA (Ionic + Angular frontend)"
+  "description": "TripFlowAI — AI-powered multi-stop trip planning PWA (Ionic + Angular frontend)",
+  "allowScripts": {
+    "@parcel/watcher@2.5.6": true,
+    "esbuild@0.28.1": true,
+    "lmdb@3.4.2": true,
+    "msgpackr-extract@3.0.4": true
+  }
 }
