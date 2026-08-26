@@ -423,11 +423,12 @@ Case-insensitive substring search over `PUBLIC` trip titles and tags. `q` is req
 
 **Auth:** None required.
 
-**Query params:** `q` (required, non-blank), plus `page`/`size`/`sort` as above.
+**Query params:** `q` (required, non-blank), plus `page`/`size` as above. **`sort` is not honoured** (SCRUM-415) — results are always ordered `createdAt desc, id desc`; passing a non-default `sort` is a 400, not a silently-ignored no-op. Unlike `GET /api/trips`, this endpoint is always in "search mode" (`q` is mandatory), so there's no unfiltered path where `sort` would apply.
 
 **Success (200):** same paged shape as `GET /api/trips`.
 **Errors:**
 - 400 — `q` missing or blank
+- 400 — `sort` present and not the default (`createdAt,desc`)
 
 **Both discovery endpoints deliberately keep the leaner `TripSummaryResponse` shape — no `visitedStopCount`/`completionPercentage` (D-08).** These endpoints are unauthenticated and cross-owner by nature (anyone browsing `PUBLIC` trips), so serving another user's completion progress here would leak it to strangers. `GET /api/trips`'s owner-only `TripOwnerSummaryResponse` is a separate DTO for exactly this reason — do not "fix" this asymmetry by adding the fields here; it is intentional, not an oversight.
 

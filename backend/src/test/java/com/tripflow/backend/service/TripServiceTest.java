@@ -25,6 +25,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
 import com.tripflow.backend.domain.Place;
 import com.tripflow.backend.domain.Stop;
@@ -39,6 +40,7 @@ import com.tripflow.backend.dto.TripSearchFilters;
 import com.tripflow.backend.dto.UpdateTripRequest;
 import com.tripflow.backend.dto.UpsertStopRequest;
 import com.tripflow.backend.exception.ForbiddenException;
+import com.tripflow.backend.exception.InvalidRequestException;
 import com.tripflow.backend.exception.ResourceNotFoundException;
 import com.tripflow.backend.mapper.StopMapper;
 import com.tripflow.backend.mapper.TripMapper;
@@ -523,5 +525,57 @@ public class TripServiceTest {
                 .isInstanceOf(ForbiddenException.class);
 
         verify(tripRepository, never()).delete(any());
+    }
+
+    // ---------- searchPublicTrips (SCRUM-415) ----------
+
+    @Test
+    void searchPublicTrips_blankQuery_throwsInvalidRequest() {
+        assertThatThrownBy(() -> tripService.searchPublicTrips("   ", PageRequest.of(0, 20)))
+                .isInstanceOf(InvalidRequestException.class);
+
+        verify(tripRepository, never()).searchPublicTrips(any(), any());
+    }
+
+    @Test
+    void searchPublicTrips_defaultSort_delegatesToRepository() {
+        Pageable pageable = PageRequest.of(0, 20, Sort.by(Sort.Direction.DESC, "createdAt"));
+        when(tripRepository.searchPublicTrips(eq("paris"), eq(pageable)))
+                .thenReturn(Page.empty());
+
+        tripService.searchPublicTrips("paris", pageable);
+
+        verify(tripRepository).searchPublicTrips("paris", pageable);
+    }
+
+    @Test
+    void searchPublicTrips_noSort_delegatesToRepository() {
+        Pageable pageable = PageRequest.of(0, 20);
+        when(tripRepository.searchPublicTrips(eq("paris"), eq(pageable)))
+                .thenReturn(Page.empty());
+
+        tripService.searchPublicTrips("paris", pageable);
+
+        verify(tripRepository).searchPublicTrips("paris", pageable);
+    }
+
+    @Test
+    void searchPublicTrips_nonDefaultSort_throwsInvalidRequest_withoutCallingRepository() {
+        Pageable pageable = PageRequest.of(0, 20, Sort.by(Sort.Direction.ASC, "title"));
+
+        assertThatThrownBy(() -> tripService.searchPublicTrips("paris", pageable))
+                .isInstanceOf(InvalidRequestException.class);
+
+        verify(tripRepository, never()).searchPublicTrips(any(), any());
+    }
+
+    @Test
+    void searchPublicTrips_defaultSortButAscendingDirection_throwsInvalidRequest() {
+        Pageable pageable = PageRequest.of(0, 20, Sort.by(Sort.Direction.ASC, "createdAt"));
+
+        assertThatThrownBy(() -> tripService.searchPublicTrips("paris", pageable))
+                .isInstanceOf(InvalidRequestException.class);
+
+        verify(tripRepository, never()).searchPublicTrips(any(), any());
     }
 }

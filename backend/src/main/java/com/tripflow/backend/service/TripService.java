@@ -4,6 +4,7 @@ import java.util.ArrayList;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -68,11 +69,20 @@ public class TripService {
      * only — see {@link com.tripflow.backend.repository.TripSearchRepository} javadoc
      * for the explicit full-text-search non-goal.
      */
+    private static final Sort SEARCH_PUBLIC_TRIPS_SORT = Sort.by(Sort.Direction.DESC, "createdAt");
+
     @Transactional(readOnly = true)
     public Page<TripSummaryResponse> searchPublicTrips(String q, Pageable pageable) {
         String trimmed = q == null ? "" : q.trim();
         if (trimmed.isEmpty()) {
             throw new InvalidRequestException("Query parameter 'q' must not be blank");
+        }
+        // SCRUM-415: TripSearchRepositoryImpl hardcodes ORDER BY created_at DESC, id DESC and
+        // never reads pageable.getSort() — silently honoring a non-default `sort` here would be
+        // the exact "well-formed but wrong" bug the finding describes, so reject it instead.
+        if (!pageable.getSort().isEmpty() && !pageable.getSort().equals(SEARCH_PUBLIC_TRIPS_SORT)) {
+            throw new InvalidRequestException(
+                    "Custom 'sort' is not supported on this endpoint; results are always ordered by createdAt desc");
         }
         return tripRepository.searchPublicTrips(trimmed, pageable);
     }
