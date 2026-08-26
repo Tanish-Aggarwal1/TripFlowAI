@@ -1,4 +1,4 @@
-import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
+import { ChangeDetectorRef, Component, inject, ChangeDetectionStrategy } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { IonContent, IonItem, IonInput, IonButton, IonText } from '@ionic/angular';
@@ -9,7 +9,7 @@ import { FieldError } from '../../../core/models/auth.model';
   selector: 'app-signup',
   imports: [ReactiveFormsModule, RouterLink, IonContent, IonItem, IonInput, IonButton, IonText],
   templateUrl: './signup.page.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrls: ['./signup.page.scss'],
 })
 export class SignupPage {
@@ -17,6 +17,7 @@ export class SignupPage {
   private fb = inject(FormBuilder);
   private authService = inject(AuthService);
   private router = inject(Router);
+  private cdr = inject(ChangeDetectorRef);
   form: FormGroup;
   isSubmitting = false;
   generalError: string | null = null;
@@ -58,6 +59,7 @@ export class SignupPage {
       error: (err: Error & { fieldErrors?: FieldError[] }) => {
         this.isSubmitting = false;
         this.applyServerErrors(err);
+        this.cdr.markForCheck();
       },
     });
   }

@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, DestroyRef, inject, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, ChangeDetectionStrategy, DestroyRef, inject, OnInit } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
@@ -56,7 +56,7 @@ interface DayGroup {
   selector: 'app-trip-view',
   templateUrl: 'trip-view.page.html',
   styleUrls: ['trip-view.page.scss'],
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     IonHeader,
     IonToolbar,
@@ -86,6 +86,7 @@ export class TripViewPage implements OnInit {
   private tripService = inject(TripService);
   private toastService = inject(ToastService);
   private destroyRef = inject(DestroyRef);
+  private cdr = inject(ChangeDetectorRef);
 
   trip: TripResponse | null = null;
   loading = true;
@@ -130,6 +131,7 @@ export class TripViewPage implements OnInit {
     this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
       this.tripId = Number(params.get('id'));
       this.loadTrip();
+      this.cdr.markForCheck();
     });
   }
 
@@ -140,10 +142,12 @@ export class TripViewPage implements OnInit {
       next: (trip) => {
         this.trip = trip;
         this.loading = false;
+        this.cdr.markForCheck();
       },
       error: (err) => {
         this.error = err.message;
         this.loading = false;
+        this.cdr.markForCheck();
       },
     });
   }
@@ -250,10 +254,12 @@ export class TripViewPage implements OnInit {
       next: (updated) => {
         this.markingVisitedId = null;
         this.onStopUpdated(updated);
+        this.cdr.markForCheck();
       },
       error: (err) => {
         this.markingVisitedId = null;
         this.toastService.showError(err, 'Could not update stop status.');
+        this.cdr.markForCheck();
       },
     });
   }
@@ -282,13 +288,18 @@ export class TripViewPage implements OnInit {
         this.trip = updated;
         this.optimizing = false;
         this.justOptimized = true;
-        setTimeout(() => (this.justOptimized = false), 1200);
+        setTimeout(() => {
+          this.justOptimized = false;
+          this.cdr.markForCheck();
+        }, 1200);
+        this.cdr.markForCheck();
 
         await this.toastService.showSuccess('Route optimized.');
       },
       error: (err) => {
         this.optimizing = false;
         this.toastService.showError(err, 'Could not optimize route.');
+        this.cdr.markForCheck();
       },
     });
   }
@@ -302,10 +313,12 @@ export class TripViewPage implements OnInit {
       next: (blob) => {
         this.exporting = false;
         downloadBlob(blob, filename);
+        this.cdr.markForCheck();
       },
       error: (err) => {
         this.exporting = false;
         this.toastService.showError(err, 'Could not export calendar.');
+        this.cdr.markForCheck();
       },
     });
   }
@@ -319,10 +332,12 @@ export class TripViewPage implements OnInit {
       next: (blob) => {
         this.exportingPdf = false;
         downloadBlob(blob, filename);
+        this.cdr.markForCheck();
       },
       error: (err) => {
         this.exportingPdf = false;
         this.toastService.showError(err, 'Could not export PDF.');
+        this.cdr.markForCheck();
       },
     });
   }

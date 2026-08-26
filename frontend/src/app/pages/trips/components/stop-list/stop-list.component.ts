@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy } from '@angular/core';
+import { ChangeDetectorRef, Component, Input, Output, EventEmitter, ChangeDetectionStrategy, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
   IonItem, IonLabel, IonButton, IonIcon,
@@ -12,7 +12,7 @@ import { UpsertStopRequest } from '../../../../core/models/trip.model';
   selector: 'app-stop-list',
   templateUrl: 'stop-list.component.html',
   styleUrls: ['stop-list.component.scss'],
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     FormsModule,
      IonItem, IonLabel, IonButton, IonIcon,
@@ -33,6 +33,8 @@ export class StopListComponent {
   newAddress = '';
   newNotes   = '';
   formError  = '';
+
+  private cdr = inject(ChangeDetectorRef);
 
   constructor() {
     addIcons({ add, trash });
@@ -75,12 +77,14 @@ export class StopListComponent {
     this.stops = [...this.stops, stop];
     this.stopsChanged.emit(this.stops);
     this.resetForm();
+    this.cdr.markForCheck();
   }
 
   // ── Remove a stop ─────────────────────────────────────────────────────────
   removeStop(index: number): void {
     this.stops = this.stops.filter((_, i) => i !== index);
     this.stopsChanged.emit(this.stops);
+    this.cdr.markForCheck();
   }
 
   // ── Reorder via Ionic reorder group ──────────────────────────────────────
@@ -91,6 +95,7 @@ handleReorder(event: CustomEvent<ItemReorderEventDetail>): void {
     this.stops = reordered;
     this.stopsChanged.emit(this.stops);
     event.detail.complete();
+    this.cdr.markForCheck();
   }
 
   // ── Reset add form ────────────────────────────────────────────────────────

@@ -1,7 +1,7 @@
 import {
-  Component, Input, Output, EventEmitter,
+  ChangeDetectorRef, Component, Input, Output, EventEmitter,
   ElementRef, ViewChild, OnChanges, OnDestroy, SimpleChanges, AfterViewInit,
-  ChangeDetectionStrategy
+  ChangeDetectionStrategy, inject
 } from '@angular/core';
 import { IonButton, IonSpinner, IonIcon } from '@ionic/angular';
 import { addIcons } from 'ionicons';
@@ -16,7 +16,7 @@ import { TripResponse, StopResponse } from '../../../../core/models/trip.model';
   selector: 'app-trip-map',
   imports: [IonButton, IonSpinner, IonIcon],
   templateUrl: './trip-map.component.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrls: ['./trip-map.component.scss'],
 })
 export class TripMapComponent implements AfterViewInit, OnChanges, OnDestroy {
@@ -26,6 +26,7 @@ export class TripMapComponent implements AfterViewInit, OnChanges, OnDestroy {
   // Not yet consumed by any host — the intended hook for a future map-click stop
   // picker (see SCRUM-367/368). Kept and tested rather than removed.
   @Output() stopSelected = new EventEmitter<StopResponse>();
+  private cdr = inject(ChangeDetectorRef);
   constructor() {
     addIcons({ navigate });
   }
@@ -106,6 +107,7 @@ export class TripMapComponent implements AfterViewInit, OnChanges, OnDestroy {
     } catch (err) {
       console.error('Mapbox init failed', err);
       this.mapFailed = true;
+      this.cdr.markForCheck();
       return;
     }
 
@@ -114,6 +116,7 @@ export class TripMapComponent implements AfterViewInit, OnChanges, OnDestroy {
     this.map.on('error', (e) => {
       console.error('Mapbox tile/style error', e?.error);
       this.mapFailed = true;
+      this.cdr.markForCheck();
     });
 
     this.map.on('load', () => this.renderTripData());

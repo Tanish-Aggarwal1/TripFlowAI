@@ -1,4 +1,4 @@
-import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
+import { ChangeDetectorRef, Component, inject, ChangeDetectionStrategy } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { Subject, debounceTime, distinctUntilChanged, switchMap } from 'rxjs';
@@ -26,7 +26,7 @@ import { AiTripPromptComponent } from '../components/ai-trip-prompt/ai-trip-prom
   selector: 'app-dashboard',
   templateUrl: 'dashboard.page.html',
   styleUrls: ['dashboard.page.scss'],
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     IonHeader, IonToolbar, IonTitle, IonContent, IonButton, IonButtons,
     IonList, IonItem, IonLabel, IonBadge, IonIcon, IonSearchbar, IonSelect, IonSelectOption,
@@ -42,6 +42,7 @@ export class DashboardPage implements ViewWillEnter {
     private router = inject(Router);
     private alertCtrl = inject(AlertController);
     private toastService = inject(ToastService);
+    private cdr = inject(ChangeDetectorRef);
 
   trips: TripOwnerSummaryResponse[] = [];
   loading = true;
@@ -85,10 +86,12 @@ export class DashboardPage implements ViewWillEnter {
         next: (page) => {
           this.trips = page.content;
           this.loading = false;
+          this.cdr.markForCheck();
         },
         error: (err) => {
           this.error = err.message;
           this.loading = false;
+          this.cdr.markForCheck();
         },
       });
   }
@@ -139,10 +142,12 @@ export class DashboardPage implements ViewWillEnter {
       next: (page) => {
         this.trips = page.content;
         this.loading = false;
+        this.cdr.markForCheck();
       },
       error: (err) => {
         this.error = err.message;
         this.loading = false;
+        this.cdr.markForCheck();
       },
     });
   }
@@ -204,6 +209,7 @@ export class DashboardPage implements ViewWillEnter {
             this.tripService.deleteTrip(trip.id).subscribe({
               next: () => {
                 this.trips = this.trips.filter((t) => t.id !== trip.id);
+                this.cdr.markForCheck();
               },
               error: (err) => {
                 this.toastService.showError(err, 'Could not delete trip.');

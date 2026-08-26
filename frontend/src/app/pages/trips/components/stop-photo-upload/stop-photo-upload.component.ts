@@ -1,4 +1,4 @@
-import { Component, EventEmitter, inject, Input, Output, ChangeDetectionStrategy } from '@angular/core';
+import { ChangeDetectorRef, Component, EventEmitter, inject, Input, Output, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
   IonItem,
@@ -23,7 +23,7 @@ import { ToastService } from '../../../../core/services/toast.service';
   selector: 'app-stop-photo-upload',
   templateUrl: 'stop-photo-upload.component.html',
   styleUrls: ['stop-photo-upload.component.scss'],
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     FormsModule,
     IonItem,
@@ -42,6 +42,7 @@ export class StopPhotoUploadComponent {
 
   private stopPhotoService = inject(StopPhotoService);
   private toastService = inject(ToastService);
+  private cdr = inject(ChangeDetectorRef);
 
   selectedFile: File | null = null;
   previewUrl: string | null = null;
@@ -97,11 +98,13 @@ export class StopPhotoUploadComponent {
             this.uploading = false;
             this.uploaded.emit(event.done);
           }
+          this.cdr.markForCheck();
         },
         error: (err) => {
           this.uploading = false;
           this.progress = 0;
           this.toastService.showError(err, 'Could not upload photo.', 3000);
+          this.cdr.markForCheck();
         },
       });
   }
