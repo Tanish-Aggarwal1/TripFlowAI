@@ -16,6 +16,8 @@ import org.springframework.web.bind.annotation.RestController;
 import com.tripflow.backend.dto.PhotoSignatureResponse;
 import com.tripflow.backend.dto.CreateStopPhotoRequest;
 import com.tripflow.backend.dto.StopPhotoResponse;
+import com.tripflow.backend.ratelimit.RateLimitProperties;
+import com.tripflow.backend.ratelimit.RateLimiterService;
 import com.tripflow.backend.security.UserPrincipal;
 import com.tripflow.backend.service.StopPhotoService;
 
@@ -31,11 +33,14 @@ import lombok.AllArgsConstructor;
 public class StopPhotoController {
 
     private final StopPhotoService stopPhotoService;
+    private final RateLimiterService rateLimiterService;
+    private final RateLimitProperties rateLimitProperties;
 
     @Operation(summary = "Get a Cloudinary upload signature", description = "Owner-only. Issues signed upload parameters for the client to upload directly to Cloudinary.")
     @PostMapping("/photo-signature")
     public ResponseEntity<PhotoSignatureResponse> getUploadSignature(
             @PathVariable Long stopId, @AuthenticationPrincipal UserPrincipal principal) {
+        rateLimiterService.checkLimit("photo-signature:" + principal.userId(), rateLimitProperties.photoSignature());
         return ResponseEntity.ok(stopPhotoService.getUploadSignature(stopId, principal.userId()));
     }
 
