@@ -169,15 +169,19 @@ All supplied filters AND together (e.g. `?search=paris&status=ACTIVE&visibility=
 | Field | Limit |
 | --- | --- |
 | `title` | max 150 chars |
+| `description` | max 5000 chars (SCRUM-417) |
 | `tags` | max 20 elements, each max 50 chars |
 | `stops` | max 50 elements (`UpdateTripRequest.MAX_STOPS`) — each stop costs a VROOM job on `/optimize` plus a waypoint on the follow-up directions call, both against a 500 req/day ORS quota |
 | `stops[].name` | max 200 chars |
 | `stops[].address` | max 300 chars |
 | `stops[].externalPlaceId` | max 150 chars |
+| `stops[].notes` | max 2000 chars (SCRUM-417) |
 | `stops[].latitude` | -90.0 to 90.0 |
 | `stops[].longitude` | -180.0 to 180.0 |
 
 Same per-field limits apply to `PUT /api/trips/{id}` (via `UpsertStopRequest` — see that endpoint's section for how it differs from `CreateStopRequest`) and the nested stop endpoints (`POST`/`PUT /api/trips/{tripId}/stops[/{stopId}]`, which share `CreateStopRequest`/`UpdateStopRequest`).
+
+**Global request-body cap (SCRUM-417):** independent of the per-field limits above, every request body is capped at `app.request.max-body-size-bytes` (default 5 MiB) by `RequestSizeLimitFilter` — a backstop against a payload sized to exhaust heap/storage before Bean Validation ever runs, since Tomcat's own size properties (`max-http-form-post-size`, `max-swallow-size`) don't cover JSON bodies. A body over the cap is rejected with `413 Payload Too Large`, whether the size is declared upfront via `Content-Length` or only discovered mid-read (e.g. chunked transfer encoding).
 
 ### GET /api/trips/{id}
 Owner sees any trip; non-owner only sees `PUBLIC` trips.
@@ -625,7 +629,7 @@ Owner-only. Persists a photo reference after the client has uploaded directly to
   "createdAt": "ISO-8601 datetime"
 }
 ```
-**Errors:** 403 (not owner), 404 (stop not found), 400 (validation — `url` required)
+**Errors:** 403 (not owner), 404 (stop not found), 400 (validation — `url` required, max 2048 chars; `cloudinaryPublicId` max 255 chars; `caption` max 500 chars — SCRUM-417)
 
 ### GET /api/stops/{stopId}/photos
 Owner sees any stop's photos; non-owner only if the stop's parent trip is `PUBLIC`. Intentionally **not** paginated (see REF-21 note under `GET /api/trips`) — there is no application-level cap on photos per stop today.
@@ -670,5 +674,6 @@ Notes:
 | Database constraint violation not already mapped to a specific 409 (e.g. `DuplicateEmailException`) | 409 | `"The request conflicts with existing data"` — no constraint name, table name, or SQL fragment is ever included in the response body |
 | Unsupported HTTP method on an existing route | 405 | the framework's standard method-not-allowed message |
 | No matching route | 404 | `"No matching route for this request"` |
+| Request body over the global size cap, discovered mid-read rather than via `Content-Length` (SCRUM-417) | 413 | `"Request body exceeds the maximum allowed size"` |
 
 All of the above log at `WARN`, never `ERROR` — they are ordinary client-error conditions, not application bugs.

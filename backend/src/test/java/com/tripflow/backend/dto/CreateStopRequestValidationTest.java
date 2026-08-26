@@ -100,4 +100,38 @@ class CreateStopRequestValidationTest {
 
 		assertThat(violations).anyMatch(v -> v.getPropertyPath().toString().equals("externalPlaceId"));
 	}
+
+	@Test
+	void notesOver2000Chars_isRejected() {
+		CreateStopRequest req = new CreateStopRequest("Cottage", 45.0, -79.9, null, null, "x".repeat(2001));
+
+		Set<ConstraintViolation<CreateStopRequest>> violations = validator.validate(req);
+
+		assertThat(violations).anyMatch(v -> v.getPropertyPath().toString().equals("notes"));
+	}
+
+	@Test
+	void notesExactly2000Chars_isAccepted() {
+		CreateStopRequest req = new CreateStopRequest("Cottage", 45.0, -79.9, null, null, "x".repeat(2000));
+
+		assertThat(validator.validate(req)).isEmpty();
+	}
+
+	@Test
+	void updateStopRequest_notesOver2000Chars_isRejected() {
+		UpdateStopRequest req = new UpdateStopRequest("Cottage", 45.0, -79.9, null, null, "x".repeat(2001), null);
+
+		Set<ConstraintViolation<UpdateStopRequest>> violations = validator.validate(req);
+
+		assertThat(violations).anyMatch(v -> v.getPropertyPath().toString().equals("notes"));
+	}
+
+	@Test
+	void upsertStopRequest_notesOver2000Chars_isRejected() {
+		UpsertStopRequest req = new UpsertStopRequest(1L, "Cottage", 45.0, -79.9, null, null, "x".repeat(2001));
+
+		Set<ConstraintViolation<UpsertStopRequest>> violations = validator.validate(req);
+
+		assertThat(violations).anyMatch(v -> v.getPropertyPath().toString().equals("notes"));
+	}
 }

@@ -20,6 +20,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tripflow.backend.dto.TripSummaryResponse;
 import com.tripflow.backend.ratelimit.RateLimitExceededException;
 import com.tripflow.backend.ratelimit.RateLimitProperties;
@@ -53,6 +54,12 @@ class DiscoveryControllerTest {
 	// of classes={...} narrowing; addFilters=false above means it never actually runs.
 	@MockitoBean
 	private JwtService jwtService;
+
+	// RequestSizeLimitFilter (SCRUM-417) is likewise a @Component Filter always constructed
+	// here; its ObjectMapper constructor dependency needs a stand-in since JacksonConfig's
+	// bean isn't part of this narrowed slice.
+	@MockitoBean
+	private ObjectMapper objectMapper;
 
 	@Test
 	void search_qOverMaxLength_returns400WithoutCallingService() throws Exception {
