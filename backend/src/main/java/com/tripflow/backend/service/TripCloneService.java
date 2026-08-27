@@ -11,7 +11,6 @@ import com.tripflow.backend.domain.User;
 import com.tripflow.backend.domain.enums.TripStatus;
 import com.tripflow.backend.domain.enums.TripVisibility;
 import com.tripflow.backend.dto.TripResponse;
-import com.tripflow.backend.exception.ResourceNotFoundException;
 import com.tripflow.backend.mapper.TripMapper;
 import com.tripflow.backend.repository.TripRepository;
 import com.tripflow.backend.repository.UserRepository;
@@ -35,10 +34,11 @@ public class TripCloneService {
     private final TripRepository tripRepository;
     private final UserRepository userRepository;
     private final TripMapper tripMapper;
+    private final TripOwnershipService tripOwnershipService;
 
     @Transactional
     public TripResponse cloneTrip(Long tripId, Long requesterId) {
-        Trip original = loadVisibleTrip(tripId, requesterId);
+        Trip original = tripOwnershipService.loadVisibleTrip(tripId, requesterId);
         User requester = userRepository.getReferenceById(requesterId);
 
         Trip clone = new Trip();
@@ -70,18 +70,5 @@ public class TripCloneService {
         log.info("Trip cloned sourceId={} newId={} ownerId={} stops={}",
                 original.getId(), saved.getId(), requesterId, saved.getStops().size());
         return tripMapper.toResponse(saved);
-    }
-
-    /** Owner or public-trip access; PRIVATE + non-owner is reported as not-found (no existence leak). */
-    private Trip loadVisibleTrip(Long tripId, Long requesterId) {
-        Trip trip = tripRepository.findWithStopsById(tripId)
-                .orElseThrow(() -> new ResourceNotFoundException("Trip not found: " + tripId));
-
-        boolean isOwner = trip.getUser().getId().equals(requesterId);
-        if (trip.getVisibility() == TripVisibility.PRIVATE && !isOwner) {
-            log.debug("Private trip clone denied tripId={} requesterId={}", tripId, requesterId);
-            throw new ResourceNotFoundException("Trip not found: " + tripId);
-        }
-        return trip;
     }
 }

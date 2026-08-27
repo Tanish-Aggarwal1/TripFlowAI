@@ -34,6 +34,7 @@ import com.tripflow.backend.exception.InvalidPhotoUrlException;
 import com.tripflow.backend.exception.ResourceNotFoundException;
 import com.tripflow.backend.repository.StopPhotoRepository;
 import com.tripflow.backend.repository.StopRepository;
+import com.tripflow.backend.repository.TripRepository;
 
 /**
  * Mirrors {@link TripOwnershipServiceTest}/{@link StopServiceTest}: fast Mockito-only
@@ -47,6 +48,7 @@ class StopPhotoServiceTest {
     @Mock private StopRepository stopRepository;
     @Mock private StopPhotoRepository stopPhotoRepository;
     @Mock private CloudinarySigningService signingService;
+    @Mock private TripRepository tripRepository;
 
     private final CloudinaryProperties cloudinaryProperties =
             new CloudinaryProperties("demo", "key", "secret");
@@ -55,8 +57,12 @@ class StopPhotoServiceTest {
 
     @BeforeEach
     void setUp() {
+        // Real TripOwnershipService (not mocked), matching TripServiceTest's pattern: the
+        // trip here always comes in pre-loaded via the Stop fetch, so isVisible never
+        // touches tripRepository — the mock is only present to satisfy the constructor.
+        TripOwnershipService tripOwnershipService = new TripOwnershipService(tripRepository);
         stopPhotoService = new StopPhotoService(
-                stopRepository, stopPhotoRepository, signingService, cloudinaryProperties);
+                stopRepository, stopPhotoRepository, signingService, cloudinaryProperties, tripOwnershipService);
     }
 
     private Stop stopOwnedBy(Long stopId, Long ownerId, TripVisibility visibility) {

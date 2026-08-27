@@ -60,7 +60,8 @@ class TripCloneServiceIT {
 	@BeforeEach
 	void setUp() {
 		TripMapper tripMapper = new TripMapper(new StopMapper());
-		tripCloneService = new TripCloneService(tripRepository, userRepository, tripMapper);
+		tripCloneService = new TripCloneService(
+				tripRepository, userRepository, tripMapper, new TripOwnershipService(tripRepository));
 	}
 
 	private User saveUser(String suffix) {
