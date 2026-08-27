@@ -327,12 +327,18 @@
 						<goals>
 							<goal>prepare-agent</goal>
 						</goals>
+						<configuration>
+							<append>false</append>
+						</configuration>
 					</execution>
 					<execution>
 						<id>prepare-agent-integration</id>
 						<goals>
 							<goal>prepare-agent-integration</goal>
 						</goals>
+						<configuration>
+							<append>false</append>
+						</configuration>
 					</execution>
 					<execution>
 						<id>merge-results</id>
@@ -345,7 +351,8 @@
 								<fileSet>
 									<directory>${project.build.directory}</directory>
 									<includes>
-										<include>*.exec</include>
+										<include>jacoco.exec</include>
+										<include>jacoco-it.exec</include>
 									</includes>
 								</fileSet>
 							</fileSets>
