@@ -1,4 +1,4 @@
-import { Component, EventEmitter, inject, Output, ChangeDetectionStrategy } from '@angular/core';
+import { ChangeDetectorRef, Component, EventEmitter, inject, Output, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
   IonItem,
@@ -29,7 +29,7 @@ const MAX_INTERESTS = 10;
   selector: 'app-ai-trip-prompt',
   templateUrl: 'ai-trip-prompt.component.html',
   styleUrls: ['ai-trip-prompt.component.scss'],
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     FormsModule,
     IonItem,
@@ -48,6 +48,7 @@ export class AiTripPromptComponent {
 
   private tripService = inject(TripService);
   private toastService = inject(ToastService);
+  private cdr = inject(ChangeDetectorRef);
 
   readonly dayOptions = Array.from({ length: 14 }, (_, i) => i + 1);
 
@@ -124,10 +125,12 @@ export class AiTripPromptComponent {
       next: (trip) => {
         this.submitting = false;
         this.created.emit(trip);
+        this.cdr.markForCheck();
       },
       error: (err) => {
         this.submitting = false;
         this.toastService.showError(err, 'Could not generate trip.', 3000);
+        this.cdr.markForCheck();
       },
     });
   }

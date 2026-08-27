@@ -1,4 +1,4 @@
-import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
+import { ChangeDetectorRef, Component, inject, ChangeDetectionStrategy } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { IonContent, IonItem, IonInput, IonButton, IonText } from '@ionic/angular';
@@ -8,7 +8,7 @@ import { AuthService } from '../../../core/services/auth.service';
   selector: 'app-login',
   imports: [ReactiveFormsModule, RouterLink, IonContent, IonItem, IonInput, IonButton, IonText],
   templateUrl: './login.page.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrls: ['./login.page.scss'],
 })
 export class LoginPage {
@@ -16,6 +16,7 @@ export class LoginPage {
   private fb = inject(FormBuilder);
   private authService = inject(AuthService);
   private router = inject(Router);
+  private cdr = inject(ChangeDetectorRef);
   form: FormGroup;
   isSubmitting = false;
   generalError: string | null = null;
@@ -47,6 +48,7 @@ export class LoginPage {
         this.isSubmitting = false;
         // UC-02: same generic message regardless of which field was wrong
         this.generalError = err.message;
+        this.cdr.markForCheck();
       },
     });
   }

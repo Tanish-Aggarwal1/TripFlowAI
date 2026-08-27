@@ -17,7 +17,8 @@ import jakarta.validation.constraints.NotNull;
 @ConfigurationProperties(prefix = "app.ratelimit")
 public record RateLimitProperties(@NotNull @Valid Limit aiSuggest, @NotNull @Valid Limit optimize,
 		@NotNull @Valid Limit aiGenerate, @NotNull @Valid Limit login, @NotNull @Valid Limit register,
-		@NotNull @Valid Limit refresh, @NotNull @Valid Limit discoverySearch) {
+		@NotNull @Valid Limit refresh, @NotNull @Valid Limit discoverySearch, @NotNull @Valid Limit photoSignature,
+		@NotNull @Valid Limit tripCreate, @NotNull @Valid Limit tripClone) {
 
 	public record Limit(int capacity, @NotNull Duration window) {
 	}

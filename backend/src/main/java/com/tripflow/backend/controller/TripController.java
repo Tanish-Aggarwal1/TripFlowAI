@@ -91,6 +91,7 @@ public class TripController {
     public ResponseEntity<TripResponse> createTrip(
             @RequestBody @Valid CreateTripRequest request,
             @AuthenticationPrincipal UserPrincipal principal) {
+        rateLimiterService.checkLimit("trip-create:" + principal.userId(), rateLimitProperties.tripCreate());
         return new ResponseEntity<>(tripService.createTrip(principal.userId(), request), HttpStatus.CREATED);
     }
 
@@ -140,6 +141,7 @@ public class TripController {
     @PostMapping("/{id}/clone")
     public ResponseEntity<TripResponse> cloneTrip(
             @PathVariable Long id, @AuthenticationPrincipal UserPrincipal principal) {
+        rateLimiterService.checkLimit("trip-clone:" + principal.userId(), rateLimitProperties.tripClone());
         return new ResponseEntity<>(tripCloneService.cloneTrip(id, principal.userId()), HttpStatus.CREATED);
     }
     

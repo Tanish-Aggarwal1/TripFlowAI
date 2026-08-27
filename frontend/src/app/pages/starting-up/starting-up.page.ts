@@ -14,7 +14,7 @@ const POLL_INTERVAL_MS = 4000;
   selector: 'app-starting-up',
   templateUrl: 'starting-up.page.html',
   styleUrls: ['starting-up.page.scss'],
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [IonContent, IonSpinner],
 })
 export class StartingUpPage implements OnInit, OnDestroy {

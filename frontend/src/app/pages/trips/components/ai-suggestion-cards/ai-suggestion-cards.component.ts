@@ -1,4 +1,5 @@
 import {
+  ChangeDetectorRef,
   Component,
   EventEmitter,
   inject,
@@ -33,7 +34,7 @@ interface SuggestionCardState {
   selector: 'app-ai-suggestion-cards',
   templateUrl: 'ai-suggestion-cards.component.html',
   styleUrls: ['ai-suggestion-cards.component.scss'],
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [IonButton, IonIcon, IonSpinner],
 })
 export class AiSuggestionCardsComponent implements OnChanges {
@@ -44,6 +45,7 @@ export class AiSuggestionCardsComponent implements OnChanges {
 
   private tripService = inject(TripService);
   private toastService = inject(ToastService);
+  private cdr = inject(ChangeDetectorRef);
 
   cards: SuggestionCardState[] = [];
 
@@ -81,11 +83,13 @@ export class AiSuggestionCardsComponent implements OnChanges {
           card.accepting = false;
           card.accepted = true;
           this.stopAdded.emit(stop);
+          this.cdr.markForCheck();
           await this.toastService.showSuccess(`${stop.name} added to your trip.`);
         },
         error: (err) => {
           card.accepting = false;
           this.toastService.showError(err, 'Could not add stop.');
+          this.cdr.markForCheck();
         },
       });
   }

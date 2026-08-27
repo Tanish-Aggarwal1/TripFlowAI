@@ -1,4 +1,4 @@
-import { Component, EventEmitter, inject, Input, Output, ChangeDetectionStrategy } from '@angular/core';
+import { ChangeDetectorRef, Component, EventEmitter, inject, Input, Output, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
   IonItem,
@@ -27,7 +27,7 @@ import { ToastService } from '../../../../core/services/toast.service';
   selector: 'app-ai-preferences-form',
   templateUrl: 'ai-preferences-form.component.html',
   styleUrls: ['ai-preferences-form.component.scss'],
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     FormsModule,
     IonItem,
@@ -47,6 +47,7 @@ export class AiPreferencesFormComponent {
 
   private tripService = inject(TripService);
   private toastService = inject(ToastService);
+  private cdr = inject(ChangeDetectorRef);
 
   interestInput = '';
   interests: string[] = [];
@@ -103,10 +104,12 @@ export class AiPreferencesFormComponent {
       next: (response) => {
         this.submitting = false;
         this.suggested.emit(response);
+        this.cdr.markForCheck();
       },
       error: (err) => {
         this.submitting = false;
         this.toastService.showError(err, 'Could not generate suggestions.', 3000);
+        this.cdr.markForCheck();
       },
     });
   }

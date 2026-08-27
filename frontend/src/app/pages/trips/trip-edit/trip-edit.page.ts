@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, DestroyRef, inject, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, ChangeDetectionStrategy, DestroyRef, inject, OnInit } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -37,7 +37,7 @@ import { StopListComponent } from '../components/stop-list/stop-list.component';
   selector: 'app-trip-edit',
   templateUrl: 'trip-edit.page.html',
   styleUrls: ['trip-edit.page.scss'],
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     FormsModule,
     IonHeader,
@@ -64,6 +64,7 @@ export class TripEditPage implements OnInit {
   private alertCtrl = inject(AlertController);
   private toastService = inject(ToastService);
   private destroyRef = inject(DestroyRef);
+  private cdr = inject(ChangeDetectorRef);
 
   // ── Mode ──────────────────────────────────────────────────────────────────
   isEditMode = false;
@@ -99,6 +100,7 @@ export class TripEditPage implements OnInit {
         this.isEditMode = true;
         this.tripId = Number(id);
         this.loadTrip(this.tripId);
+        this.cdr.markForCheck();
       }
     });
   }
@@ -126,10 +128,12 @@ export class TripEditPage implements OnInit {
           notes: s.notes ?? undefined,
         }));
         this.loading = false;
+        this.cdr.markForCheck();
       },
       error: (err) => {
         this.error = err.message;
         this.loading = false;
+        this.cdr.markForCheck();
       },
     });
   }
@@ -175,6 +179,7 @@ export class TripEditPage implements OnInit {
         error: (err) => {
           this.saving = false;
           this.error = err.message;
+          this.cdr.markForCheck();
         },
       });
     } else {
@@ -196,6 +201,7 @@ export class TripEditPage implements OnInit {
         error: (err) => {
           this.saving = false;
           this.error = err.message;
+          this.cdr.markForCheck();
         },
       });
     }
