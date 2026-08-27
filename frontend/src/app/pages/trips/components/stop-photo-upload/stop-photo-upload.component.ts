@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, EventEmitter, inject, Input, Output, ChangeDetectionStrategy } from '@angular/core';
+import { ChangeDetectorRef, Component, EventEmitter, inject, Input, Output, ChangeDetectionStrategy, OnDestroy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
   IonItem,
@@ -14,6 +14,10 @@ import { camera, checkmark, close } from 'ionicons/icons';
 import { StopPhotoService } from '../../../../core/services/stop-photo.service';
 import { StopPhotoResponse } from '../../../../core/models/trip.model';
 import { ToastService } from '../../../../core/services/toast.service';
+
+// Mirrors StopPhotoService.MAX_UPLOAD_BYTES (backend) / the Cloudinary max_file_size
+// signed for this upload — reject oversized files before the network round trip.
+const MAX_UPLOAD_BYTES = 10_000_000;
 
 // SCRUM-164: picker → signature → direct-to-Cloudinary → persist. File bytes
 // never hit our backend (see StopPhotoService.uploadPhoto). Gallery/thumbnail
@@ -35,7 +39,7 @@ import { ToastService } from '../../../../core/services/toast.service';
     IonProgressBar,
   ],
 })
-export class StopPhotoUploadComponent {
+export class StopPhotoUploadComponent implements OnDestroy {
   @Input({ required: true }) stopId!: number;
   @Output() uploaded = new EventEmitter<StopPhotoResponse>();
   @Output() cancelled = new EventEmitter<void>();
@@ -58,17 +62,24 @@ export class StopPhotoUploadComponent {
 
   onFileSelected(event: Event): void {
     this.formError = '';
+    this.revokePreview();
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0] ?? null;
 
     if (!file) {
       this.selectedFile = null;
-      this.previewUrl = null;
       return;
     }
     if (!file.type.startsWith('image/')) {
       this.formError = 'Please choose an image file.';
       input.value = '';
+      this.selectedFile = null;
+      return;
+    }
+    if (file.size > MAX_UPLOAD_BYTES) {
+      this.formError = 'Photo must be 10MB or smaller.';
+      input.value = '';
+      this.selectedFile = null;
       return;
     }
 
@@ -96,6 +107,7 @@ export class StopPhotoUploadComponent {
             this.progress = event.progress;
           } else {
             this.uploading = false;
+            this.revokePreview();
             this.uploaded.emit(event.done);
           }
           this.cdr.markForCheck();
@@ -110,9 +122,18 @@ export class StopPhotoUploadComponent {
   }
 
   cancel(): void {
+    this.revokePreview();
+    this.cancelled.emit();
+  }
+
+  ngOnDestroy(): void {
+    this.revokePreview();
+  }
+
+  private revokePreview(): void {
     if (this.previewUrl) {
       URL.revokeObjectURL(this.previewUrl);
+      this.previewUrl = null;
     }
-    this.cancelled.emit();
   }
 }

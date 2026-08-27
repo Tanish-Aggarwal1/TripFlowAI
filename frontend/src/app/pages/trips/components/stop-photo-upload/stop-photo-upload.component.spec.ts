@@ -66,6 +66,56 @@ describe('StopPhotoUploadComponent', () => {
     expect(component.selectedFile).toBeNull();
   });
 
+  it('rejects a file over 10MB on selection', () => {
+    const file = new File(['x'], 'huge.jpg', { type: 'image/jpeg' });
+    Object.defineProperty(file, 'size', { value: 10_000_001 });
+    const input = { files: [file], value: '' } as unknown as HTMLInputElement;
+
+    component.onFileSelected({ target: input } as unknown as Event);
+
+    expect(component.formError).toBe('Photo must be 10MB or smaller.');
+    expect(component.selectedFile).toBeNull();
+  });
+
+  it('revokes the previous preview URL when a new file is picked', () => {
+    const revokeSpy = spyOn(URL, 'revokeObjectURL');
+    spyOn(URL, 'createObjectURL').and.returnValues('blob:one', 'blob:two');
+    const file1 = new File(['x'], 'a.jpg', { type: 'image/jpeg' });
+    const file2 = new File(['x'], 'b.jpg', { type: 'image/jpeg' });
+
+    component.onFileSelected({ target: { files: [file1], value: '' } } as unknown as Event);
+    expect(component.previewUrl).toBe('blob:one');
+
+    component.onFileSelected({ target: { files: [file2], value: '' } } as unknown as Event);
+
+    expect(revokeSpy).toHaveBeenCalledWith('blob:one');
+    expect(component.previewUrl).toBe('blob:two');
+  });
+
+  it('revokes the preview URL after a successful upload', () => {
+    const revokeSpy = spyOn(URL, 'revokeObjectURL');
+    spyOn(URL, 'createObjectURL').and.returnValue('blob:preview');
+    const file = new File(['x'], 'photo.jpg', { type: 'image/jpeg' });
+    component.onFileSelected({ target: { files: [file], value: '' } } as unknown as Event);
+    photoServiceSpy.uploadPhoto.and.returnValue(of({ done: photo }));
+
+    component.submit();
+
+    expect(revokeSpy).toHaveBeenCalledWith('blob:preview');
+    expect(component.previewUrl).toBeNull();
+  });
+
+  it('revokes the preview URL on destroy', () => {
+    const revokeSpy = spyOn(URL, 'revokeObjectURL');
+    spyOn(URL, 'createObjectURL').and.returnValue('blob:preview');
+    const file = new File(['x'], 'photo.jpg', { type: 'image/jpeg' });
+    component.onFileSelected({ target: { files: [file], value: '' } } as unknown as Event);
+
+    fixture.destroy();
+
+    expect(revokeSpy).toHaveBeenCalledWith('blob:preview');
+  });
+
   it('tracks progress events without completing', () => {
     const file = new File(['x'], 'photo.jpg', { type: 'image/jpeg' });
     component.selectedFile = file;
