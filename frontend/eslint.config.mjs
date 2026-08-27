@@ -16,13 +16,6 @@ export default tseslint.config(
       },
     },
     rules: {
-      // Angular 22's own `ng update` migration set ChangeDetectionStrategy.Eager
-      // on every pre-existing component to preserve pre-v22 default CD behavior,
-      // rather than risk switching them to real OnPush sight-unseen. Enforcing
-      // this rule would fight that migration's own choice; converting each
-      // component to genuine OnPush is real, separate work (needs auditing
-      // each one's mutation patterns), not a version-bump task.
-      '@angular-eslint/prefer-on-push-component-change-detection': 'off',
       '@angular-eslint/component-class-suffix': ['error', { suffixes: ['Page', 'Component'] }],
       '@angular-eslint/component-selector': ['error', { type: 'element', prefix: 'app', style: 'kebab-case' }],
       '@angular-eslint/directive-selector': ['error', { type: 'attribute', prefix: 'app', style: 'camelCase' }],

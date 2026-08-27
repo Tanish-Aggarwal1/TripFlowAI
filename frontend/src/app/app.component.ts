@@ -14,7 +14,7 @@ import { SessionStateService } from './core/services/session-state.service';
 @Component({
   selector: 'app-root',
   templateUrl: 'app.component.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [IonApp, IonButton, IonButtons, IonRouterOutlet, IonTitle, IonToolbar],
 })
 export class AppComponent {

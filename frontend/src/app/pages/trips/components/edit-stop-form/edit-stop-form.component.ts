@@ -1,4 +1,4 @@
-import { Component, EventEmitter, inject, Input, OnInit, Output, ChangeDetectionStrategy } from '@angular/core';
+import { ChangeDetectorRef, Component, EventEmitter, inject, Input, OnInit, Output, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
   IonItem,
@@ -23,7 +23,7 @@ import { ToastService } from '../../../../core/services/toast.service';
   selector: 'app-edit-stop-form',
   templateUrl: 'edit-stop-form.component.html',
   styleUrls: ['edit-stop-form.component.scss'],
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     FormsModule,
     IonItem,
@@ -44,6 +44,7 @@ export class EditStopFormComponent implements OnInit {
 
   private tripService = inject(TripService);
   private toastService = inject(ToastService);
+  private cdr = inject(ChangeDetectorRef);
 
   name = '';
   address = '';
@@ -88,10 +89,12 @@ export class EditStopFormComponent implements OnInit {
       next: (updated) => {
         this.submitting = false;
         this.updated.emit(updated);
+        this.cdr.markForCheck();
       },
       error: (err) => {
         this.submitting = false;
         this.toastService.showError(err, 'Could not update stop.', 3000);
+        this.cdr.markForCheck();
       },
     });
   }
