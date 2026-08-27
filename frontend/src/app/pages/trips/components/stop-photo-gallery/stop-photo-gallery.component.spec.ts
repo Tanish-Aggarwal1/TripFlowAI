@@ -48,15 +48,40 @@ describe('StopPhotoGalleryComponent', () => {
     fixture = TestBed.createComponent(StopPhotoGalleryComponent);
     component = fixture.componentInstance;
     component.stopId = 9;
+    component.ngOnChanges({
+      stopId: { currentValue: 9, previousValue: undefined, firstChange: true, isFirstChange: () => true },
+    });
     fixture.detectChanges();
   });
 
   it('should create', () => expect(component).toBeTruthy());
 
-  it('loads photos on init', () => {
+  it('loads photos when stopId first binds', () => {
     expect(photoServiceSpy.listPhotos).toHaveBeenCalledWith(9);
     expect(component.photos).toEqual([photo1, photo2]);
     expect(component.loading).toBeFalse();
+  });
+
+  it('reloads photos for the new stop when stopId changes on a live instance', () => {
+    const photo3: StopPhotoResponse = { ...photo1, id: 3, stopId: 14 };
+    photoServiceSpy.listPhotos.calls.reset();
+    photoServiceSpy.listPhotos.and.returnValue(of([photo3]));
+
+    component.stopId = 14;
+    component.ngOnChanges({
+      stopId: { currentValue: 14, previousValue: 9, firstChange: false, isFirstChange: () => false },
+    });
+
+    expect(photoServiceSpy.listPhotos).toHaveBeenCalledWith(14);
+    expect(component.photos).toEqual([photo3]);
+  });
+
+  it('does not reload photos when an unrelated input change fires', () => {
+    photoServiceSpy.listPhotos.calls.reset();
+
+    component.ngOnChanges({});
+
+    expect(photoServiceSpy.listPhotos).not.toHaveBeenCalled();
   });
 
   it('shows an error and stops loading when listPhotos fails', () => {

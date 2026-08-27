@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, EventEmitter, inject, Input, OnInit, Output, ChangeDetectionStrategy } from '@angular/core';
+import { ChangeDetectorRef, Component, EventEmitter, inject, Input, OnChanges, Output, SimpleChanges, ChangeDetectionStrategy } from '@angular/core';
 import { IonButton, IonIcon, IonSpinner, AlertController } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import { add, trash } from 'ionicons/icons';
@@ -18,7 +18,7 @@ import { ToastService } from '../../../../core/services/toast.service';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [IonButton, IonIcon, IonSpinner, StopPhotoUploadComponent],
 })
-export class StopPhotoGalleryComponent implements OnInit {
+export class StopPhotoGalleryComponent implements OnChanges {
   @Input({ required: true }) stopId!: number;
   // Not yet bound by any host — the right hook for trip-view to learn about photo
   // count changes once it stops rendering its own separate upload UI (SCRUM-432).
@@ -40,8 +40,10 @@ export class StopPhotoGalleryComponent implements OnInit {
     addIcons({ add, trash });
   }
 
-  ngOnInit(): void {
-    this.loadPhotos();
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['stopId']) {
+      this.loadPhotos();
+    }
   }
 
   loadPhotos(): void {
