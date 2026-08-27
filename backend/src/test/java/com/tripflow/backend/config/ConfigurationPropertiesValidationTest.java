@@ -9,6 +9,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.client.RestClient;
 
+import com.tripflow.backend.client.cloudinary.CloudinaryProperties;
+import com.tripflow.backend.client.cloudinary.CloudinaryConfig;
 import com.tripflow.backend.client.ors.OrsProperties;
 import com.tripflow.backend.client.ors.OrsClientConfig;
 import com.tripflow.backend.ratelimit.RateLimitProperties;
@@ -71,6 +73,29 @@ class ConfigurationPropertiesValidationTest {
 				.withPropertyValues("app.schedule.day-start-time=09:00", "app.schedule.day-end-time=21:00",
 						"app.schedule.default-visit-duration=1h")
 				.run(context -> assertThat(context).hasSingleBean(RouteScheduleProperties.class));
+	}
+
+	@Test
+	void cloudinaryProperties_placeholderWithNoDefaultAndEnvVarUnset_failsToStart() {
+		// SCRUM-461: application.properties binds these via ${CLOUDINARY_CLOUD_NAME} etc.
+		// with no fallback default. @NotBlank alone does NOT catch this — Spring's Binder
+		// leaves an unresolvable placeholder as the literal, non-blank text (verified via
+		// CloudinaryProperties' own requireResolved guard, added for exactly this reason).
+		contextRunner.withUserConfiguration(CloudinaryConfig.class)
+				.withPropertyValues("app.cloudinary.cloud-name=${CLOUDINARY_CLOUD_NAME}",
+						"app.cloudinary.api-key=${CLOUDINARY_API_KEY}",
+						"app.cloudinary.api-secret=${CLOUDINARY_API_SECRET}")
+				.run(context -> assertThat(context).getFailure()
+						.rootCause().isInstanceOf(IllegalStateException.class)
+						.hasMessageContaining("unresolved placeholder"));
+	}
+
+	@Test
+	void cloudinaryProperties_allPropertiesPresent_binds() {
+		contextRunner.withUserConfiguration(CloudinaryConfig.class)
+				.withPropertyValues("app.cloudinary.cloud-name=my-cloud", "app.cloudinary.api-key=key",
+						"app.cloudinary.api-secret=secret")
+				.run(context -> assertThat(context).hasSingleBean(CloudinaryProperties.class));
 	}
 
 	@Configuration
