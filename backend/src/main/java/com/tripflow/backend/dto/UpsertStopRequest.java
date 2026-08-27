@@ -32,7 +32,7 @@ public record UpsertStopRequest(
         @NotNull @DecimalMin("-180.0") @DecimalMax("180.0") Double longitude,
         @Size(max = 300) String address,
         @Size(max = 150) String externalPlaceId,
-        String notes
+        @Size(max = 2000) String notes
 ) {
 
     /**

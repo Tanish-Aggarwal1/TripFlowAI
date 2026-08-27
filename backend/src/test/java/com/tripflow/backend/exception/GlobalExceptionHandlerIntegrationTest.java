@@ -279,6 +279,21 @@ public class GlobalExceptionHandlerIntegrationTest {
 	}
 
 	@Test
+	void payloadTooLarge_returns413ApiErrorNotGeneric400() throws Exception {
+		// RequestSizeLimitFilter's wrapped stream throws PayloadTooLargeException mid-read when
+		// Content-Length was missing/understated; Jackson/Spring wrap it into
+		// HttpMessageNotReadableException by the time it reaches this handler.
+		ResultActions result = mockMvc.perform(get("/test/payload-too-large"))
+				.andExpect(status().is(413))
+				.andExpect(jsonPath("$.status").value(413))
+				.andExpect(jsonPath("$.error").value("Payload Too Large"))
+				.andExpect(jsonPath("$.message").value("Request body exceeds the maximum allowed size"))
+				.andExpect(jsonPath("$.path").value("/test/payload-too-large"));
+
+		assertApiErrorKeys(result.andReturn());
+	}
+
+	@Test
 	void springSecurityBadCredentials_returns401ApiError() throws Exception {
 		ResultActions result = mockMvc.perform(get("/test/unauthorized-spring"))
 				.andExpect(status().isUnauthorized())
@@ -398,6 +413,14 @@ public class GlobalExceptionHandlerIntegrationTest {
 		@GetMapping("/test/rate-limit-exceeded")
 		public void rateLimitExceeded() {
 			throw new RateLimitExceededException("Rate limit exceeded, try again in 42 second(s)", 42);
+		}
+
+		@GetMapping("/test/payload-too-large")
+		public void payloadTooLarge() {
+			throw new org.springframework.http.converter.HttpMessageNotReadableException(
+					"could not read document",
+					new PayloadTooLargeException("Request body exceeds the maximum allowed size"),
+					null);
 		}
 	}
 }

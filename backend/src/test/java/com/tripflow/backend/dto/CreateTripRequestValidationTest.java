@@ -129,7 +129,39 @@ public class CreateTripRequestValidationTest {
         assertThat(violations).anyMatch(v -> v.getPropertyPath().toString().equals("stops"));
     }
 
+    @Test
+    void descriptionOver5000Chars_isRejected() {
+        CreateTripRequest req = new CreateTripRequest(
+                "Weekend Trip", "x".repeat(5001), null, TripVisibility.PRIVATE, List.of(validStop()));
+
+        Set<ConstraintViolation<CreateTripRequest>> violations = validator.validate(req);
+
+        assertThat(violations).anyMatch(v -> v.getPropertyPath().toString().equals("description"));
+    }
+
+    @Test
+    void descriptionExactly5000Chars_isAccepted() {
+        CreateTripRequest req = new CreateTripRequest(
+                "Weekend Trip", "x".repeat(5000), null, TripVisibility.PRIVATE, List.of(validStop()));
+
+        assertThat(validator.validate(req)).isEmpty();
+    }
+
+    @Test
+    void updateRequest_descriptionOver5000Chars_isRejected() {
+        UpdateTripRequest req = new UpdateTripRequest(
+                "Weekend Trip", "x".repeat(5001), null, TripVisibility.PRIVATE, List.of(validUpsertStop()));
+
+        Set<ConstraintViolation<UpdateTripRequest>> violations = validator.validate(req);
+
+        assertThat(violations).anyMatch(v -> v.getPropertyPath().toString().equals("description"));
+    }
+
     private CreateStopRequest validStop() {
         return new CreateStopRequest("Cottage", 45.0, -79.9, null, null, null);
+    }
+
+    private UpsertStopRequest validUpsertStop() {
+        return new UpsertStopRequest(null, "Cottage", 45.0, -79.9, null, null, null);
     }
 }

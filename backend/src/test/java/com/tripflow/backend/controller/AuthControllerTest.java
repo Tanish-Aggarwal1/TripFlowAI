@@ -24,6 +24,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tripflow.backend.config.RefreshTokenProperties;
 import com.tripflow.backend.dto.AuthResponse;
 import com.tripflow.backend.dto.LoginRequest;
@@ -76,6 +77,12 @@ class AuthControllerTest {
 	// since addFilters = false above disables filter execution entirely.
 	@MockitoBean
 	private JwtService jwtService;
+
+	// RequestSizeLimitFilter (SCRUM-417) is likewise a @Component Filter always constructed
+	// here; its ObjectMapper constructor dependency needs a stand-in since JacksonConfig's
+	// bean isn't part of this narrowed slice.
+	@MockitoBean
+	private ObjectMapper objectMapper;
 
 	@MockitoBean
 	private RateLimiterService rateLimiterService;

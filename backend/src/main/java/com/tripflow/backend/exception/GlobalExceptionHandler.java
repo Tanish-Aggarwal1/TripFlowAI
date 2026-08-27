@@ -127,6 +127,14 @@ public class GlobalExceptionHandler {
 
 	@ExceptionHandler(HttpMessageNotReadableException.class)
 	public ResponseEntity<ApiError> handleMalformedJson(HttpMessageNotReadableException ex, HttpServletRequest req) {
+		// RequestSizeLimitFilter's wrapped stream throws PayloadTooLargeException mid-read when
+		// Content-Length was missing/understated (e.g. chunked encoding) — Jackson surfaces that
+		// as an IOException, which Spring wraps here, so unwrap the cause chain to tell a genuinely
+		// oversized body apart from an ordinary malformed one.
+		if (findCause(ex, PayloadTooLargeException.class) != null) {
+			log.warn("413 Payload Too Large on {}: request body exceeded size limit mid-read", req.getRequestURI());
+			return error(HttpStatus.PAYLOAD_TOO_LARGE, "Request body exceeds the maximum allowed size", req, null);
+		}
 		// Don't echo ex.getMessage() to the client — it can contain fragments of the
 		// submitted payload. Log it server-side only.
 		log.warn("400 Bad Request on {}: malformed request body: {}", req.getRequestURI(), ex.getMessage());
@@ -200,5 +208,14 @@ public class GlobalExceptionHandler {
 	private String lastPathSegment(String propertyPath) {
 		int lastDot = propertyPath.lastIndexOf('.');
 		return lastDot < 0 ? propertyPath : propertyPath.substring(lastDot + 1);
+	}
+
+	private <T extends Throwable> T findCause(Throwable ex, Class<T> type) {
+		for (Throwable t = ex; t != null; t = t.getCause()) {
+			if (type.isInstance(t)) {
+				return type.cast(t);
+			}
+		}
+		return null;
 	}
 }
