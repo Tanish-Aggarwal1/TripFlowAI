@@ -36,6 +36,7 @@ public class DiscoveryController {
 
     @Operation(summary = "Search public trips", description = "Case-insensitive substring match on trip title and "
             + "tags, PUBLIC trips only. 'q' is required, cannot be blank, and cannot exceed 100 characters. "
+            + "Results are always ordered createdAt desc — a non-default 'sort' is rejected with 400. "
             + "No authentication required; IP-keyed rate limited.")
     @GetMapping("/search")
     public ResponseEntity<PagedModel<TripSummaryResponse>> searchPublicTrips(

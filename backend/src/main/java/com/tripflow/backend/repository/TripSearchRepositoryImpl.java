@@ -63,6 +63,12 @@ public class TripSearchRepositoryImpl implements TripSearchRepository {
         return "%" + escaped + "%";
     }
 
+    /**
+     * SCRUM-415: {@code pageable.getSort()} is deliberately unread below — order is always
+     * {@code createdAt DESC, id DESC}. {@code TripService.searchPublicTrips} rejects a
+     * non-default sort with 400 before this is ever called, so a caller is never silently
+     * given results ordered differently than what they asked for.
+     */
     @Override
     public Page<TripSummaryResponse> searchPublicTrips(String query, Pageable pageable) {
         String pattern = likePattern(query);

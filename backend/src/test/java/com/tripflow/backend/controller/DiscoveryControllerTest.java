@@ -22,6 +22,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tripflow.backend.dto.TripSummaryResponse;
+import com.tripflow.backend.exception.InvalidRequestException;
 import com.tripflow.backend.ratelimit.RateLimitExceededException;
 import com.tripflow.backend.ratelimit.RateLimitProperties;
 import com.tripflow.backend.ratelimit.RateLimiterService;
@@ -81,6 +82,18 @@ class DiscoveryControllerTest {
 				.andExpect(status().isOk());
 
 		verify(rateLimiterService).checkLimit(startsWith("discovery-search:"), any());
+	}
+
+	@Test
+	void search_nonDefaultSort_returns400() throws Exception {
+		// SCRUM-415: TripService.searchPublicTrips throws for a non-default sort — this
+		// confirms the exception actually reaches the client as 400, not just that the
+		// service-layer check exists (see TripServiceTest for that).
+		when(tripService.searchPublicTrips(eq("ottawa"), any()))
+				.thenThrow(new InvalidRequestException("Custom 'sort' is not supported on this endpoint"));
+
+		mockMvc.perform(get("/api/discovery/search").param("q", "ottawa").param("sort", "title,asc"))
+				.andExpect(status().isBadRequest());
 	}
 
 	@Test
