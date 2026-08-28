@@ -4,6 +4,7 @@ import { provideHttpClient, withXhr } from '@angular/common/http';
 import { Router, provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { AuthService } from '../../../core/services/auth.service';
+import { FieldError } from '../../../core/models/auth.model';
 
 describe('LoginPage', () => {
   let component: LoginPage;
@@ -73,6 +74,29 @@ describe('LoginPage', () => {
       expect(component.isSubmitting).toBeFalse();
       expect(component.generalError).toBe('Invalid credentials.');
     });
+
+    it('applies server field errors to the matching controls', () => {
+      const fieldErrors: FieldError[] = [{ field: 'email', message: 'Malformed email.' }];
+      const err = Object.assign(new Error('Please fix the errors below.'), { fieldErrors });
+      authService.login.and.returnValue(throwError(() => err));
+
+      component.form.setValue({ email: 'user@example.com', password: 'password123' });
+      component.onSubmit();
+
+      expect(component.isSubmitting).toBeFalse();
+      expect(component.form.get('email')?.errors?.['server']).toBe('Malformed email.');
+    });
+
+    it('falls back to generalError for a field error with no matching control', () => {
+      const fieldErrors: FieldError[] = [{ field: 'nonexistent', message: 'Unknown field issue.' }];
+      const err = Object.assign(new Error('Please fix the errors below.'), { fieldErrors });
+      authService.login.and.returnValue(throwError(() => err));
+
+      component.form.setValue({ email: 'user@example.com', password: 'password123' });
+      component.onSubmit();
+
+      expect(component.generalError).toBe('Unknown field issue.');
+    });
   });
 
   describe('fieldError', () => {
@@ -104,6 +128,13 @@ describe('LoginPage', () => {
       control?.markAsTouched();
       control?.setValue('password123');
       expect(component.fieldError('password')).toBeNull();
+    });
+
+    it('returns a server error message when present', () => {
+      const control = component.form.get('email');
+      control?.markAsTouched();
+      control?.setErrors({ server: 'Malformed email.' });
+      expect(component.fieldError('email')).toBe('Malformed email.');
     });
   });
 });
