@@ -84,5 +84,16 @@ Verified the gate actually fails the build: temporarily set the `statements` flo
 ## Required Status Check
 Enabled in Settings → Branches → main → branch protection. PR cannot merge until this check is green.
 
+## CodeQL Security Scanning
+`.github/workflows/codeql.yml` is a separate workflow from `backend-ci.yml`/`frontend-ci.yml` — GitHub’s static analysis (SAST), not part of the test/build pipeline.
+
+**Triggers:** PR targeting `main`, push to `main`, and a weekly scheduled scan (`17 3 * * 1`) that catches newly-disclosed vulnerability patterns in unchanged code.
+
+**Languages:** `java-kotlin` and `javascript-typescript`, each analyzed as its own matrix job with `build-mode: none` (CodeQL scans source directly, no compile step).
+
+**Where alerts surface:** repo Security tab → Code scanning alerts (the workflow writes via the `security-events: write` permission) — not a PR comment or check annotation.
+
+**Required check:** not in the required-status-check list under Settings → Branches → main (only `backend-ci`/`frontend-ci` block merge) — a CodeQL finding does not by itself block a PR.
+
 ## Screenshot Evidence
 [Attach: green pipeline run, and one red pipeline run showing a blocked merge]
