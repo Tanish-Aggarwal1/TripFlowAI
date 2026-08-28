@@ -1,4 +1,5 @@
-import { ChangeDetectorRef, Component, inject, ChangeDetectionStrategy } from '@angular/core';
+import { ChangeDetectorRef, Component, DestroyRef, inject, ChangeDetectionStrategy } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { IonContent, IonItem, IonInput, IonButton, IonText } from '@ionic/angular';
@@ -17,6 +18,7 @@ export class LoginPage {
   private authService = inject(AuthService);
   private router = inject(Router);
   private cdr = inject(ChangeDetectorRef);
+  private destroyRef = inject(DestroyRef);
   form: FormGroup;
   isSubmitting = false;
   generalError: string | null = null;
@@ -39,7 +41,10 @@ export class LoginPage {
 
     const { email, password } = this.form.value;
 
-    this.authService.login({ email, password }).subscribe({
+    this.authService
+      .login({ email, password })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
       next: () => {
         this.isSubmitting = false;
         this.router.navigate(['/dashboard']);

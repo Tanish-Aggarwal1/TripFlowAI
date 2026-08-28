@@ -1,4 +1,5 @@
-import { ChangeDetectorRef, Component, EventEmitter, inject, Input, OnInit, Output, ChangeDetectionStrategy } from '@angular/core';
+import { ChangeDetectorRef, Component, DestroyRef, EventEmitter, inject, Input, OnInit, Output, ChangeDetectionStrategy } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import {
   IonItem,
@@ -45,6 +46,7 @@ export class EditStopFormComponent implements OnInit {
   private tripService = inject(TripService);
   private toastService = inject(ToastService);
   private cdr = inject(ChangeDetectorRef);
+  private destroyRef = inject(DestroyRef);
 
   name = '';
   address = '';
@@ -85,7 +87,10 @@ export class EditStopFormComponent implements OnInit {
     };
 
     this.submitting = true;
-    this.tripService.updateStop(this.tripId, this.stop.id, request).subscribe({
+    this.tripService
+      .updateStop(this.tripId, this.stop.id, request)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
       next: (updated) => {
         this.submitting = false;
         this.updated.emit(updated);

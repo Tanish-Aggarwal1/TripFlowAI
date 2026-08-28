@@ -1,4 +1,5 @@
-import { ChangeDetectorRef, Component, EventEmitter, inject, Output, ChangeDetectionStrategy } from '@angular/core';
+import { ChangeDetectorRef, Component, DestroyRef, EventEmitter, inject, Output, ChangeDetectionStrategy } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import {
   IonItem,
@@ -47,6 +48,7 @@ export class AiTripPromptComponent {
   private tripService = inject(TripService);
   private toastService = inject(ToastService);
   private cdr = inject(ChangeDetectorRef);
+  private destroyRef = inject(DestroyRef);
 
   readonly dayOptions = Array.from({ length: 14 }, (_, i) => i + 1);
 
@@ -95,7 +97,10 @@ export class AiTripPromptComponent {
     };
 
     this.submitting = true;
-    this.tripService.generateTripWithAi(request).subscribe({
+    this.tripService
+      .generateTripWithAi(request)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
       next: (trip) => {
         this.submitting = false;
         this.created.emit(trip);

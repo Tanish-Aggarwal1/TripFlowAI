@@ -108,7 +108,10 @@ export class TripEditPage implements OnInit {
   // ── Load existing trip (edit mode) ────────────────────────────────────────
   private loadTrip(id: number): void {
     this.loading = true;
-    this.tripService.getTrip(id).subscribe({
+    this.tripService
+      .getTrip(id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
       next: (trip: TripResponse) => {
         this.title = trip.title;
         this.description = trip.description ?? '';
@@ -170,7 +173,10 @@ export class TripEditPage implements OnInit {
         stops: this.stops,
         startDate: this.startDate,
       };
-      this.tripService.updateTrip(this.tripId, request).subscribe({
+      this.tripService
+        .updateTrip(this.tripId, request)
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
         next: () => {
           this.saving = false;
           this.toastService.showSuccess('Trip updated!');
@@ -192,7 +198,10 @@ export class TripEditPage implements OnInit {
         // new, so strip the always-null id rather than sending a meaningless field.
         stops: this.stops.map(({ id: _id, ...stop }) => stop),
       };
-      this.tripService.createTrip(request).subscribe({
+      this.tripService
+        .createTrip(request)
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
         next: () => {
           this.saving = false;
           this.toastService.showSuccess('Trip created!');

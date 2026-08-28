@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { AlertController, ToastController } from '@ionic/angular';
-import { of, throwError } from 'rxjs';
+import { of, throwError, Subject } from 'rxjs';
 import { StopPhotoGalleryComponent } from './stop-photo-gallery.component';
 import { StopPhotoService } from '../../../../core/services/stop-photo.service';
 import { StopPhotoResponse } from '../../../../core/models/trip.model';
@@ -91,6 +91,18 @@ describe('StopPhotoGalleryComponent', () => {
 
     expect(component.error).toBe('Stop not found.');
     expect(component.loading).toBeFalse();
+  });
+
+  it('does not write photos/loading state when the component is destroyed before loadPhotos resolves', () => {
+    const photos$ = new Subject<StopPhotoResponse[]>();
+    photoServiceSpy.listPhotos.and.returnValue(photos$);
+
+    component.loadPhotos();
+    fixture.destroy();
+    photos$.next([photo1]);
+
+    expect(component.photos).toEqual([photo1, photo2]);
+    expect(component.loading).toBeTrue();
   });
 
   it('opens the upload form', () => {

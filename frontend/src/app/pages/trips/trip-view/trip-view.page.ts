@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, ChangeDetectionStrategy, DestroyRef, inject, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, ChangeDetectionStrategy, DestroyRef, inject, OnDestroy, OnInit } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
@@ -80,7 +80,7 @@ interface DayGroup {
     StopPhotoGalleryComponent,
   ],
 })
-export class TripViewPage implements OnInit {
+export class TripViewPage implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private tripService = inject(TripService);
@@ -110,6 +110,7 @@ export class TripViewPage implements OnInit {
   markingVisitedId: number | null = null;
 
   private tripId = 0;
+  private justOptimizedTimeoutId: ReturnType<typeof setTimeout> | undefined;
 
   constructor() {
     addIcons({
@@ -135,10 +136,17 @@ export class TripViewPage implements OnInit {
     });
   }
 
+  ngOnDestroy(): void {
+    clearTimeout(this.justOptimizedTimeoutId);
+  }
+
   loadTrip(): void {
     this.loading = true;
     this.error = null;
-    this.tripService.getTrip(this.tripId).subscribe({
+    this.tripService
+      .getTrip(this.tripId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
       next: (trip) => {
         this.trip = trip;
         this.loading = false;
@@ -250,7 +258,10 @@ export class TripViewPage implements OnInit {
       status: stop.status === 'VISITED' ? 'PLANNED' : 'VISITED',
     };
 
-    this.tripService.updateStop(this.trip.id, stop.id, request).subscribe({
+    this.tripService
+      .updateStop(this.trip.id, stop.id, request)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
       next: (updated) => {
         this.markingVisitedId = null;
         this.onStopUpdated(updated);
@@ -283,12 +294,16 @@ export class TripViewPage implements OnInit {
     if (!this.trip || this.optimizing) return;
     this.optimizing = true;
 
-    this.tripService.optimizeTrip(this.trip.id).subscribe({
+    this.tripService
+      .optimizeTrip(this.trip.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
       next: async (updated) => {
         this.trip = updated;
         this.optimizing = false;
         this.justOptimized = true;
-        setTimeout(() => {
+        clearTimeout(this.justOptimizedTimeoutId);
+        this.justOptimizedTimeoutId = setTimeout(() => {
           this.justOptimized = false;
           this.cdr.markForCheck();
         }, 1200);
@@ -309,7 +324,10 @@ export class TripViewPage implements OnInit {
     this.exporting = true;
     const filename = `${sanitizeFilename(this.trip.title)}.ics`;
 
-    this.tripService.exportIcs(this.trip.id).subscribe({
+    this.tripService
+      .exportIcs(this.trip.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
       next: (blob) => {
         this.exporting = false;
         downloadBlob(blob, filename);
@@ -328,7 +346,10 @@ export class TripViewPage implements OnInit {
     this.exportingPdf = true;
     const filename = `${sanitizeFilename(this.trip.title)}.pdf`;
 
-    this.tripService.exportPdf(this.trip.id).subscribe({
+    this.tripService
+      .exportPdf(this.trip.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
       next: (blob) => {
         this.exportingPdf = false;
         downloadBlob(blob, filename);

@@ -1,4 +1,5 @@
-import { ChangeDetectorRef, Component, EventEmitter, inject, Input, Output, ChangeDetectionStrategy } from '@angular/core';
+import { ChangeDetectorRef, Component, DestroyRef, EventEmitter, inject, Input, Output, ChangeDetectionStrategy } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import {
   IonItem,
@@ -48,6 +49,7 @@ export class AiPreferencesFormComponent {
   private tripService = inject(TripService);
   private toastService = inject(ToastService);
   private cdr = inject(ChangeDetectorRef);
+  private destroyRef = inject(DestroyRef);
 
   interests: string[] = [];
   budget: 'low' | 'medium' | 'high' = 'medium';
@@ -76,7 +78,10 @@ export class AiPreferencesFormComponent {
     };
 
     this.submitting = true;
-    this.tripService.suggestItinerary(this.tripId, request).subscribe({
+    this.tripService
+      .suggestItinerary(this.tripId, request)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
       next: (response) => {
         this.submitting = false;
         this.suggested.emit(response);

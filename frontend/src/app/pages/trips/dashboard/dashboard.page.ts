@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, inject, ChangeDetectionStrategy } from '@angular/core';
+import { ChangeDetectorRef, Component, DestroyRef, inject, ChangeDetectionStrategy } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { Subject, debounceTime, distinctUntilChanged, switchMap } from 'rxjs';
@@ -43,6 +43,7 @@ export class DashboardPage implements ViewWillEnter {
     private alertCtrl = inject(AlertController);
     private toastService = inject(ToastService);
     private cdr = inject(ChangeDetectorRef);
+    private destroyRef = inject(DestroyRef);
 
   trips: TripOwnerSummaryResponse[] = [];
   loading = true;
@@ -138,7 +139,10 @@ export class DashboardPage implements ViewWillEnter {
   loadTrips(): void {
     this.loading = true;
     this.error = null;
-    this.tripService.listTrips(0, 20, this.filters).subscribe({
+    this.tripService
+      .listTrips(0, 20, this.filters)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
       next: (page) => {
         this.trips = page.content;
         this.loading = false;
@@ -206,7 +210,10 @@ export class DashboardPage implements ViewWillEnter {
           text: 'Delete',
           role: 'destructive',
           handler: () => {
-            this.tripService.deleteTrip(trip.id).subscribe({
+            this.tripService
+              .deleteTrip(trip.id)
+              .pipe(takeUntilDestroyed(this.destroyRef))
+              .subscribe({
               next: () => {
                 this.trips = this.trips.filter((t) => t.id !== trip.id);
                 this.cdr.markForCheck();

@@ -1,6 +1,7 @@
 import {
   ChangeDetectorRef,
   Component,
+  DestroyRef,
   EventEmitter,
   inject,
   Input,
@@ -9,6 +10,7 @@ import {
   SimpleChanges,
   ChangeDetectionStrategy
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { IonButton, IonIcon, IonSpinner } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import { addCircleOutline, closeOutline } from 'ionicons/icons';
@@ -46,6 +48,7 @@ export class AiSuggestionCardsComponent implements OnChanges {
   private tripService = inject(TripService);
   private toastService = inject(ToastService);
   private cdr = inject(ChangeDetectorRef);
+  private destroyRef = inject(DestroyRef);
 
   cards: SuggestionCardState[] = [];
 
@@ -78,6 +81,7 @@ export class AiSuggestionCardsComponent implements OnChanges {
         longitude: card.suggestion.longitude,
         notes: card.suggestion.reason ?? undefined,
       })
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: async (stop) => {
           card.accepting = false;
