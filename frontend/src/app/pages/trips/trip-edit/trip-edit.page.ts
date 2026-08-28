@@ -144,18 +144,22 @@ export class TripEditPage implements OnInit {
   // ── Save ──────────────────────────────────────────────────────────────────
   async save(): Promise<void> {
     if (!this.title.trim()) {
-      this.toastService.showError(undefined, 'Title is required.');
+      this.error = 'Title is required.';
+      this.cdr.markForCheck();
       return;
     }
     if (this.stops.length === 0) {
-      this.toastService.showError(undefined, 'Add at least one stop.');
+      this.error = 'Add at least one stop.';
+      this.cdr.markForCheck();
       return;
     }
     // Backend @Size(max = MAX_STOPS) would reject this as a bare 400.
     if (this.stops.length > MAX_STOPS) {
-      this.toastService.showError(undefined, `A trip can have at most ${MAX_STOPS} stops.`);
+      this.error = `A trip can have at most ${MAX_STOPS} stops.`;
+      this.cdr.markForCheck();
       return;
     }
+    this.error = null;
 
     const tags = this.tagsInput
       .split(',')
