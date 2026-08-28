@@ -12,6 +12,10 @@
 - [ ] test
 - [ ] ref (refactor)
 - [ ] perf (performance)
+- [ ] chore
+- [ ] ci
+- [ ] build
+- [ ] style
 
 ## Breaking Change?
 - [ ] Yes — describe impact below
@@ -19,7 +23,9 @@
 
 ## Testing Evidence
 <!-- Paste screenshots, test output, or pipeline links -->
-— Rollback: <how to revert>
+
+## Rollback
+<!-- How to revert this change -->
 
 ## Screenshots (if UI)
 <!-- Before/after or new screens -->
