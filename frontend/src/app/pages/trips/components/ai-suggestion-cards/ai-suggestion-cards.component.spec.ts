@@ -83,6 +83,23 @@ describe('AiSuggestionCardsComponent', () => {
     expect(component.cards.every((c) => !c.accepting && !c.accepted)).toBeTrue();
   });
 
+  it('assigns each card a distinct identity even when the AI response reuses the same order', () => {
+    const duplicateOrderSuggestion: SuggestedStopResponse = { ...suggestion2, order: suggestion1.order };
+    component.suggestions = [suggestion1, duplicateOrderSuggestion];
+    component.ngOnChanges({
+      suggestions: {
+        currentValue: component.suggestions,
+        previousValue: [],
+        firstChange: true,
+        isFirstChange: () => true,
+      },
+    });
+
+    expect(component.cards.length).toBe(2);
+    expect(component.cards[0]).not.toBe(component.cards[1]);
+    expect(new Set(component.cards).size).toBe(2);
+  });
+
   describe('dismiss', () => {
     it('removes the card from the list', () => {
       component.cards = [
