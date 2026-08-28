@@ -120,7 +120,8 @@ Coordinate before touching, in the same PR-open window, more than one of:
 - `*IT.java` → Failsafe, CI-only via the `-Pci` Maven profile (Docker unavailable on all team machines — this is why IT correctness can only be confirmed in CI, not locally).
 - Test packages mirror source packages exactly (see §4).
 - Prefer slice tests (`@WebMvcTest`, `@DataJpaTest`) over full `@SpringBootTest` where the scope allows — faster, and avoids dragging in unrelated infrastructure (e.g. `AuthControllerTest` uses `@WebMvcTest` + `@AutoConfigureMockMvc(addFilters = false)` rather than booting security).
-- Coverage measured via JaCoCo, merging Surefire + Failsafe exec data before reporting (see `docs/ci.md`). Current floor: 80% overall, 80% on changed files (set 2026-07-19, see `docs/ci.md` for the exact provenance of that number).
+- Coverage measured via JaCoCo, merging Surefire + Failsafe exec data before reporting. Current floor: **92% overall, 80% on changed files** (re-measured 2026-07-26, SCRUM-206 — see `docs/ci.md` for exact provenance; do not duplicate the numbers here again).
+- Frontend coverage (Karma/Istanbul) has its own floor, enforced by `karma.conf.js`: statements 93%, branches 84%, functions 90%, lines 94% (measured 2026-07-28, SCRUM-214/236/247 — see `docs/ci.md`).
 - Query-count assertions (N+1 guards) use Hibernate `Statistics`, with the measured value locked and dated in a comment — never guessed.
 
 ## 7. CI/CD
@@ -158,4 +159,7 @@ Render free tier spins the backend down when idle — hit `/actuator/health` a f
 | 2026-07-23 | Updated package tree (gemini client landed, ai package added), coverage-floor provenance closed, risk register synced through Sprint 4 pre-work, frontend-standards.md created |
 | 2026-07-26 | REF-21: established the team-wide pagination/sorting convention — repositories accept `Pageable` and return `Page<>`/projection DTOs, controllers accept `?page=&size=&sort=`, responses use Spring Data's `PagedModel` shape (`content` + `page`). `GET /api/trips` is the first endpoint on this convention; see `docs/api-contracts.md` for the full contract. |
 | 2026-07-26 | REF-23: added springdoc-openapi 3.1.0 (`springdoc-openapi-starter-webmvc-ui`) — confirmed against the running app (Testcontainers IT) that the 3.x line supports Spring Boot 4.1 / Spring Framework 7, per its own release notes (2.x targets Boot 3.x only). Swagger UI at `/swagger-ui.html`, raw doc at `/api-docs`, both permit-all in `SecurityConfig`; disabled via `springdoc.*.enabled=false` in the prod profile. |
+| 2026-07-26 | SCRUM-206: re-measured backend coverage, replacing the SCRUM-136 placeholder floor (80/80) with 92% overall / 80% changed-files, set a few points below the measured ~96%. (Backfilled 2026-08-28 by SCRUM-453 — not recorded here at the time, which is how §6 drifted.) |
+| 2026-07-28 | SCRUM-214/236/247: added an enforced frontend coverage floor (Karma/Istanbul) — statements 93%, branches 84%, functions 90%, lines 94% — where none had existed before. (Backfilled 2026-08-28 by SCRUM-453.) |
 | 2026-08-05 | Added §10 Deployment, pointing to `docs/deployment.md` (SCRUM-73/SCRUM-168) — backend and frontend are live on Render. |
+| 2026-08-28 | SCRUM-453: corrected §6's stale backend coverage floor (was still showing the SCRUM-206 placeholder's old 80/80 figure) to 92/80, and added the missing frontend floor to §6. |
