@@ -74,16 +74,14 @@ export class StopListComponent {
       notes:   this.newNotes.trim()   || undefined,
     };
 
-    this.stops = [...this.stops, stop];
-    this.stopsChanged.emit(this.stops);
+    this.stopsChanged.emit([...this.stops, stop]);
     this.resetForm();
     this.cdr.markForCheck();
   }
 
   // ── Remove a stop ─────────────────────────────────────────────────────────
   removeStop(index: number): void {
-    this.stops = this.stops.filter((_, i) => i !== index);
-    this.stopsChanged.emit(this.stops);
+    this.stopsChanged.emit(this.stops.filter((_, i) => i !== index));
     this.cdr.markForCheck();
   }
 
@@ -92,8 +90,7 @@ handleReorder(event: CustomEvent<ItemReorderEventDetail>): void {
     const reordered = [...this.stops];
     const item = reordered.splice(event.detail.from, 1)[0];
     reordered.splice(event.detail.to, 0, item);
-    this.stops = reordered;
-    this.stopsChanged.emit(this.stops);
+    this.stopsChanged.emit(reordered);
     event.detail.complete();
     this.cdr.markForCheck();
   }
