@@ -15,7 +15,6 @@ import com.tripflow.backend.client.cloudinary.SignedUploadRequest;
 import com.tripflow.backend.domain.Stop;
 import com.tripflow.backend.domain.StopPhoto;
 import com.tripflow.backend.domain.Trip;
-import com.tripflow.backend.domain.enums.TripVisibility;
 import com.tripflow.backend.dto.CreateStopPhotoRequest;
 import com.tripflow.backend.dto.StopPhotoResponse;
 import com.tripflow.backend.exception.ForbiddenException;
@@ -43,6 +42,7 @@ public class StopPhotoService {
     private final StopPhotoRepository stopPhotoRepository;
     private final CloudinarySigningService signingService;
     private final CloudinaryProperties cloudinaryProperties;
+    private final TripOwnershipService tripOwnershipService;
 
     // Constrains what a signature authorizes: format is Cloudinary-validated against actual
     // file content (not just extension), so this is the real backstop against a signature
@@ -174,12 +174,14 @@ public class StopPhotoService {
      * {@code TripLikeService}. A 403 here confirmed that the stop id exists, turning this
      * endpoint into an existence oracle for stops on other people's private trips.
      * {@link #loadOwnedStop} keeps its 403 — those are owner-only writes, a different case.
+     *
+     * <p>The rule itself is delegated to {@code TripOwnershipService.isVisible} (SCRUM-419)
+     * rather than a load-and-throw variant, since the {@link Trip} here is already in hand
+     * via the parent {@link Stop} fetch — a second repository call would be redundant.
      */
     private Stop loadVisibleStop(Long stopId, Long requesterId) {
         Stop stop = loadStop(stopId);
-        Trip trip = stop.getTrip();
-        boolean isOwner = trip.getUser().getId().equals(requesterId);
-        if (trip.getVisibility() == TripVisibility.PRIVATE && !isOwner) {
+        if (!tripOwnershipService.isVisible(stop.getTrip(), requesterId)) {
             log.debug("Private stop-photo list denied (404, existence not disclosed) stopId={} requesterId={}",
                     stopId, requesterId);
             throw new ResourceNotFoundException("Stop not found: " + stopId);

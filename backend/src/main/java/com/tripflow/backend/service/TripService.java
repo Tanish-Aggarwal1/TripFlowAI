@@ -18,7 +18,6 @@ import com.tripflow.backend.dto.TripSearchFilters;
 import com.tripflow.backend.dto.TripSummaryResponse;
 import com.tripflow.backend.dto.UpdateTripRequest;
 import com.tripflow.backend.exception.InvalidRequestException;
-import com.tripflow.backend.exception.ResourceNotFoundException;
 import com.tripflow.backend.mapper.TripMapper;
 import com.tripflow.backend.repository.TripRepository;
 import com.tripflow.backend.repository.TripSearchRepositoryImpl;
@@ -108,32 +107,14 @@ public class TripService {
         return tripMapper.toResponse(saved);
     }
 
-	// Deliberately not TripOwnershipService.loadOwnedTrip (SCRUM-222/AUDIT-13,
-	// reviewed and
-	// left as-is): that method enforces "owner only", but a PUBLIC trip must also
-	// be
-	// readable by non-owners, so this method's own find-or-404 + visibility check
-	// can't be
-	// replaced by it without changing behavior.
-	//
-	// SCRUM-71a: a non-owner hitting a PRIVATE trip gets ResourceNotFoundException
-	// (404),
-	// not ForbiddenException (403) — a 403 would confirm the trip id exists,
-	// leaking its
-	// existence to someone who isn't allowed to know that. 404 is indistinguishable
-	// from
-	// "no trip with this id."
+	// SCRUM-71a: a non-owner hitting a PRIVATE trip gets ResourceNotFoundException (404),
+	// not ForbiddenException (403) — a 403 would confirm the trip id exists, leaking its
+	// existence to someone who isn't allowed to know that. 404 is indistinguishable from
+	// "no trip with this id." (SCRUM-419: owner-or-public check centralised in
+	// TripOwnershipService.loadVisibleTrip.)
 	@Transactional(readOnly = true)
 	public TripResponse getTrip(Long tripId, Long requesterId) {
-		Trip trip = tripRepository.findWithStopsById(tripId)
-				.orElseThrow(() -> new ResourceNotFoundException("Trip not found: " + tripId));
-
-		boolean isOwner = trip.getUser().getId().equals(requesterId);
-		if (trip.getVisibility() == TripVisibility.PRIVATE && !isOwner) {
-			log.debug("Private trip access denied (404, existence not disclosed) tripId={} requesterId={}", tripId,
-					requesterId);
-			throw new ResourceNotFoundException("Trip not found: " + tripId);
-		}
+		Trip trip = tripOwnershipService.loadVisibleTrip(tripId, requesterId);
 		return tripMapper.toResponse(trip);
 	}
 

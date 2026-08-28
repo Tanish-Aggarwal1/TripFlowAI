@@ -61,44 +61,6 @@ describe('AiTripPromptComponent', () => {
     expectAllFormControlsLabeled(fixture.nativeElement);
   });
 
-  describe('addInterest / removeInterest', () => {
-    it('adds a trimmed interest and clears the input', () => {
-      component.interestInput = '  food  ';
-
-      component.addInterest();
-
-      expect(component.interests).toEqual(['food']);
-      expect(component.interestInput).toBe('');
-    });
-
-    it('rejects an interest over 50 characters', () => {
-      component.interestInput = 'x'.repeat(51);
-
-      component.addInterest();
-
-      expect(component.interests).toEqual([]);
-      expect(component.formError).toBe('Each interest must be at most 50 characters.');
-    });
-
-    it('rejects more than 10 interests', () => {
-      component.interests = Array.from({ length: 10 }, (_, i) => `interest${i}`);
-      component.interestInput = 'one too many';
-
-      component.addInterest();
-
-      expect(component.interests.length).toBe(10);
-      expect(component.formError).toBe('At most 10 interests are allowed.');
-    });
-
-    it('removes an interest', () => {
-      component.interests = ['food', 'hiking'];
-
-      component.removeInterest('food');
-
-      expect(component.interests).toEqual(['hiking']);
-    });
-  });
-
   describe('submit', () => {
     it('blocks submission with an empty destination', () => {
       component.location = '   ';

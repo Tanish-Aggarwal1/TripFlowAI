@@ -9,17 +9,15 @@ import {
   IonButton,
   IonIcon,
   IonSpinner,
-  IonChip,
 } from '@ionic/angular';
 import { addIcons } from 'ionicons';
-import { sparkles, closeCircle } from 'ionicons/icons';
+import { sparkles } from 'ionicons/icons';
 import { TripService } from '../../../../core/services/trip.service';
 import { GenerateTripRequest, TripResponse } from '../../../../core/models/trip.model';
 import { ToastService } from '../../../../core/services/toast.service';
+import { InterestChipsComponent } from '../interest-chips/interest-chips.component';
 
 const MAX_PROMPT_LENGTH = 1000;
-const MAX_INTEREST_LENGTH = 50;
-const MAX_INTERESTS = 10;
 
 // Dropdown-driven trip creation on the dashboard — composes a prompt from
 // structured fields (days/location/budget/pace/interests) and sends it to
@@ -40,7 +38,7 @@ const MAX_INTERESTS = 10;
     IonButton,
     IonIcon,
     IonSpinner,
-    IonChip,
+    InterestChipsComponent,
   ],
 })
 export class AiTripPromptComponent {
@@ -58,7 +56,6 @@ export class AiTripPromptComponent {
   days = 3;
   budget: 'low' | 'medium' | 'high' = 'medium';
   pace: 'relaxed' | 'moderate' | 'packed' = 'moderate';
-  interestInput = '';
   interests: string[] = [];
   title = '';
 
@@ -66,30 +63,7 @@ export class AiTripPromptComponent {
   formError = '';
 
   constructor() {
-    addIcons({ sparkles, 'close-circle': closeCircle });
-  }
-
-  addInterest(): void {
-    const value = this.interestInput.trim();
-    if (!value) return;
-
-    if (value.length > MAX_INTEREST_LENGTH) {
-      this.formError = `Each interest must be at most ${MAX_INTEREST_LENGTH} characters.`;
-      return;
-    }
-    if (this.interests.length >= MAX_INTERESTS) {
-      this.formError = `At most ${MAX_INTERESTS} interests are allowed.`;
-      return;
-    }
-    if (!this.interests.includes(value)) {
-      this.interests = [...this.interests, value];
-    }
-    this.interestInput = '';
-    this.formError = '';
-  }
-
-  removeInterest(interest: string): void {
-    this.interests = this.interests.filter((i) => i !== interest);
+    addIcons({ sparkles });
   }
 
   private buildPrompt(): string {

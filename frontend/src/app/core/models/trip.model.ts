@@ -167,6 +167,11 @@ export interface ItineraryPreferencesRequest {
   pace?: string;
 }
 
+// Mirrors backend ItineraryPreferencesRequest's @Size constraints on each interest
+// and on the interest list. Exceeding either is a 400, so the client blocks first.
+export const MAX_INTEREST_LENGTH = 50;
+export const MAX_INTERESTS = 10;
+
 export interface SuggestedStopResponse {
   order: number;
   name: string;
