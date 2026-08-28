@@ -1,7 +1,15 @@
 <ion-content>
-  <div class="centered">
-    <ion-spinner></ion-spinner>
-    <h2>Waking up the server&hellip;</h2>
-    <p>The backend spins down when idle. This can take up to a minute on the first request.</p>
-  </div>
+  @if (unavailable()) {
+    <div class="centered">
+      <h2>Still unavailable</h2>
+      <p>The backend didn't respond after several attempts. It may be down for longer than usual.</p>
+      <ion-button (click)="retry()">Retry</ion-button>
+    </div>
+  } @else {
+    <div class="centered">
+      <ion-spinner></ion-spinner>
+      <h2>Waking up the server&hellip;</h2>
+      <p>The backend spins down when idle. This can take up to a minute on the first request.</p>
+    </div>
+  }
 </ion-content>

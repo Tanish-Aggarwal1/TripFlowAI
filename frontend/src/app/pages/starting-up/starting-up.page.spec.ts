@@ -65,6 +65,24 @@ describe('StartingUpPage', () => {
     expect(routerSpy.navigateByUrl).toHaveBeenCalledWith('/login');
   });
 
+  it('falls back to /login for a scheme-relative redirect target', () => {
+    setUp('//evil.example.com/steal');
+    fixture.detectChanges();
+
+    httpMock.expectOne(healthUrl).flush({ status: 'UP' });
+
+    expect(routerSpy.navigateByUrl).toHaveBeenCalledWith('/login');
+  });
+
+  it('falls back to /login for a redirect target that is not a relative path', () => {
+    setUp('https://evil.example.com');
+    fixture.detectChanges();
+
+    httpMock.expectOne(healthUrl).flush({ status: 'UP' });
+
+    expect(routerSpy.navigateByUrl).toHaveBeenCalledWith('/login');
+  });
+
   it('keeps polling on failure and stops once the backend responds', fakeAsync(() => {
     setUp(null);
     fixture.detectChanges();
@@ -93,5 +111,50 @@ describe('StartingUpPage', () => {
 
     httpMock.expectNone(healthUrl);
     expect(routerSpy.navigateByUrl).not.toHaveBeenCalled();
+  }));
+
+  it('gives up after the max attempt cap and shows the unavailable state', fakeAsync(() => {
+    setUp(null);
+    fixture.detectChanges();
+
+    // Initial check + 29 more polls = 30 attempts total (MAX_POLL_ATTEMPTS).
+    httpMock.expectOne(healthUrl).error(new ProgressEvent('error'), { status: 0, statusText: 'Down' });
+    for (let i = 0; i < 28; i++) {
+      tick(4000);
+      httpMock.expectOne(healthUrl).error(new ProgressEvent('error'), { status: 0, statusText: 'Down' });
+      expect(component.unavailable()).toBeFalse();
+    }
+
+    tick(4000);
+    httpMock.expectOne(healthUrl).error(new ProgressEvent('error'), { status: 0, statusText: 'Down' });
+    expect(component.unavailable()).toBeTrue();
+    expect(routerSpy.navigateByUrl).not.toHaveBeenCalled();
+
+    // No further polling once the cap is hit.
+    tick(8000);
+    httpMock.expectNone(healthUrl);
+
+    component.ngOnDestroy();
+  }));
+
+  it('resets and resumes polling on retry', fakeAsync(() => {
+    setUp(null);
+    fixture.detectChanges();
+
+    for (let i = 0; i < 30; i++) {
+      httpMock.expectOne(healthUrl).error(new ProgressEvent('error'), { status: 0, statusText: 'Down' });
+      if (i < 29) {
+        tick(4000);
+      }
+    }
+    expect(component.unavailable()).toBeTrue();
+
+    component.retry();
+    expect(component.unavailable()).toBeFalse();
+
+    httpMock.expectOne(healthUrl).flush({ status: 'UP' });
+    expect(routerSpy.navigateByUrl).toHaveBeenCalledWith('/login');
+
+    component.ngOnDestroy();
   }));
 });
