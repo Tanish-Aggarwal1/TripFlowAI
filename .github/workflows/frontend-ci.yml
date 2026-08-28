@@ -37,8 +37,10 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
 
       - name: Verify Mapbox secret is set
+        env:
+          MAPBOX_TOKEN: ${{ secrets.MAPBOX_TOKEN }}
         run: |
-          if [ -z "${{ secrets.MAPBOX_TOKEN }}" ]; then
+          if [ -z "$MAPBOX_TOKEN" ]; then
             echo "::error::MAPBOX_TOKEN secret is not set in repo settings"
             exit 1
           fi
@@ -56,8 +58,10 @@ jobs:
       # coverage report, which is uploaded as a public 14-day artifact below
       # (SCRUM-450).
       - name: Inject Mapbox token
+        env:
+          MAPBOX_TOKEN: ${{ secrets.MAPBOX_TOKEN }}
         run: |
-          sed -i "s|__MAPBOX_TOKEN__|${{ secrets.MAPBOX_TOKEN }}|g" src/environments/environment.prod.ts
+          sed -i "s|__MAPBOX_TOKEN__|$MAPBOX_TOKEN|g" src/environments/environment.prod.ts
 
       - name: Inject prod API base URL
         # Not a hard requirement (unlike Mapbox) — SCRUM-73's backend is live
@@ -67,9 +71,11 @@ jobs:
         # never provisioned here. If it is set, this substitutes it automatically;
         # until then the placeholder is left as-is, which is harmless here since
         # this workflow only builds for verification and never ships the artifact.
+        env:
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
         run: |
-          if [ -n "${{ secrets.API_BASE_URL }}" ]; then
-            sed -i "s|__API_BASE_URL__|${{ secrets.API_BASE_URL }}|g" src/environments/environment.prod.ts
+          if [ -n "$API_BASE_URL" ]; then
+            sed -i "s|__API_BASE_URL__|$API_BASE_URL|g" src/environments/environment.prod.ts
           else
             echo "::warning::API_BASE_URL secret not set — leaving __API_BASE_URL__ placeholder in environment.prod.ts (fine for CI verification builds; set this secret before an actual production build/deploy)."
           fi
