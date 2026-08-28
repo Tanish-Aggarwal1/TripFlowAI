@@ -110,6 +110,7 @@ describe('TripEditPage', () => {
       await component.save();
 
       expect(tripServiceSpy.createTrip).not.toHaveBeenCalled();
+      expect(component.error).toBe('Title is required.');
     });
 
     it('save() rejects an empty stop list without calling the service', async () => {
@@ -120,6 +121,7 @@ describe('TripEditPage', () => {
       await component.save();
 
       expect(tripServiceSpy.createTrip).not.toHaveBeenCalled();
+      expect(component.error).toBe('Add at least one stop.');
     });
 
     it('save() creates the trip and navigates to the dashboard on success', async () => {
@@ -284,6 +286,7 @@ describe('TripEditPage', () => {
       await component.save();
 
       expect(tripServiceSpy.updateTrip).not.toHaveBeenCalled();
+      expect(component.error).toBe(`A trip can have at most ${MAX_STOPS} stops.`);
     });
 
     it('viewOnMap navigates to the trip detail route', () => {
