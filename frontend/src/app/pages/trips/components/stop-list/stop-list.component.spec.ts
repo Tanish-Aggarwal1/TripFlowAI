@@ -95,11 +95,13 @@ describe('StopListComponent', () => {
       component.newName = 'North Pole';
       component.newLat = '90';
       component.newLng = '180';
+      spyOn(component.stopsChanged, 'emit');
 
       component.addStop();
 
       expect(component.formError).toBe('');
-      expect(component.stops.length).toBe(1);
+      const emitted = (component.stopsChanged.emit as jasmine.Spy).calls.mostRecent().args[0];
+      expect(emitted.length).toBe(1);
     });
   });
 
@@ -114,24 +116,26 @@ describe('StopListComponent', () => {
 
       component.addStop();
 
-      expect(component.stops).toEqual([
+      const emitted = (component.stopsChanged.emit as jasmine.Spy).calls.mostRecent().args[0];
+      expect(emitted).toEqual([
         { id: null, name: 'Cottage', latitude: 45.0, longitude: -79.9, address: '123 Main St', notes: 'Nice place' },
       ]);
-      expect(component.stopsChanged.emit).toHaveBeenCalledWith(component.stops);
       expect(component.newName).toBe('');
       expect(component.newLat).toBe('');
       expect(component.formError).toBe('');
     });
 
     it('omits address/notes when left blank', () => {
+      spyOn(component.stopsChanged, 'emit');
       component.newName = 'Cottage';
       component.newLat = '45.0';
       component.newLng = '-79.9';
 
       component.addStop();
 
-      expect(component.stops[0].address).toBeUndefined();
-      expect(component.stops[0].notes).toBeUndefined();
+      const emitted = (component.stopsChanged.emit as jasmine.Spy).calls.mostRecent().args[0];
+      expect(emitted[0].address).toBeUndefined();
+      expect(emitted[0].notes).toBeUndefined();
     });
   });
 
@@ -145,8 +149,8 @@ describe('StopListComponent', () => {
 
       component.removeStop(0);
 
-      expect(component.stops).toEqual([{ id: 11, name: 'B', latitude: 2, longitude: 2 }]);
-      expect(component.stopsChanged.emit).toHaveBeenCalledWith(component.stops);
+      const emitted = (component.stopsChanged.emit as jasmine.Spy).calls.mostRecent().args[0];
+      expect(emitted).toEqual([{ id: 11, name: 'B', latitude: 2, longitude: 2 }]);
     });
   });
 
@@ -158,6 +162,11 @@ describe('StopListComponent', () => {
       ];
       fixture.detectChanges();
 
+      // Mimics the parent's onStopsChanged() flowing the new array back down
+      // through the @Input, since the child no longer self-assigns `stops`.
+      spyOn(component.stopsChanged, 'emit').and.callFake((stops: unknown) => {
+        component.stops = stops as typeof component.stops;
+      });
       component.removeStop(0);
       fixture.detectChanges();
 
@@ -184,8 +193,8 @@ describe('StopListComponent', () => {
 
       component.handleReorder(event);
 
-      expect(component.stops.map((s) => s.name)).toEqual(['B', 'C', 'A']);
-      expect(component.stopsChanged.emit).toHaveBeenCalledWith(component.stops);
+      const emitted = (component.stopsChanged.emit as jasmine.Spy).calls.mostRecent().args[0];
+      expect(emitted.map((s: { name: string }) => s.name)).toEqual(['B', 'C', 'A']);
       expect(completeSpy).toHaveBeenCalled();
     });
 
@@ -198,13 +207,15 @@ describe('StopListComponent', () => {
         { id: 11, name: 'B', latitude: 2, longitude: 2 },
         { id: 12, name: 'C', latitude: 3, longitude: 3 },
       ];
+      spyOn(component.stopsChanged, 'emit');
       const event = {
         detail: { from: 0, to: 2, complete: () => undefined } as unknown as ItemReorderEventDetail,
       } as CustomEvent<ItemReorderEventDetail>;
 
       component.handleReorder(event);
 
-      expect(component.stops.map((s) => [s.id, s.name])).toEqual([
+      const emitted = (component.stopsChanged.emit as jasmine.Spy).calls.mostRecent().args[0];
+      expect(emitted.map((s: { id: number; name: string }) => [s.id, s.name])).toEqual([
         [11, 'B'],
         [12, 'C'],
         [10, 'A'],
@@ -219,22 +230,70 @@ describe('StopListComponent', () => {
         { id: 11, name: 'B', latitude: 2, longitude: 2 },
         { id: 12, name: 'C', latitude: 3, longitude: 3 },
       ];
+      spyOn(component.stopsChanged, 'emit');
 
       component.removeStop(1);
 
-      expect(component.stops.map((s) => s.id)).toEqual([10, 12]);
+      const emitted = (component.stopsChanged.emit as jasmine.Spy).calls.mostRecent().args[0];
+      expect(emitted.map((s: { id: number }) => s.id)).toEqual([10, 12]);
     });
 
     // A new stop must be null, never 0 or undefined — null is what tells the backend to
     // insert. undefined would serialise away and read as "existing stop, id missing".
     it('addStop gives a brand-new stop a null id', () => {
+      spyOn(component.stopsChanged, 'emit');
       component.newName = 'Cottage';
       component.newLat = '45';
       component.newLng = '-79';
 
       component.addStop();
 
-      expect(component.stops[0].id).toBeNull();
+      const emitted = (component.stopsChanged.emit as jasmine.Spy).calls.mostRecent().args[0];
+      expect(emitted[0].id).toBeNull();
+    });
+  });
+
+  describe('does not mutate its own @Input', () => {
+    it('addStop leaves the input array reference and contents untouched', () => {
+      const original = [{ id: 10, name: 'A', latitude: 1, longitude: 1 }];
+      component.stops = original;
+      component.newName = 'Cottage';
+      component.newLat = '45';
+      component.newLng = '-79';
+
+      component.addStop();
+
+      expect(component.stops).toBe(original);
+      expect(original.length).toBe(1);
+    });
+
+    it('removeStop leaves the input array reference and contents untouched', () => {
+      const original = [
+        { id: 10, name: 'A', latitude: 1, longitude: 1 },
+        { id: 11, name: 'B', latitude: 2, longitude: 2 },
+      ];
+      component.stops = original;
+
+      component.removeStop(0);
+
+      expect(component.stops).toBe(original);
+      expect(original.length).toBe(2);
+    });
+
+    it('handleReorder leaves the input array reference and contents untouched', () => {
+      const original = [
+        { id: 10, name: 'A', latitude: 1, longitude: 1 },
+        { id: 11, name: 'B', latitude: 2, longitude: 2 },
+      ];
+      component.stops = original;
+      const event = {
+        detail: { from: 0, to: 1, complete: () => undefined } as unknown as ItemReorderEventDetail,
+      } as CustomEvent<ItemReorderEventDetail>;
+
+      component.handleReorder(event);
+
+      expect(component.stops).toBe(original);
+      expect(original.map((s) => s.name)).toEqual(['A', 'B']);
     });
   });
 });
