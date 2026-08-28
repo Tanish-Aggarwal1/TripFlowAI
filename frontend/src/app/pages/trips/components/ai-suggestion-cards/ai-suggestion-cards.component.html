@@ -9,7 +9,7 @@
     </div>
   }
 
-  @for (card of cards; track card.suggestion.order) {
+  @for (card of cards; track card) {
     <div class="card" [class.accepted]="card.accepted">
       <div class="card-body">
         <h4>{{ card.suggestion.name }}</h4>
