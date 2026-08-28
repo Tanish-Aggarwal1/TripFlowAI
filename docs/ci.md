@@ -82,7 +82,9 @@ Verified the gate actually fails the build: temporarily set the `statements` flo
    - Testcontainers/Docker-dependent `*IT` tests can only be diagnosed via the CI log, never locally — no team machine has Docker
 
 ## Required Status Check
-Enabled in Settings → Branches → main → branch protection. PR cannot merge until this check is green.
+Configured in Settings → Branches → main → branch protection → required status checks. Currently only **`backend`** (the job name in `backend-ci.yml`) is required — a PR cannot merge until it is green.
+
+`frontend` (`frontend-ci.yml`), `check-title` (`pr-title-check.yml`), and CodeQL are **not** required: they still run and show red on failure, but a PR can merge past them. This is deliberate for `frontend` — `frontend-ci.yml` is path-scoped to `paths: ["frontend/**"]` (`:3-11`), and GitHub Actions never reports a status for a workflow a `paths:` filter skips entirely. If `frontend` were made required, a backend-only or docs-only PR would sit forever at "Expected — Waiting for status to be reported" since no `frontend` status would ever arrive to satisfy it. Making `frontend` required would first need the `paths:` filter removed (run the job unconditionally, gate only its expensive steps on a changed-files check) so it always reports.
 
 ## CodeQL Security Scanning
 `.github/workflows/codeql.yml` is a separate workflow from `backend-ci.yml`/`frontend-ci.yml` — GitHub’s static analysis (SAST), not part of the test/build pipeline.
@@ -93,7 +95,7 @@ Enabled in Settings → Branches → main → branch protection. PR cannot merge
 
 **Where alerts surface:** repo Security tab → Code scanning alerts (the workflow writes via the `security-events: write` permission) — not a PR comment or check annotation.
 
-**Required check:** not in the required-status-check list under Settings → Branches → main (only `backend-ci`/`frontend-ci` block merge) — a CodeQL finding does not by itself block a PR.
+**Required check:** not in the required-status-check list under Settings → Branches → main (only `backend` blocks merge, see §Required Status Check above) — a CodeQL finding does not by itself block a PR.
 
 ## Screenshot Evidence
 [Attach: green pipeline run, and one red pipeline run showing a blocked merge]
