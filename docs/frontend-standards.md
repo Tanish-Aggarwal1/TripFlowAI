@@ -7,6 +7,7 @@ Owner: Neel. Applies to all code under `frontend/src/`.
 ## Framework & Version
 
 - Ionic 8 + Angular 20, standalone components (no `NgModule`).
+- Node.js: pinned via `frontend/.nvmrc` and `package.json` `engines.node`, matching the version `frontend-ci.yml` uses (`setup-node` step).
 - TypeScript strict mode enabled.
 
 ## Component Pattern
