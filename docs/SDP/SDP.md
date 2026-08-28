@@ -138,7 +138,7 @@ See `docs/ci.md` for the full pipeline. Summary: PR + push to `main` triggers `b
 
 ## 9. Onboarding
 
-1. Clone the repo, copy `.env.example` to `backend/.env`, fill in local secrets.
+1. Clone the repo, copy `.env.example` to `backend/.env`, fill in local secrets (see `docs/deployment.md` "Local Development Setup" for the required variable list).
 2. Run PostgreSQL locally on 5432 with a `tripflow` database.
 3. Eclipse: Run As → Spring Boot App. No `SPRING_PROFILES_ACTIVE` needed (`dev` is default).
 4. `.\mvnw.cmd test` for unit tests; full `-Pci` suite requires Docker and mainly runs in CI.
