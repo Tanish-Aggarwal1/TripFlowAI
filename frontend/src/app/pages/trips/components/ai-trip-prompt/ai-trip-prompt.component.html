@@ -29,27 +29,11 @@
     </ion-select>
   </ion-item>
 
-  <ion-item>
-    <ion-input
-      label="Interests (optional)"
-      labelPlacement="stacked"
-      [(ngModel)]="interestInput"
-      placeholder="e.g. food, hiking, museums"
-      (keyup.enter)="addInterest()"
-    ></ion-input>
-  </ion-item>
-  <ion-button fill="clear" size="small" (click)="addInterest()">Add interest</ion-button>
-
-  @if (interests.length > 0) {
-    <div class="chip-row">
-      @for (interest of interests; track interest) {
-        <ion-chip (click)="removeInterest(interest)">
-          {{ interest }}
-          <ion-icon name="close-circle"></ion-icon>
-        </ion-chip>
-      }
-    </div>
-  }
+  <app-interest-chips
+    label="Interests (optional)"
+    [interests]="interests"
+    (interestsChange)="interests = $event"
+  ></app-interest-chips>
 
   <ion-item>
     <ion-input label="Title (optional)" labelPlacement="stacked" [(ngModel)]="title" placeholder="Leave blank to let Gemini name it"></ion-input>

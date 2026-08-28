@@ -51,63 +51,6 @@ describe('AiPreferencesFormComponent', () => {
     expectAllFormControlsLabeled(fixture.nativeElement);
   });
 
-  describe('addInterest', () => {
-    it('adds a trimmed interest and clears the input', () => {
-      component.interestInput = '  hiking  ';
-
-      component.addInterest();
-
-      expect(component.interests).toEqual(['hiking']);
-      expect(component.interestInput).toBe('');
-    });
-
-    it('ignores blank input', () => {
-      component.interestInput = '   ';
-
-      component.addInterest();
-
-      expect(component.interests).toEqual([]);
-    });
-
-    it('rejects an interest longer than 50 characters', () => {
-      component.interestInput = 'a'.repeat(51);
-
-      component.addInterest();
-
-      expect(component.interests).toEqual([]);
-      expect(component.formError).toBe('Each interest must be at most 50 characters.');
-    });
-
-    it('rejects a 11th interest (max 10)', () => {
-      component.interests = Array.from({ length: 10 }, (_, i) => `interest-${i}`);
-      component.interestInput = 'one-too-many';
-
-      component.addInterest();
-
-      expect(component.interests.length).toBe(10);
-      expect(component.formError).toBe('At most 10 interests are allowed.');
-    });
-
-    it('does not add a duplicate interest', () => {
-      component.interests = ['food'];
-      component.interestInput = 'food';
-
-      component.addInterest();
-
-      expect(component.interests).toEqual(['food']);
-    });
-  });
-
-  describe('removeInterest', () => {
-    it('removes the given interest', () => {
-      component.interests = ['food', 'hiking'];
-
-      component.removeInterest('food');
-
-      expect(component.interests).toEqual(['hiking']);
-    });
-  });
-
   describe('submit', () => {
     it('blocks submission with zero interests', () => {
       component.interests = [];

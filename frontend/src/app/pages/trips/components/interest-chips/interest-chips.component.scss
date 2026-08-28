@@ -1,0 +1,12 @@
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 4px 8px 12px;
+}
+
+.form-error {
+  color: var(--ion-color-danger);
+  font-size: 13px;
+  margin: 6px 0 0 4px;
+}

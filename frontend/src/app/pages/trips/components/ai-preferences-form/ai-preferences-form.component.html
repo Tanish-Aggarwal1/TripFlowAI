@@ -1,27 +1,11 @@
 <div class="ai-preferences-form">
   <h3>Tell Gemini about this trip</h3>
 
-  <ion-item>
-    <ion-input
-      label="Interests"
-      labelPlacement="stacked"
-      [(ngModel)]="interestInput"
-      placeholder="e.g. food, hiking, museums"
-      (keyup.enter)="addInterest()"
-    ></ion-input>
-  </ion-item>
-  <ion-button fill="clear" size="small" (click)="addInterest()">Add interest</ion-button>
-
-  @if (interests.length > 0) {
-    <div class="chip-row">
-      @for (interest of interests; track interest) {
-        <ion-chip (click)="removeInterest(interest)">
-          {{ interest }}
-          <ion-icon name="close-circle"></ion-icon>
-        </ion-chip>
-      }
-    </div>
-  }
+  <app-interest-chips
+    label="Interests"
+    [interests]="interests"
+    (interestsChange)="interests = $event"
+  ></app-interest-chips>
 
   <ion-item>
     <ion-select label="Budget" labelPlacement="stacked" [(ngModel)]="budget" interface="popover">
