@@ -14,6 +14,7 @@ import java.time.temporal.ChronoUnit;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -37,6 +38,10 @@ import com.tripflow.backend.security.JwtService;
 import com.tripflow.backend.service.AuthService;
 import com.tripflow.backend.service.RefreshTokenService;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import jakarta.servlet.http.Cookie;
 
 @WebMvcTest(AuthController.class)
@@ -227,5 +232,34 @@ class AuthControllerTest {
 				.andReturn().getResponse().getHeader(HttpHeaders.SET_COOKIE);
 
 		Assertions.assertThat(setCookie).startsWith("refresh_token=rotated-raw-token");
+	}
+
+	// ---------- rate-limit bucket key observability (security.md M-1) ----------
+
+	@Test
+	void login_logsResolvedRateLimitBucketKeyAtDebug() throws Exception {
+		when(authService.login(any(LoginRequest.class)))
+				.thenReturn(new AuthResponse("jwt-token", "Bearer", 1L, "tanish", Instant.now()));
+
+		Logger authControllerLogger = (Logger) LoggerFactory.getLogger(AuthController.class);
+		Level originalLevel = authControllerLogger.getLevel();
+		authControllerLogger.setLevel(Level.DEBUG);
+		ListAppender<ILoggingEvent> appender = new ListAppender<>();
+		appender.start();
+		authControllerLogger.addAppender(appender);
+
+		try {
+			mockMvc.perform(post("/api/auth/login")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(LOGIN_JSON))
+					.andExpect(status().isOk());
+		} finally {
+			authControllerLogger.detachAppender(appender);
+			authControllerLogger.setLevel(originalLevel);
+		}
+
+		Assertions.assertThat(appender.list)
+				.extracting(ILoggingEvent::getFormattedMessage)
+				.anyMatch(message -> message.equals("Rate limit bucket key resolved: login:127.0.0.1"));
 	}
 }
