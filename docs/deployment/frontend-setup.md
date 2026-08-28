@@ -31,3 +31,20 @@ The two open items above are tracked as follow-up work, not blockers for the cur
 ## Redeploying
 
 Push to `main` (frontend changes only trigger `frontend-ci.yml` for CI, per its `paths: frontend/**` filter). Render's own auto-deploy watches `main` independently and rebuilds on every push, using the build-time env vars configured in its dashboard.
+
+## Security headers
+
+**Status: partially in-repo.** `frontend/src/index.html` ships a `<meta http-equiv="Content-Security-Policy">` covering `default-src`, `script-src`, `style-src`, `img-src`, `connect-src`, and `object-src` — this takes effect automatically on every deploy, no manual step needed.
+
+`frame-ancestors`, `X-Frame-Options`, `X-Content-Type-Options`, and `Referrer-Policy` cannot be set via `<meta>` (browsers ignore `frame-ancestors` there, and the other three aren't CSP directives at all). Render Static Sites have no `_headers`-file support (unlike Netlify/Cloudflare Pages) — confirmed against Render's own docs — so these four must be added as a **one-time manual step** in the Render dashboard: this service → **Headers** tab → **Add Header**, one row per rule below (Path / Name / Value):
+
+| Path | Name | Value |
+|---|---|---|
+| `/*` | `Content-Security-Policy` | `default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https://res.cloudinary.com data: blob:; connect-src 'self' https://tripflowai.onrender.com https://api.mapbox.com https://events.mapbox.com https://api.cloudinary.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none';` |
+| `/*` | `X-Frame-Options` | `DENY` |
+| `/*` | `X-Content-Type-Options` | `nosniff` |
+| `/*` | `Referrer-Policy` | `strict-origin-when-cross-origin` |
+
+The header-level CSP row duplicates the meta tag's directives plus `frame-ancestors` — when both are present, browsers enforce the intersection, so this is a strictly stronger, not conflicting, layer. This mirrors how `MAPBOX_TOKEN`/`API_BASE_URL` are already dashboard-only for this service (see Hosting above) — Render gives no code-based mechanism (no `_headers` file; a `render.yaml` Blueprint would work but isn't adopted anywhere in this repo, and introducing one here would change how this manually-created service is managed, which is out of scope for a headers fix).
+
+If `connect-src`'s API origin changes (e.g. a new backend host), update both this table and the `<meta>` tag in `index.html` together.
