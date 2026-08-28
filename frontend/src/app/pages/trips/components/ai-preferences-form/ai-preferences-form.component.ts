@@ -8,21 +8,21 @@ import {
   IonButton,
   IonIcon,
   IonSpinner,
-  IonChip,
 } from '@ionic/angular';
 import { addIcons } from 'ionicons';
-import { sparkles, closeCircle } from 'ionicons/icons';
+import { sparkles } from 'ionicons/icons';
 import { TripService } from '../../../../core/services/trip.service';
 import {
   ItineraryPreferencesRequest,
   SuggestedItineraryResponse,
 } from '../../../../core/models/trip.model';
 import { ToastService } from '../../../../core/services/toast.service';
+import { InterestChipsComponent } from '../interest-chips/interest-chips.component';
 
 // SCRUM-67a / SCRUM-155: collects interests/budget/pace and submits to the
 // existing POST /api/trips/{id}/ai-suggest endpoint (SCRUM-64, already live).
-// Client-side limits mirror ItineraryPreferencesRequest's @Size constraints
-// (max 10 interests, 50 chars each) so bad input never reaches the API.
+// Interest limits (max 10, 50 chars each) mirror ItineraryPreferencesRequest's
+// @Size constraints and live in app-interest-chips / trip.model.ts.
 @Component({
   selector: 'app-ai-preferences-form',
   templateUrl: 'ai-preferences-form.component.html',
@@ -37,7 +37,7 @@ import { ToastService } from '../../../../core/services/toast.service';
     IonButton,
     IonIcon,
     IonSpinner,
-    IonChip,
+    InterestChipsComponent,
   ],
 })
 export class AiPreferencesFormComponent {
@@ -49,7 +49,6 @@ export class AiPreferencesFormComponent {
   private toastService = inject(ToastService);
   private cdr = inject(ChangeDetectorRef);
 
-  interestInput = '';
   interests: string[] = [];
   budget: 'low' | 'medium' | 'high' = 'medium';
   pace: 'relaxed' | 'moderate' | 'packed' = 'moderate';
@@ -58,30 +57,7 @@ export class AiPreferencesFormComponent {
   formError = '';
 
   constructor() {
-    addIcons({ sparkles, 'close-circle': closeCircle });
-  }
-
-  addInterest(): void {
-    const value = this.interestInput.trim();
-    if (!value) return;
-
-    if (value.length > 50) {
-      this.formError = 'Each interest must be at most 50 characters.';
-      return;
-    }
-    if (this.interests.length >= 10) {
-      this.formError = 'At most 10 interests are allowed.';
-      return;
-    }
-    if (!this.interests.includes(value)) {
-      this.interests = [...this.interests, value];
-    }
-    this.interestInput = '';
-    this.formError = '';
-  }
-
-  removeInterest(interest: string): void {
-    this.interests = this.interests.filter((i) => i !== interest);
+    addIcons({ sparkles });
   }
 
   submit(): void {
