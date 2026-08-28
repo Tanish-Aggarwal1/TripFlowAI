@@ -225,6 +225,37 @@ describe('TripViewPage', () => {
         jasmine.objectContaining({ message: 'ORS unavailable.', color: 'danger' }),
       );
     });
+
+    it('does not write trip/optimizing state or toast when the component is destroyed before optimizeTrip resolves', () => {
+      component.ngOnInit();
+      const optimize$ = new Subject<TripResponse>();
+      tripServiceSpy.optimizeTrip.and.returnValue(optimize$);
+
+      component.onOptimizeRequested();
+      expect(component.optimizing).toBeTrue();
+
+      fixture.destroy();
+      optimize$.next(trip({ id: 1, title: 'Should not apply' }));
+
+      expect(component.optimizing).toBeTrue();
+      expect(component.trip?.title).not.toBe('Should not apply');
+      expect(toastCtrlSpy.create).not.toHaveBeenCalledWith(
+        jasmine.objectContaining({ message: 'Route optimized.' }),
+      );
+    });
+
+    it('clears the pending justOptimized timeout on destroy so it never fires afterward', fakeAsync(() => {
+      component.ngOnInit();
+      tripServiceSpy.optimizeTrip.and.returnValue(of(trip({ id: 1 })));
+
+      component.onOptimizeRequested();
+      expect(component.justOptimized).toBeTrue();
+
+      component.ngOnDestroy();
+      tick(1200);
+
+      expect(component.justOptimized).toBeTrue();
+    }));
   });
 
   describe('exportToCalendar', () => {

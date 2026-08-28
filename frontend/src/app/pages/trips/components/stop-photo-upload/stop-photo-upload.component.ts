@@ -1,4 +1,5 @@
-import { ChangeDetectorRef, Component, EventEmitter, inject, Input, Output, ChangeDetectionStrategy, OnDestroy } from '@angular/core';
+import { ChangeDetectorRef, Component, DestroyRef, EventEmitter, inject, Input, Output, ChangeDetectionStrategy, OnDestroy } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import {
   IonItem,
@@ -47,6 +48,7 @@ export class StopPhotoUploadComponent implements OnDestroy {
   private stopPhotoService = inject(StopPhotoService);
   private toastService = inject(ToastService);
   private cdr = inject(ChangeDetectorRef);
+  private destroyRef = inject(DestroyRef);
 
   selectedFile: File | null = null;
   previewUrl: string | null = null;
@@ -101,6 +103,7 @@ export class StopPhotoUploadComponent implements OnDestroy {
 
     this.stopPhotoService
       .uploadPhoto(this.stopId, this.selectedFile, this.caption.trim() || undefined)
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (event) => {
           if ('progress' in event) {

@@ -1,4 +1,5 @@
-import { ChangeDetectorRef, Component, EventEmitter, inject, Input, OnInit, Output, ChangeDetectionStrategy } from '@angular/core';
+import { ChangeDetectorRef, Component, DestroyRef, EventEmitter, inject, Input, OnInit, Output, ChangeDetectionStrategy } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { IonButton, IonIcon, IonSpinner, AlertController } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import { add, trash } from 'ionicons/icons';
@@ -28,6 +29,7 @@ export class StopPhotoGalleryComponent implements OnInit {
   private alertCtrl = inject(AlertController);
   private toastService = inject(ToastService);
   private cdr = inject(ChangeDetectorRef);
+  private destroyRef = inject(DestroyRef);
 
   photos: StopPhotoResponse[] = [];
   loading = true;
@@ -47,7 +49,10 @@ export class StopPhotoGalleryComponent implements OnInit {
   loadPhotos(): void {
     this.loading = true;
     this.error = '';
-    this.stopPhotoService.listPhotos(this.stopId).subscribe({
+    this.stopPhotoService
+      .listPhotos(this.stopId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
       next: (photos) => {
         this.photos = photos;
         this.loading = false;
@@ -96,7 +101,10 @@ export class StopPhotoGalleryComponent implements OnInit {
     if (this.deletingId === photo.id) return;
     this.deletingId = photo.id;
 
-    this.stopPhotoService.deletePhoto(this.stopId, photo.id).subscribe({
+    this.stopPhotoService
+      .deletePhoto(this.stopId, photo.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
       next: () => {
         this.deletingId = null;
         this.photos = this.photos.filter((p) => p.id !== photo.id);

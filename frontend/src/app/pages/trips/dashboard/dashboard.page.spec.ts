@@ -1,7 +1,7 @@
 import { ComponentFixture, fakeAsync, TestBed, tick } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { AlertController, ToastController } from '@ionic/angular';
-import { of, throwError } from 'rxjs';
+import { of, throwError, Subject } from 'rxjs';
 import { DashboardPage } from './dashboard.page';
 import { TripService } from '../../../core/services/trip.service';
 import { PagedResponse, TripOwnerSummaryResponse } from '../../../core/models/trip.model';
@@ -97,6 +97,21 @@ describe('DashboardPage', () => {
 
       expect(component.error).toBe('Network error.');
       expect(component.loading).toBeFalse();
+    });
+
+    it('does not write trips/loading state when the component is destroyed before loadTrips resolves', () => {
+      const trips$ = new Subject<PagedResponse<TripOwnerSummaryResponse>>();
+      tripServiceSpy.listTrips.and.returnValue(trips$);
+
+      component.loadTrips();
+      fixture.destroy();
+      trips$.next({
+        content: [summary],
+        page: { size: 20, number: 0, totalElements: 1, totalPages: 1 },
+      } as PagedResponse<TripOwnerSummaryResponse>);
+
+      expect(component.trips).toEqual([]);
+      expect(component.loading).toBeTrue();
     });
   });
 
@@ -328,6 +343,21 @@ describe('DashboardPage', () => {
       );
       expect(component.trips).toEqual([summary]);
       expect(component.error).toBeNull();
+    });
+
+    it('does not remove the trip from the list when the component is destroyed before deleteTrip resolves', async () => {
+      component.trips = [summary];
+      const invokeDeleteHandler = stubAlertWithDeleteHandler();
+      const delete$ = new Subject<void>();
+      tripServiceSpy.deleteTrip.and.returnValue(delete$);
+      const event = jasmine.createSpyObj<Event>('Event', ['stopPropagation']);
+
+      await component.confirmDelete(summary, event);
+      invokeDeleteHandler();
+      fixture.destroy();
+      delete$.next();
+
+      expect(component.trips).toEqual([summary]);
     });
   });
 });

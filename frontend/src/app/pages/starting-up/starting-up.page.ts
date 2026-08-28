@@ -1,4 +1,5 @@
-import { Component, inject, OnDestroy, OnInit, ChangeDetectionStrategy } from '@angular/core';
+import { Component, DestroyRef, inject, OnDestroy, OnInit, ChangeDetectionStrategy } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
 import { IonContent, IonSpinner } from '@ionic/angular';
@@ -21,6 +22,7 @@ export class StartingUpPage implements OnInit, OnDestroy {
   private http = inject(HttpClient);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
+  private destroyRef = inject(DestroyRef);
   private pollHandle: ReturnType<typeof setInterval> | null = null;
 
   ngOnInit(): void {
@@ -34,7 +36,10 @@ export class StartingUpPage implements OnInit, OnDestroy {
 
   private checkHealth(): void {
     const healthUrl = `${environment.apiBaseUrl.replace(/\/api\/?$/, '')}/actuator/health`;
-    this.http.get(healthUrl).subscribe({
+    this.http
+      .get(healthUrl)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
       next: () => this.onBackendReady(),
       error: () => {
         // Still down (or still starting) - the next scheduled poll will retry.
