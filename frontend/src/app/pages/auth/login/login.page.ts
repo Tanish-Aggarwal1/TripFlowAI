@@ -4,6 +4,7 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { Router, RouterLink } from '@angular/router';
 import { IonContent, IonItem, IonInput, IonButton, IonText } from '@ionic/angular';
 import { AuthService } from '../../../core/services/auth.service';
+import { FieldError } from '../../../core/models/auth.model';
 
 @Component({
   selector: 'app-login',
@@ -49,13 +50,30 @@ export class LoginPage {
         this.isSubmitting = false;
         this.router.navigate(['/dashboard']);
       },
-      error: (err: Error) => {
+      error: (err: Error & { fieldErrors?: FieldError[] }) => {
         this.isSubmitting = false;
-        // UC-02: same generic message regardless of which field was wrong
-        this.generalError = err.message;
+        this.applyServerErrors(err);
         this.cdr.markForCheck();
       },
     });
+  }
+
+  // 401 (bad credentials) always carries a plain generalError per UC-02 - no field is
+  // singled out. A 400 (e.g. malformed email) can carry fieldErrors, which this attaches
+  // to the matching control instead of dropping them into a generic banner.
+  private applyServerErrors(err: Error & { fieldErrors?: FieldError[] }): void {
+    if (err.fieldErrors?.length) {
+      for (const fe of err.fieldErrors) {
+        const control = this.form.get(fe.field);
+        if (control) {
+          control.setErrors({ server: fe.message });
+        } else {
+          this.generalError = fe.message;
+        }
+      }
+    } else {
+      this.generalError = err.message;
+    }
   }
 
   fieldError(name: string): string | null {
@@ -64,6 +82,7 @@ export class LoginPage {
 
     if (control.errors['required']) return 'This field is required.';
     if (control.errors['email']) return 'Enter a valid email address.';
+    if (control.errors['server']) return control.errors['server'];
     return null;
   }
 }
