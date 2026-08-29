@@ -168,6 +168,14 @@ export class TripViewPage implements OnInit, OnDestroy {
       : [];
   }
 
+  // Display number by position in sortedStops, not raw stopOrder — stopOrder can have
+  // gaps (upsert deletes/inserts without recompacting), and the map (trip-map.component)
+  // numbers markers by position too. Keying both views off the same derivation keeps
+  // "stop 3 in the list" and "marker 3 on the map" pointing at the same stop.
+  get stopNumbers(): Map<number, number> {
+    return new Map(this.sortedStops.map((stop, index) => [stop.id, index + 1]));
+  }
+
   get dayGroups(): DayGroup[] {
     if (!this.trip) return [];
 
