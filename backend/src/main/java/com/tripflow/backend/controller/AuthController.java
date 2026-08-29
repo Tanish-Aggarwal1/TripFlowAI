@@ -31,11 +31,13 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Tag(name = "Auth", description = "Registration and login — issues the JWT used by every other endpoint")
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
+@Slf4j
 public class AuthController {
 
     /** Non-simple header a cross-site form or image tag cannot set, so requiring it forces a
@@ -60,7 +62,7 @@ public class AuthController {
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request,
             HttpServletRequest httpRequest, HttpServletResponse httpResponse) {
-        rateLimiterService.checkLimit("register:" + httpRequest.getRemoteAddr(), rateLimitProperties.register());
+        rateLimiterService.checkLimit(rateLimitKey("register", httpRequest), rateLimitProperties.register());
         AuthResponse response = authService.register(request);
         attachRefreshCookie(httpResponse, refreshTokenService.issue(response.userId()));
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
@@ -70,7 +72,7 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request,
             HttpServletRequest httpRequest, HttpServletResponse httpResponse) {
-        rateLimiterService.checkLimit("login:" + httpRequest.getRemoteAddr(), rateLimitProperties.login());
+        rateLimiterService.checkLimit(rateLimitKey("login", httpRequest), rateLimitProperties.login());
         AuthResponse response = authService.login(request);
         attachRefreshCookie(httpResponse, refreshTokenService.issue(response.userId()));
         return ResponseEntity.ok(response);
@@ -84,7 +86,7 @@ public class AuthController {
             @CookieValue(name = REFRESH_COOKIE, required = false) String rawRefreshToken,
             HttpServletRequest httpRequest, HttpServletResponse httpResponse) {
         requireCsrfGateHeader(httpRequest);
-        rateLimiterService.checkLimit("refresh:" + httpRequest.getRemoteAddr(), rateLimitProperties.refresh());
+        rateLimiterService.checkLimit(rateLimitKey("refresh", httpRequest), rateLimitProperties.refresh());
         if (rawRefreshToken == null) {
             throw new InvalidRefreshTokenException();
         }
@@ -112,6 +114,17 @@ public class AuthController {
         httpResponse.addHeader(HttpHeaders.SET_COOKIE,
                 refreshCookie("").maxAge(Duration.ZERO).build().toString());
         return ResponseEntity.noContent().build();
+    }
+
+    /** Logs which client address the rate limiter actually keyed on for this request — the
+     * cheapest way to settle whether {@code remote-ip-header=CF-Connecting-IP} (SCRUM-312) is
+     * really resolving to per-client IPs in prod, or whether every caller is collapsing onto
+     * one shared bucket keyed on a proxy address (security.md M-1). Grep prod logs for
+     * "Rate limit bucket key resolved" and inspect the addresses. */
+    private String rateLimitKey(String bucket, HttpServletRequest request) {
+        String key = bucket + ":" + request.getRemoteAddr();
+        log.debug("Rate limit bucket key resolved: {}", key);
+        return key;
     }
 
     private void requireCsrfGateHeader(HttpServletRequest request) {
