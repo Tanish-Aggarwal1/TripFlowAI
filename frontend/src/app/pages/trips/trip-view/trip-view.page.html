@@ -60,7 +60,7 @@
       @for (stop of group.stops; track stop.id) {
       <ion-item class="stop-card" lines="none">
         <ion-label>
-          <h3>{{ stop.stopOrder + 1 }}. {{ stop.name }}</h3>
+          <h3>{{ stopNumbers.get(stop.id) }}. {{ stop.name }}</h3>
           @if (stop.address) {
           <p>{{ stop.address }}</p>
           }

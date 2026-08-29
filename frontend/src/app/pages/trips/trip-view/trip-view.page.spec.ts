@@ -465,6 +465,44 @@ describe('TripViewPage', () => {
     });
   });
 
+  describe('stopNumbers (M-10: list must agree with trip-map marker numbering)', () => {
+    it('numbers by position in sortedStops, not by raw stopOrder, so gaps in stopOrder do not create mismatched numbers', () => {
+      // stopOrder 0, 1, 3 — a gap, as would result from an upsert that deletes a
+      // middle stop without recompacting stopOrder. trip-map numbers markers by
+      // position (index + 1); the list must derive from the same position so
+      // "stop 3" in the list and "marker 3" on the map are the same stop.
+      component.trip = trip({
+        stops: [
+          stop({ id: 1, stopOrder: 0 }),
+          stop({ id: 2, stopOrder: 1 }),
+          stop({ id: 3, stopOrder: 3 }),
+        ],
+      });
+
+      const numbers = component.stopNumbers;
+
+      expect(numbers.get(1)).toBe(1);
+      expect(numbers.get(2)).toBe(2);
+      expect(numbers.get(3)).toBe(3);
+    });
+
+    it('numbers correctly regardless of the input array order', () => {
+      component.trip = trip({
+        stops: [
+          stop({ id: 3, stopOrder: 2 }),
+          stop({ id: 1, stopOrder: 0 }),
+          stop({ id: 2, stopOrder: 1 }),
+        ],
+      });
+
+      const numbers = component.stopNumbers;
+
+      expect(numbers.get(1)).toBe(1);
+      expect(numbers.get(2)).toBe(2);
+      expect(numbers.get(3)).toBe(3);
+    });
+  });
+
   describe('AI suggestion modal (SCRUM-67 wiring)', () => {
     it('openAiSuggest resets suggestions and opens the modal', () => {
       component.aiSuggestions = { tripId: 1, summary: 'old', stops: [] };
