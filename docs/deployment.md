@@ -9,7 +9,7 @@ The application uses three Spring profiles:
 | Profile | File | Purpose |
 |---|---|---|
 | `dev` | `application-dev.properties` | Local development (default when `SPRING_PROFILES_ACTIVE` is unset) |
-| `test` | `application-test.properties` | CI and local test runs (Surefire + Failsafe) |
+| `test` | `application-test.properties` (lives in `src/test/resources/`, not `src/main/resources/`) | CI and local test runs (Surefire + Failsafe) |
 | `prod` | `application-prod.properties` | Production deployment (Render/Railway) |
 
 Shared configuration (JWT settings, ORS client config, JPA dialect, `ddl-auto=validate`, actuator health exposure) lives in the base `application.properties` and is inherited by all profiles unless explicitly overridden.
@@ -53,7 +53,7 @@ Copy the output directly into the platform's environment variable settings — n
 
 ## Local Development Setup
 
-1. Copy `.env.example` to `backend/.env` (gitignored) and fill in `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET`, `JWT_EXPIRY_MS`, `ORS_API_KEY`.
+1. Copy `.env.example` to `backend/.env` (gitignored) and fill in `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET`, `JWT_EXPIRY_MS`, `ORS_API_KEY`, and `GEMINI_API_KEY` — the app fails to start with any of these unset (`application.properties`/`application-dev.properties` have no defaults for them). The three `CLOUDINARY_*` vars are optional locally: `application-dev.properties` defaults them to `dev-*-placeholder` values, so photo upload just won't work end-to-end until you set real ones.
 2. Run PostgreSQL locally on port 5432 with a `tripflow` database created.
 3. In Eclipse: Run As → Spring Boot App. No `SPRING_PROFILES_ACTIVE` needed — `dev` is the default.
 4. Via Maven wrapper: `.\mvnw.cmd spring-boot:run`
