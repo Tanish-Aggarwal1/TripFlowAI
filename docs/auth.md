@@ -9,7 +9,7 @@ Stateless JWT-based authentication via Spring Security. No sessions, no server-s
 1. User registers (`POST /api/auth/register`) or logs in (`POST /api/auth/login`).
 2. `AuthService` validates credentials (BCrypt password check on login), issues a JWT signed with HMAC-SHA256 via `JwtService`.
 3. Client stores the token and sends it as `Authorization: Bearer <token>` on every subsequent request.
-4. `JwtAuthFilter` (a `OncePerRequestFilter`) intercepts each request, validates the token, and — if valid — sets a `UserPrincipal` on the `SecurityContext`.
+4. `JwtAuthFilter` (a `OncePerRequestFilter`) intercepts each request, validates the token's signature and expiry, then compares its `tv` (token version) claim against `users.token_version` — a mismatch, or the user no longer existing, is rejected the same as an invalid token. If it all checks out, a `UserPrincipal` is set on the `SecurityContext`.
 5. Token expires after `JWT_EXPIRY_MS` milliseconds (default 15 minutes — short because it is backed by silent refresh, below).
 
 ## Refresh Tokens
@@ -20,7 +20,9 @@ Register and login also set an httpOnly `refresh_token` cookie scoped to `Path=/
 
 **Reuse detection (D-03).** Presenting an already-redeemed token means two parties hold the same value, so it is treated as theft rather than as a retry: every refresh token that user holds is revoked, on every device, and the call returns 401. `RefreshTokenService` logs this at WARN with a `REFRESH_TOKEN_REUSE_DETECTED` marker carrying the user id and the number of rows revoked — greppable in production logs, and deliberately so, since a benign multi-tab race can trip it (two tabs share one cookie, so the slower tab's timer presents a value the faster tab already spent). Revoked and expired tokens are checked *before* reuse, so an ordinary logout or a lapsed token is never mistaken for a compromise.
 
-**Known residual:** access tokens are stateless JWTs with no denylist, so one issued just before a mass revoke stays valid until its own expiry. The blast radius is bounded by the 15-minute lifetime; an access-token denylist was judged materially larger work than the risk warrants.
+**Access-token revocation (M-7).** Reuse detection also increments `users.token_version` for that user, in the same transaction as the mass refresh-token revoke. Every access token already issued carries the *previous* version as its `tv` claim, so `JwtAuthFilter` rejects them immediately rather than leaving them valid for their own remaining lifetime — closing the gap noted below. `token_version` is otherwise untouched (an ordinary login or logout does not bump it), so this only fires on the actual compromise signal, not on every session end. This also means a deleted user's token stops authenticating immediately, rather than surfacing a foreign-key error further down the call stack.
+
+**Remaining residual:** there is still no per-token denylist, so an individual `revoke`/logout of one refresh token does not touch that device's still-live *access* token — it simply expires naturally within 15 minutes. Only the mass-revoke path (reuse detection) bumps `token_version`; a full "log out this one device's access token immediately" mechanism was judged materially larger work than the risk warrants.
 
 **Logout (D-04).** `POST /api/auth/logout` revokes only the token presented in the cookie, leaving the user's other devices signed in, and always clears the cookie and returns 204 — for a valid, expired, already-revoked, unknown or absent cookie alike, so it is idempotent and is not an oracle for whether a cookie was still good.
 

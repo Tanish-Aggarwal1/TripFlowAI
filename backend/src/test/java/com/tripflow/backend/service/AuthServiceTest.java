@@ -63,7 +63,7 @@ class AuthServiceTest {
 			user.setId(42L);
 			return user;
 		});
-		when(jwtService.generateToken(42L, EMAIL)).thenReturn(TOKEN);
+		when(jwtService.generateToken(42L, EMAIL, 0)).thenReturn(TOKEN);
 		when(jwtService.getExpiry(TOKEN)).thenReturn(EXPIRY);
 
 		AuthResponse response = authService.register(request);
@@ -94,7 +94,7 @@ class AuthServiceTest {
 			user.setId(42L);
 			return user;
 		});
-		when(jwtService.generateToken(42L, EMAIL)).thenReturn(TOKEN);
+		when(jwtService.generateToken(42L, EMAIL, 0)).thenReturn(TOKEN);
 		when(jwtService.getExpiry(TOKEN)).thenReturn(EXPIRY);
 
 		authService.register(request);
@@ -187,7 +187,7 @@ class AuthServiceTest {
 		user.setPasswordHash(HASHED);
 		when(userRepository.findByEmail(EMAIL)).thenReturn(Optional.of(user));
 		when(passwordEncoder.matches(PASSWORD, HASHED)).thenReturn(true);
-		when(jwtService.generateToken(7L, EMAIL)).thenReturn(TOKEN);
+		when(jwtService.generateToken(7L, EMAIL, 0)).thenReturn(TOKEN);
 		when(jwtService.getExpiry(TOKEN)).thenReturn(EXPIRY);
 
 		AuthResponse response = authService.login(request);

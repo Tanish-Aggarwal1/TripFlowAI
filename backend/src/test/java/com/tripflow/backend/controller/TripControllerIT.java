@@ -473,7 +473,7 @@ class TripControllerIT {
 	@Test
 	void createTrip_withRealJwt_authenticatesThroughFilterAndPersists() throws Exception {
 		User user = createTestUser("realjwt");
-		String token = jwtService.generateToken(user.getId(), user.getEmail());
+		String token = jwtService.generateToken(user.getId(), user.getEmail(), user.getTokenVersion());
 
 		CreateTripRequest tripRequest = sampleTripRequest("Real JWT Trip", TripVisibility.PRIVATE);
 

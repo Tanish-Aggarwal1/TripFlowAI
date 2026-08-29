@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -76,6 +77,7 @@ class RefreshTokenServiceTest {
 				.isInstanceOf(InvalidRefreshTokenException.class);
 
 		verify(refreshTokenRepository, times(1)).revokeAllForUser(eq(USER_ID), any(Instant.class));
+		verify(userRepository, times(1)).incrementTokenVersion(USER_ID);
 	}
 
 	@Test
@@ -90,7 +92,7 @@ class RefreshTokenServiceTest {
 				.isInstanceOf(InvalidRefreshTokenException.class);
 
 		verify(refreshTokenRepository, never()).save(any(RefreshToken.class));
-		verify(jwtService, never()).generateToken(anyLong(), anyString());
+		verify(jwtService, never()).generateToken(anyLong(), anyString(), anyInt());
 	}
 
 	@Test
@@ -107,7 +109,7 @@ class RefreshTokenServiceTest {
 				.isInstanceOf(InvalidRefreshTokenException.class);
 
 		verify(refreshTokenRepository, times(1)).revokeAllForUser(eq(USER_ID), any(Instant.class));
-		verify(jwtService, never()).generateToken(anyLong(), anyString());
+		verify(jwtService, never()).generateToken(anyLong(), anyString(), anyInt());
 	}
 
 	@Test
@@ -123,6 +125,7 @@ class RefreshTokenServiceTest {
 				.isInstanceOf(InvalidRefreshTokenException.class);
 
 		verify(refreshTokenRepository, never()).revokeAllForUser(anyLong(), any(Instant.class));
+		verify(userRepository, never()).incrementTokenVersion(anyLong());
 	}
 
 	@Test
@@ -151,6 +154,7 @@ class RefreshTokenServiceTest {
 		assertThat(saved.getValue()).isSameAs(live);
 		assertThat(live.getRevokedAt()).isNotNull();
 		verify(refreshTokenRepository, never()).revokeAllForUser(anyLong(), any(Instant.class));
+		verify(userRepository, never()).incrementTokenVersion(anyLong());
 	}
 
 	@Test
