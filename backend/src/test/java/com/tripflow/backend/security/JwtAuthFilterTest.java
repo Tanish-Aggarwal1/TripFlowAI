@@ -8,6 +8,8 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.Optional;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,6 +20,8 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import com.tripflow.backend.repository.UserRepository;
+
 import jakarta.servlet.FilterChain;
 
 @ExtendWith(MockitoExtension.class)
@@ -27,6 +31,7 @@ class JwtAuthFilterTest {
 			"test-jwt-secret-must-be-at-least-256-bits-long-for-hmac-sha256";
 
 	@Mock private FilterChain filterChain;
+	@Mock private UserRepository userRepository;
 
 	private JwtService jwtService;
 	private JwtAuthFilter filter;
@@ -34,7 +39,7 @@ class JwtAuthFilterTest {
 	@BeforeEach
 	void setUp() {
 		jwtService = new JwtService(new JwtProperties(SECRET, 3_600_000L));
-		filter = new JwtAuthFilter(jwtService);
+		filter = new JwtAuthFilter(jwtService, userRepository);
 	}
 
 	@AfterEach
@@ -67,7 +72,8 @@ class JwtAuthFilterTest {
 
 	@Test
 	void validBearerToken_setsAuthenticationWithUserPrincipal() throws Exception {
-		String token = jwtService.generateToken(55L, "user@example.com");
+		String token = jwtService.generateToken(55L, "user@example.com", 0);
+		when(userRepository.findTokenVersionById(55L)).thenReturn(Optional.of(0));
 		MockHttpServletRequest request = new MockHttpServletRequest();
 		request.addHeader("Authorization", "Bearer " + token);
 		MockHttpServletResponse response = new MockHttpServletResponse();
@@ -86,8 +92,9 @@ class JwtAuthFilterTest {
 	@Test
 	void validBearerToken_parsesAndVerifiesTokenExactlyOnce() throws Exception {
 		JwtService spiedJwtService = spy(jwtService);
-		JwtAuthFilter spiedFilter = new JwtAuthFilter(spiedJwtService);
-		String token = spiedJwtService.generateToken(55L, "user@example.com");
+		JwtAuthFilter spiedFilter = new JwtAuthFilter(spiedJwtService, userRepository);
+		String token = spiedJwtService.generateToken(55L, "user@example.com", 0);
+		when(userRepository.findTokenVersionById(55L)).thenReturn(Optional.of(0));
 		MockHttpServletRequest request = new MockHttpServletRequest();
 		request.addHeader("Authorization", "Bearer " + token);
 		MockHttpServletResponse response = new MockHttpServletResponse();
@@ -98,6 +105,34 @@ class JwtAuthFilterTest {
 		verify(spiedJwtService, never()).isValid(anyString());
 		verify(spiedJwtService, never()).extractUserId(anyString());
 		verify(spiedJwtService, never()).extractEmail(anyString());
+	}
+
+	@Test
+	void validBearerToken_tokenVersionMismatch_leavesContextUnauthenticated() throws Exception {
+		String token = jwtService.generateToken(55L, "user@example.com", 0);
+		when(userRepository.findTokenVersionById(55L)).thenReturn(Optional.of(1));
+		MockHttpServletRequest request = new MockHttpServletRequest();
+		request.addHeader("Authorization", "Bearer " + token);
+		MockHttpServletResponse response = new MockHttpServletResponse();
+
+		filter.doFilterInternal(request, response, filterChain);
+
+		assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+		verify(filterChain).doFilter(request, response);
+	}
+
+	@Test
+	void validBearerToken_userNoLongerExists_leavesContextUnauthenticated() throws Exception {
+		String token = jwtService.generateToken(55L, "user@example.com", 0);
+		when(userRepository.findTokenVersionById(55L)).thenReturn(Optional.empty());
+		MockHttpServletRequest request = new MockHttpServletRequest();
+		request.addHeader("Authorization", "Bearer " + token);
+		MockHttpServletResponse response = new MockHttpServletResponse();
+
+		filter.doFilterInternal(request, response, filterChain);
+
+		assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+		verify(filterChain).doFilter(request, response);
 	}
 
 	@Test
@@ -119,7 +154,7 @@ class JwtAuthFilterTest {
 		// with the normal jwtService from setUp() — JJWT's parser reads the exp claim
 		// embedded in the token itself, not the verifying service's own configured expiry.
 		JwtService expiredJwtService = new JwtService(new JwtProperties(SECRET, -1_000L));
-		String expiredToken = expiredJwtService.generateToken(55L, "user@example.com");
+		String expiredToken = expiredJwtService.generateToken(55L, "user@example.com", 0);
 
 		MockHttpServletRequest request = new MockHttpServletRequest();
 		request.addHeader("Authorization", "Bearer " + expiredToken);

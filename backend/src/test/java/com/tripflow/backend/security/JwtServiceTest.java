@@ -24,7 +24,7 @@ class JwtServiceTest {
 
 	@Test
 	void generateToken_roundTripsUserIdAndEmail() {
-		String token = jwtService.generateToken(99L, "user@example.com");
+		String token = jwtService.generateToken(99L, "user@example.com", 0);
 
 		assertThat(jwtService.extractUserId(token)).isEqualTo(99L);
 		assertThat(jwtService.isValid(token)).isTrue();
@@ -32,15 +32,22 @@ class JwtServiceTest {
 
 	@Test
 	void extractEmail_returnsEmailClaim() {
-		String token = jwtService.generateToken(1L, "user@example.com");
+		String token = jwtService.generateToken(1L, "user@example.com", 0);
 
 		assertThat(jwtService.extractEmail(token)).isEqualTo("user@example.com");
 	}
 
 	@Test
+	void extractTokenVersion_returnsTokenVersionClaim() {
+		String token = jwtService.generateToken(1L, "user@example.com", 3);
+
+		assertThat(jwtService.extractTokenVersion(token)).isEqualTo(3);
+	}
+
+	@Test
 	void getExpiry_returnsConfiguredOffset() {
 		Instant before = Instant.now();
-		String token = jwtService.generateToken(1L, "user@example.com");
+		String token = jwtService.generateToken(1L, "user@example.com", 0);
 		Instant expiry = jwtService.getExpiry(token);
 
 		assertThat(expiry).isAfter(before.plus(Duration.ofMillis(EXPIRY_MS - 1000)));
@@ -49,7 +56,7 @@ class JwtServiceTest {
 
 	@Test
 	void isValid_rejectsTamperedToken() {
-		String token = jwtService.generateToken(1L, "user@example.com");
+		String token = jwtService.generateToken(1L, "user@example.com", 0);
 
 		// Flip a character inside the signature segment, not at the very end of
 		// the token. Base64url only guarantees every bit is significant within a
@@ -72,7 +79,7 @@ class JwtServiceTest {
 	@Test
 	void isValid_rejectsExpiredToken() throws InterruptedException {
 		JwtService shortLived = new JwtService(new JwtProperties(SECRET, 1L));
-		String token = shortLived.generateToken(1L, "user@example.com");
+		String token = shortLived.generateToken(1L, "user@example.com", 0);
 		Thread.sleep(50);
 
 		assertThat(shortLived.isValid(token)).isFalse();

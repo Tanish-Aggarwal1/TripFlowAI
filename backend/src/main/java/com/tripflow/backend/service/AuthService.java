@@ -82,7 +82,7 @@ public class AuthService {
 	}
 
 	private AuthResponse buildAuthResponse(User user) {
-		String token = jwtService.generateToken(user.getId(), user.getEmail());
+		String token = jwtService.generateToken(user.getId(), user.getEmail(), user.getTokenVersion());
 		return new AuthResponse(token, "Bearer", user.getId(), user.getUsername(), jwtService.getExpiry(token));
 	}
 }

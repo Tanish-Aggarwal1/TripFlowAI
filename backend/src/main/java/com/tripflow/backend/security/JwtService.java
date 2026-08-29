@@ -24,11 +24,12 @@ public class JwtService {
         this.expirationMs = jwtProperties.expirationMs();
     }
 
-    public String generateToken(Long userId, String email) {
+    public String generateToken(Long userId, String email, int tokenVersion) {
         Instant now = Instant.now();
         return Jwts.builder()
                 .subject(userId.toString())
                 .claim("email", email)
+                .claim("tv", tokenVersion)
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(now.plusMillis(expirationMs)))
                 .signWith(key)
@@ -45,6 +46,11 @@ public class JwtService {
 
     public String extractEmail(String token) {
         return parseClaims(token).get("email", String.class);
+    }
+
+    /** Null means the token predates this claim (M-7 rollout) — callers must treat that as invalid. */
+    public Integer extractTokenVersion(String token) {
+        return parseClaims(token).get("tv", Integer.class);
     }
 
     public boolean isValid(String token) {

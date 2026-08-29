@@ -92,6 +92,9 @@ public class RefreshTokenService {
         // replay, so the whole user is treated as compromised and every device signed out (D-03).
         if (refreshTokenRepository.markUsed(stored.getId(), Instant.now()) == 0) {
             int revoked = refreshTokenRepository.revokeAllForUser(stored.getUserId(), Instant.now());
+            // M-7: also bumps token_version so access tokens already issued to this user stop
+            // authenticating instead of remaining valid for up to their own 15-minute expiry.
+            userRepository.incrementTokenVersion(stored.getUserId());
             // Distinguishable marker (checkpoint option-c): greppable in production logs, so how
             // often a benign multi-tab race trips this is measurable rather than guessed at.
             log.warn("REFRESH_TOKEN_REUSE_DETECTED all sessions revoked userId={} revokedTokenCount={}",
@@ -100,7 +103,7 @@ public class RefreshTokenService {
         }
 
         User user = userRepository.findById(stored.getUserId()).orElseThrow(InvalidRefreshTokenException::new);
-        String accessToken = jwtService.generateToken(user.getId(), user.getEmail());
+        String accessToken = jwtService.generateToken(user.getId(), user.getEmail(), user.getTokenVersion());
         IssuedToken replacement = issue(user.getId());
 
         log.info("Refresh token rotated userId={}", user.getId());

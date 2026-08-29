@@ -33,6 +33,7 @@ import com.tripflow.backend.exception.DuplicateEmailException;
 import com.tripflow.backend.exception.InvalidCredentialsException;
 import com.tripflow.backend.ratelimit.RateLimitProperties;
 import com.tripflow.backend.ratelimit.RateLimiterService;
+import com.tripflow.backend.repository.UserRepository;
 import com.tripflow.backend.security.JwtService;
 import com.tripflow.backend.service.AuthService;
 import com.tripflow.backend.service.RefreshTokenService;
@@ -77,6 +78,12 @@ class AuthControllerTest {
 	// since addFilters = false above disables filter execution entirely.
 	@MockitoBean
 	private JwtService jwtService;
+
+	// JwtAuthFilter now also depends on UserRepository (M-7 token_version check) — same
+	// constructor-satisfaction reasoning as jwtService above; addFilters = false means
+	// neither bean is ever exercised in these tests.
+	@MockitoBean
+	private UserRepository userRepository;
 
 	// RequestSizeLimitFilter (SCRUM-417) is likewise a @Component Filter always constructed
 	// here; its ObjectMapper constructor dependency needs a stand-in since JacksonConfig's
