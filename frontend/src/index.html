@@ -5,6 +5,16 @@
   <meta charset="utf-8" />
   <title>TripFlowAI</title>
 
+  <!--
+    Second layer of XSS defense for the localStorage-held JWT (SCRUM-416 / M-8).
+    frame-ancestors, X-Frame-Options, X-Content-Type-Options and Referrer-Policy are NOT
+    honoured via <meta> — those are set as real response headers in Render's dashboard
+    (see docs/deployment/frontend-setup.md#security-headers). This meta CSP covers what
+    it can: default-src/script-src/connect-src/img-src/object-src, which is the part that
+    actually blocks token exfiltration on injection.
+  -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https://res.cloudinary.com data: blob:; connect-src 'self' https://tripflowai.onrender.com https://api.mapbox.com https://events.mapbox.com https://api.cloudinary.com; object-src 'none'; base-uri 'self';" />
+
   <base href="/" />
 
   <meta name="color-scheme" content="light dark" />
