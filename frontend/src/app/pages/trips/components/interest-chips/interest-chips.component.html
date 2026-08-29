@@ -12,9 +12,16 @@
 @if (interests.length > 0) {
   <div class="chip-row">
     @for (interest of interests; track interest) {
-      <ion-chip (click)="removeInterest(interest)">
+      <ion-chip>
         {{ interest }}
-        <ion-icon name="close-circle"></ion-icon>
+        <ion-button
+          fill="clear"
+          size="small"
+          [attr.aria-label]="'Remove ' + interest"
+          (click)="removeInterest(interest)"
+        >
+          <ion-icon slot="icon-only" name="close-circle"></ion-icon>
+        </ion-button>
       </ion-chip>
     }
   </div>

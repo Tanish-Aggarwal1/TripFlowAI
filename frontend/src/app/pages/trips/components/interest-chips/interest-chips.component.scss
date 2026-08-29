@@ -3,6 +3,13 @@
   flex-wrap: wrap;
   gap: 6px;
   padding: 4px 8px 12px;
+
+  ion-chip ion-button {
+    margin: 0 -8px 0 0;
+    --padding-start: 4px;
+    --padding-end: 4px;
+    height: 24px;
+  }
 }
 
 .form-error {

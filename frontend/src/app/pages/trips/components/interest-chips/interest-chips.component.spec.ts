@@ -90,4 +90,32 @@ describe('InterestChipsComponent', () => {
       expect(component.interestsChange.emit).toHaveBeenCalledWith(['hiking']);
     });
   });
+
+  describe('chip removal is keyboard-operable', () => {
+    it('renders a focusable ion-button with an accessible name for each chip', () => {
+      component.interests = ['food', 'hiking'];
+      fixture.detectChanges();
+
+      const buttons: HTMLElement[] = Array.from(
+        fixture.nativeElement.querySelectorAll('ion-chip ion-button'),
+      );
+
+      expect(buttons.length).toBe(2);
+      expect(buttons[0].getAttribute('aria-label')).toBe('Remove food');
+      expect(buttons[1].getAttribute('aria-label')).toBe('Remove hiking');
+    });
+
+    it('removes the interest when its button is activated, without a handler on the chip itself', () => {
+      spyOn(component.interestsChange, 'emit');
+      component.interests = ['food', 'hiking'];
+      fixture.detectChanges();
+
+      const chip: HTMLElement = fixture.nativeElement.querySelector('ion-chip');
+      const button: HTMLElement = chip.querySelector('ion-button')!;
+
+      button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+      expect(component.interestsChange.emit).toHaveBeenCalledWith(['hiking']);
+    });
+  });
 });
