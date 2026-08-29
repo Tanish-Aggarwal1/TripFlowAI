@@ -135,7 +135,7 @@ public class AuthControllerIT {
 				.content(registerJson("someoneelse", "taken@tripflow.com", "password123")))
 				.andExpect(status().isConflict())
 				.andExpect(jsonPath("$.status").value(409))
-				.andExpect(jsonPath("$.message").value("Email already registered: taken@tripflow.com"));
+				.andExpect(jsonPath("$.message").value("Email already registered"));
 	}
 
 	@Test

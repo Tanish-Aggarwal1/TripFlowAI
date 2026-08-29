@@ -131,7 +131,7 @@ class AuthControllerTest {
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(REGISTER_JSON))
 				.andExpect(status().isConflict())
-				.andExpect(jsonPath("$.message").value("Email already registered: tanish@example.com"));
+				.andExpect(jsonPath("$.message").value("Email already registered"));
 	}
 
 	@Test

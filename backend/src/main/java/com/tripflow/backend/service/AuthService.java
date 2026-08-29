@@ -32,6 +32,12 @@ public class AuthService {
 	private static final String EMAIL_UNIQUE_CONSTRAINT = "users_email_key";
 	private static final String USERNAME_UNIQUE_CONSTRAINT = "users_username_key";
 
+	// Fixed BCrypt hash of an arbitrary, unusable password (matches no real account). Checked
+	// against on every unknown-email login so that path pays the same BCrypt cost as a real one,
+	// closing the login-timing account-enumeration oracle (SCRUM M-6).
+	private static final String DUMMY_PASSWORD_HASH =
+			"$2a$10$7ymKW8v.vB24DALQDFUziOnNEWA5VBNMEd29UHWekZ811xIVtGwS2";
+
 	@Transactional
 	public AuthResponse register(RegisterRequest request) {
 		String username = request.username().trim();
@@ -71,9 +77,15 @@ public class AuthService {
 
 	@Transactional(readOnly = true)
 	public AuthResponse login(LoginRequest request) {
-		User user = userRepository.findByEmail(request.email()).orElseThrow(InvalidCredentialsException::new);
+		User user = userRepository.findByEmail(request.email()).orElse(null);
 
-		if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+		// Always run the BCrypt check, even on a lookup miss, against a fixed dummy hash - an
+		// early return here is what let a non-existent email skip the expensive verification and
+		// return in a fraction of the time a real one takes.
+		String hashToCheck = user != null ? user.getPasswordHash() : DUMMY_PASSWORD_HASH;
+		boolean passwordMatches = passwordEncoder.matches(request.password(), hashToCheck);
+
+		if (user == null || !passwordMatches) {
 			throw new InvalidCredentialsException();
 		}
 

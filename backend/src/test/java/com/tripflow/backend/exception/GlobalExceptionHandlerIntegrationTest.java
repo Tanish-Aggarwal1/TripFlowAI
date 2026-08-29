@@ -119,7 +119,7 @@ public class GlobalExceptionHandlerIntegrationTest {
 				.andExpect(status().isConflict())
 				.andExpect(jsonPath("$.status").value(409))
 				.andExpect(jsonPath("$.error").value("Conflict"))
-				.andExpect(jsonPath("$.message").value("Email already registered: taken@example.com"))
+				.andExpect(jsonPath("$.message").value("Email already registered"))
 				.andExpect(jsonPath("$.path").value("/test/conflict"));
 
 		assertApiErrorKeys(result.andReturn());

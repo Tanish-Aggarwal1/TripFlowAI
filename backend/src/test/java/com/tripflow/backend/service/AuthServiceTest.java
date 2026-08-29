@@ -3,6 +3,7 @@ package com.tripflow.backend.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -113,7 +114,11 @@ class AuthServiceTest {
 		when(userRepository.existsByEmail(EMAIL)).thenReturn(true);
 
 		assertThatThrownBy(() -> authService.register(request))
-				.isInstanceOf(DuplicateEmailException.class);
+				.isInstanceOf(DuplicateEmailException.class)
+				// Message must not echo the submitted email back to the client - that's a direct
+				// account-enumeration oracle (SCRUM M-6).
+				.hasMessage("Email already registered")
+				.satisfies(ex -> assertThat(ex.getMessage()).doesNotContain(EMAIL));
 
 		verify(userRepository, never()).save(any());
 	}
@@ -142,7 +147,8 @@ class AuthServiceTest {
 				"ERROR: duplicate key value violates unique constraint \"users_email_key\""));
 
 		assertThatThrownBy(() -> authService.register(request))
-				.isInstanceOf(DuplicateEmailException.class);
+				.isInstanceOf(DuplicateEmailException.class)
+				.hasMessage("Email already registered");
 	}
 
 	@Test
@@ -194,12 +200,18 @@ class AuthServiceTest {
 	}
 
 	@Test
-	void login_unknownEmail_throwsInvalidCredentialsException() {
+	void login_unknownEmail_throwsInvalidCredentialsExceptionAndStillRunsPasswordCheck() {
 		LoginRequest request = new LoginRequest(EMAIL, PASSWORD);
 		when(userRepository.findByEmail(EMAIL)).thenReturn(Optional.empty());
 
 		assertThatThrownBy(() -> authService.login(request))
 				.isInstanceOf(InvalidCredentialsException.class);
+
+		// The BCrypt check must still run against a dummy hash on a lookup miss - skipping it is
+		// exactly what let a non-existent email return faster than a real one (SCRUM M-6 timing
+		// oracle). A real equality-of-latency test would be flaky, so assert the code path
+		// executes instead of measuring wall-clock time.
+		verify(passwordEncoder).matches(eq(PASSWORD), any(String.class));
 	}
 
 	@Test
