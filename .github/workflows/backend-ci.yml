@@ -61,3 +61,15 @@ jobs:
           min-coverage-overall: 92
           min-coverage-changed-files: 80
           update-comment: true
+
+  # Informational only, not a required status check (adding one needs a manual
+  # branch-protection change, out of scope here). Proves the production image
+  # still builds on every PR — no push, no registry credentials.
+  docker-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Build backend image
+        run: docker build -f backend/Dockerfile backend
