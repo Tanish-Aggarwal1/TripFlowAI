@@ -513,4 +513,79 @@ describe('TripService', () => {
     expect(req.request.responseType).toBe('blob');
     req.flush(mockBlob);
   });
+
+  // ── Feed actions (SOCIAL-02/03/04, D-04) ────────────────────────────────────
+
+  it('should like a trip via POST', (done) => {
+    service.likeTrip(12).subscribe(() => done());
+
+    const req = httpMock.expectOne('http://localhost:8080/api/trips/12/like');
+    expect(req.request.method).toBe('POST');
+    req.flush(null);
+  });
+
+  it('should unlike a trip via DELETE', (done) => {
+    service.unlikeTrip(12).subscribe(() => done());
+
+    const req = httpMock.expectOne('http://localhost:8080/api/trips/12/like');
+    expect(req.request.method).toBe('DELETE');
+    req.flush(null);
+  });
+
+  it('should save a trip via POST', (done) => {
+    service.saveTrip(13).subscribe(() => done());
+
+    const req = httpMock.expectOne('http://localhost:8080/api/trips/13/save');
+    expect(req.request.method).toBe('POST');
+    req.flush(null);
+  });
+
+  it('should unsave a trip via DELETE', (done) => {
+    service.unsaveTrip(13).subscribe(() => done());
+
+    const req = httpMock.expectOne('http://localhost:8080/api/trips/13/save');
+    expect(req.request.method).toBe('DELETE');
+    req.flush(null);
+  });
+
+  it('should clone a trip via POST and resolve with the new TripResponse', (done) => {
+    const clonedTrip = {
+      id: 14,
+      title: 'Copy of Trip 13',
+      description: null,
+      tags: [],
+      visibility: 'PRIVATE' as const,
+      status: 'DRAFT' as const,
+      ownerId: 1,
+      stops: [],
+      createdAt: '2026-08-31T00:00:00Z',
+      updatedAt: '2026-08-31T00:00:00Z',
+      routeGeometry: null,
+      startDate: null,
+      visitedStopCount: 0,
+      completionPercentage: 0,
+    };
+
+    service.cloneTrip(13).subscribe((trip) => {
+      expect(trip).toEqual(clonedTrip);
+      done();
+    });
+
+    const req = httpMock.expectOne('http://localhost:8080/api/trips/13/clone');
+    expect(req.request.method).toBe('POST');
+    req.flush(clonedTrip);
+  });
+
+  it('should list saved trips via GET', (done) => {
+    const mockPage = { content: [], page: { size: 20, number: 0, totalElements: 0, totalPages: 0 } };
+
+    service.listSavedTrips().subscribe((page) => {
+      expect(page).toEqual(mockPage);
+      done();
+    });
+
+    const req = httpMock.expectOne('http://localhost:8080/api/trips/saved?page=0&size=20');
+    expect(req.request.method).toBe('GET');
+    req.flush(mockPage);
+  });
 });

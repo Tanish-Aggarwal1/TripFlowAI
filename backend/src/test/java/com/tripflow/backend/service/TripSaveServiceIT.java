@@ -10,6 +10,8 @@ import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.boot.testcontainers.context.ImportTestcontainers;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.test.context.ActiveProfiles;
 
 import com.tripflow.backend.config.JpaConfig;
@@ -162,5 +164,23 @@ class TripSaveServiceIT {
         tripSaveService.saveTrip(trip.getId(), owner.getId());
 
         assertThat(savedTripRepository.count()).isEqualTo(1);
+    }
+
+    @Test
+    void listSaved_tripSavedByUserA_isAbsentFromUserBsList() {
+        User owner = saveUser("owner9");
+        User userA = saveUser("usera9");
+        User userB = saveUser("userb9");
+        Trip trip = saveTrip(owner, "Shared Public Trip", TripVisibility.PUBLIC);
+
+        tripSaveService.saveTrip(trip.getId(), userA.getId());
+
+        Pageable pageable = PageRequest.of(0, 20);
+        assertThat(tripSaveService.listSaved(userA.getId(), pageable).getContent())
+                .as("user A saved this trip")
+                .hasSize(1);
+        assertThat(tripSaveService.listSaved(userB.getId(), pageable).getContent())
+                .as("user B never saved anything and must not see user A's save")
+                .isEmpty();
     }
 }

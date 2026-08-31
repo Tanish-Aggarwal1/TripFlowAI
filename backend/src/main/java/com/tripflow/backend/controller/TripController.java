@@ -97,6 +97,17 @@ public class TripController {
         return new ResponseEntity<>(tripService.createTrip(principal.userId(), request), HttpStatus.CREATED);
     }
 
+    @Operation(summary = "List saved trips", description = "Paginated list of the authenticated user's own "
+            + "saved/bookmarked trips (SOCIAL-04). Never includes another user's saves. Declared above "
+            + "GET /{id} so Spring's literal-segment matching resolves 'saved' before the {id} template.")
+    @GetMapping("/saved")
+    public ResponseEntity<PagedModel<TripOwnerSummaryResponse>> listSavedTrips(
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        Page<TripOwnerSummaryResponse> page = tripSaveService.listSaved(principal.userId(), pageable);
+        return ResponseEntity.ok(new PagedModel<>(page));
+    }
+
     @Operation(summary = "Get a trip",
             description = "Owner sees any trip; non-owners only see PUBLIC trips. A PRIVATE trip "
                     + "requested by a non-owner returns 404 (not 403) so its existence isn't leaked.")
