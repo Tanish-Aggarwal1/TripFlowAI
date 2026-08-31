@@ -256,6 +256,16 @@ describe('FeedActionRailComponent', () => {
     expect(component.ratingCount()).toBe(3);
   });
 
+  it('surfaces a toast when the rating summary fetch fails, without crashing', () => {
+    fixture.componentRef.setInput('active', true);
+    TestBed.tick();
+
+    const req = httpMock.expectOne('http://localhost:8080/api/trips/42/rating');
+    req.flush({ message: 'Server error' }, { status: 500, statusText: 'Internal Server Error' });
+
+    expect(toastCtrlSpy.create).toHaveBeenCalled();
+  });
+
   it('does not re-fetch the rating summary on repeated activation of the same card', () => {
     fixture.componentRef.setInput('active', true);
     TestBed.tick();
