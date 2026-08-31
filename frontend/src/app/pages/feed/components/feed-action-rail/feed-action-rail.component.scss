@@ -1,0 +1,45 @@
+:host {
+  display: block;
+}
+
+// D-04: vertical strip along the card's right edge, above the inner stop-swiper
+// (z-index 10) and the top/bottom overlays. touch-action: none plus the template's
+// stopPropagation keep a tap near the edge from being read as a swipe by either the
+// inner horizontal swiper or the outer vertical one.
+.action-rail {
+  position: absolute;
+  right: 8px;
+  bottom: 96px;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  touch-action: none;
+}
+
+.action-control {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+
+  ion-button {
+    --padding-start: 8px;
+    --padding-end: 8px;
+    width: 48px;
+    height: 48px;
+    margin: 0;
+
+    ion-icon {
+      font-size: 28px;
+    }
+  }
+}
+
+.like-count {
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+}

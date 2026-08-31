@@ -1,0 +1,59 @@
+<!-- Sits as a sibling of the inner horizontal swiper (never a descendant), positioned
+     absolutely on top of it, so a touch on the rail never bubbles into the swiper's own
+     listeners. stopPropagation below is defensive belt-and-suspenders for the same
+     reason: a tap near the card's right edge must never be interpreted as a swipe. -->
+<div class="action-rail" (pointerdown)="$event.stopPropagation()" (touchstart)="$event.stopPropagation()">
+  <!-- aria-label is a static string, not a liked()/saved()-dependent ternary: Ionic's
+       ion-button snapshots every aria-* attribute off its host exactly once, in its
+       own Stencil componentWillLoad, and moves the snapshot onto the internal native
+       <button> in its shadow root — it never re-reads the host afterward (confirmed
+       against @ionic/core's inheritAttributes/inheritAriaAttributes source, which
+       says as much in its own doc comment), so ANY aria-* binding that changes after
+       first render (including aria-pressed) would silently freeze at its initial
+       value inside the shadow root while the host's live attribute drifts out of
+       sync with what assistive tech actually reads. [color] and the icon binding
+       below are ordinary reactive @Input properties (not attribute-inherited), so
+       the active state is communicated visually via those instead. -->
+  <div class="action-control">
+    <ion-button
+      class="like-button"
+      fill="clear"
+      size="large"
+      [color]="liked() ? 'danger' : 'light'"
+      [disabled]="busy()"
+      (click)="toggleLike()"
+      aria-label="Like trip"
+    >
+      <ion-icon slot="icon-only" [name]="liked() ? 'heart' : 'heart-outline'"></ion-icon>
+    </ion-button>
+    <span class="like-count">{{ likeCount() }}</span>
+  </div>
+
+  <div class="action-control">
+    <ion-button
+      class="save-button"
+      fill="clear"
+      size="large"
+      [color]="saved() ? 'warning' : 'light'"
+      [disabled]="busy()"
+      (click)="toggleSave()"
+      aria-label="Save trip"
+    >
+      <ion-icon slot="icon-only" [name]="saved() ? 'bookmark' : 'bookmark-outline'"></ion-icon>
+    </ion-button>
+  </div>
+
+  <div class="action-control">
+    <ion-button
+      class="clone-button"
+      fill="clear"
+      size="large"
+      color="light"
+      [disabled]="busy()"
+      (click)="clone()"
+      aria-label="Clone trip"
+    >
+      <ion-icon slot="icon-only" name="copy-outline"></ion-icon>
+    </ion-button>
+  </div>
+</div>
