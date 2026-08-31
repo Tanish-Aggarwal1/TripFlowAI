@@ -58,7 +58,11 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-            		.requestMatchers("/api/auth/**", "/api/discovery/**", "/actuator/health", "/actuator/metrics", "/actuator/metrics/**",
+            		// SOCIAL-01 / 06-CONTEXT.md Phase Boundary: the discovery surface (feed,
+            		// trips, search) requires authentication — it is not a public unauthenticated
+            		// surface. "/api/discovery/**" was removed from this list deliberately; every
+            		// DiscoveryController handler now falls through to anyRequest().authenticated().
+            		.requestMatchers("/api/auth/**", "/actuator/health", "/actuator/metrics", "/actuator/metrics/**",
             				"/swagger-ui.html", "/swagger-ui/**", "/api-docs", "/api-docs/**").permitAll()
                 .anyRequest().authenticated()
             )

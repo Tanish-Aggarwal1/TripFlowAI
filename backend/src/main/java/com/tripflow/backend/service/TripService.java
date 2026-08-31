@@ -1,24 +1,33 @@
 package com.tripflow.backend.service;
 
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.tripflow.backend.domain.Stop;
+import com.tripflow.backend.domain.StopPhoto;
 import com.tripflow.backend.domain.Trip;
 import com.tripflow.backend.domain.User;
 import com.tripflow.backend.domain.enums.TripVisibility;
 import com.tripflow.backend.dto.CreateTripRequest;
+import com.tripflow.backend.dto.FeedTripResponse;
 import com.tripflow.backend.dto.TripOwnerSummaryResponse;
 import com.tripflow.backend.dto.TripResponse;
 import com.tripflow.backend.dto.TripSearchFilters;
 import com.tripflow.backend.dto.TripSummaryResponse;
 import com.tripflow.backend.dto.UpdateTripRequest;
 import com.tripflow.backend.exception.InvalidRequestException;
+import com.tripflow.backend.mapper.FeedTripMapper;
 import com.tripflow.backend.mapper.TripMapper;
+import com.tripflow.backend.repository.StopPhotoRepository;
 import com.tripflow.backend.repository.TripRepository;
 import com.tripflow.backend.repository.TripSearchRepositoryImpl;
 import com.tripflow.backend.repository.UserRepository;
@@ -44,6 +53,8 @@ public class TripService {
     private final TripMapper tripMapper;
     private final TripOwnershipService tripOwnershipService;
     private final StopService stopService;
+    private final StopPhotoRepository stopPhotoRepository;
+    private final FeedTripMapper feedTripMapper;
 
     @Transactional(readOnly = true)
     public Page<TripOwnerSummaryResponse> listTrips(Long ownerId, Pageable pageable) {
@@ -89,6 +100,36 @@ public class TripService {
     @Transactional(readOnly = true)
     public Page<TripSummaryResponse> listPublicTrips(Pageable pageable) {
         return tripRepository.findSummariesByVisibility(TripVisibility.PUBLIC, pageable);
+    }
+
+    /**
+     * SOCIAL-01: authenticated, full-card feed of PUBLIC trips. {@code viewerId} is accepted
+     * now even though this task does not branch on it — 06-06 (interest-based ranking) needs
+     * it and adding the parameter later would ripple through the controller and both test
+     * classes. Ordered by recency only; ranking is explicitly out of scope here (06-06 owns it).
+     *
+     * <p>Stop photos are fetched in exactly one batched {@link StopPhotoRepository} query per
+     * page (Pitfall 2): every stop id across the page's trips is collected first, the batch
+     * finder is called once, then results are grouped by stop id for {@link FeedTripMapper}.
+     * An empty page short-circuits before that call entirely.
+     */
+    @Transactional(readOnly = true)
+    public Page<FeedTripResponse> listFeed(Long viewerId, Pageable pageable) {
+        Page<Trip> page = tripRepository.findByVisibility(TripVisibility.PUBLIC, pageable);
+        log.debug("Feed page loaded viewerId={} trips={}", viewerId, page.getNumberOfElements());
+
+        List<Long> stopIds = page.getContent().stream()
+                .flatMap(trip -> trip.getStops().stream())
+                .map(Stop::getId)
+                .toList();
+
+        Map<Long, List<StopPhoto>> photosByStopId = stopIds.isEmpty()
+                ? Map.of()
+                : stopPhotoRepository.findByStopIdInOrderByCreatedAtAsc(stopIds).stream()
+                        .collect(Collectors.groupingBy(photo -> photo.getStop().getId()));
+
+        List<FeedTripResponse> responses = feedTripMapper.toFeedResponses(page.getContent(), photosByStopId);
+        return new PageImpl<>(responses, pageable, page.getTotalElements());
     }
 
     @Transactional

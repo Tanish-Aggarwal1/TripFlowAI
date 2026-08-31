@@ -77,56 +77,86 @@ class DiscoveryControllerIT {
 	}
 
 	@Test
-void search_noAuth_missingQParam_returns400() throws Exception {
+void search_noAuth_missingQParam_returns401() throws Exception {
+    // SOCIAL-01/06-CONTEXT.md: /api/discovery/** now requires auth; a missing q-param
+    // never reaches validation because the authentication gate rejects first.
     mockMvc.perform(get("/api/discovery/search"))
+            .andExpect(status().isUnauthorized());
+}
+
+@Test
+void search_missingQParam_authenticated_returns400() throws Exception {
+    User user = createTestUser("search-noq");
+    mockMvc.perform(get("/api/discovery/search").with(asUser(user)))
             .andExpect(status().isBadRequest());
 }
 
 @Test
 void search_blankQParam_returns400() throws Exception {
-    mockMvc.perform(get("/api/discovery/search").param("q", "   "))
+    User user = createTestUser("search-blank");
+    mockMvc.perform(get("/api/discovery/search").param("q", "   ").with(asUser(user)))
             .andExpect(status().isBadRequest());
 }
 
 @Test
 void search_qOverMaxLength_returns400WithoutQuerying() throws Exception {
     // SCRUM-493: @Size(max = 100) on 'q' must reject before hitting the repository.
+    User user = createTestUser("search-toolong");
     String tooLong = "a".repeat(101);
-    mockMvc.perform(get("/api/discovery/search").param("q", tooLong))
+    mockMvc.perform(get("/api/discovery/search").param("q", tooLong).with(asUser(user)))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.fieldErrors[0].field").value("q"));
 }
 
 @Test
 void search_qAtMaxLength_returns200() throws Exception {
+    User user = createTestUser("search-atmax");
     String exactly100 = "a".repeat(100);
-    mockMvc.perform(get("/api/discovery/search").param("q", exactly100))
+    mockMvc.perform(get("/api/discovery/search").param("q", exactly100).with(asUser(user)))
             .andExpect(status().isOk());
 }
 
 @Test
-void search_noAuth_titleMatch_returnsPublicTripsOnly() throws Exception {
+void search_noAuth_titleMatch_returns401() throws Exception {
     User owner = createTestUser("owner1");
+
+    createTrip(owner, "Ottawa Weekend", TripVisibility.PUBLIC, null);
+
+    mockMvc.perform(get("/api/discovery/search").param("q", "ottawa"))
+            .andExpect(status().isUnauthorized());
+}
+
+@Test
+void search_authenticated_titleMatch_returnsPublicTripsOnly() throws Exception {
+    User owner = createTestUser("owner1b");
+    User viewer = createTestUser("viewer1b");
 
     createTrip(owner, "Ottawa Weekend", TripVisibility.PUBLIC, null);
     createTrip(owner, "Ottawa Secret Trip", TripVisibility.PRIVATE, null);
     createTrip(owner, "Unrelated Public Trip", TripVisibility.PUBLIC, null);
 
-    mockMvc.perform(get("/api/discovery/search").param("q", "ottawa"))
+    mockMvc.perform(get("/api/discovery/search").param("q", "ottawa").with(asUser(viewer)))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.content.length()").value(1))
             .andExpect(jsonPath("$.content[0].title").value("Ottawa Weekend"));
 }
 
   @Test
-  void listPublicTrips_noAuth_returnsOnlyPublicTrips() throws Exception {
+  void listPublicTrips_noAuth_returns401() throws Exception {
+      mockMvc.perform(get("/api/discovery/trips"))
+              .andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void listPublicTrips_authenticated_filtersOutPrivateTrips() throws Exception {
       User owner = createTestUser("owner");
-  
+      User viewer = createTestUser("viewer");
+
       createTrip(owner, "Public One", TripVisibility.PUBLIC, null);
       createTrip(owner, "Public Two", TripVisibility.PUBLIC, null);
       createTrip(owner, "Private One", TripVisibility.PRIVATE, null);
-  
-      mockMvc.perform(get("/api/discovery/trips"))
+
+      mockMvc.perform(get("/api/discovery/trips").with(asUser(viewer)))
               .andExpect(status().isOk())
               .andExpect(jsonPath("$.content.length()").value(2))
               .andExpect(jsonPath("$.content[*].visibility",
