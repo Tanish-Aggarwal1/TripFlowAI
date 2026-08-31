@@ -56,4 +56,27 @@
       <ion-icon slot="icon-only" name="copy-outline"></ion-icon>
     </ion-button>
   </div>
+
+  <!-- SOCIAL-07: 1-5 star rating. Each star's aria-label is a fixed string per star
+       (never changes after render) so it's safe against Ionic's snapshot-once
+       aria-* inheritance noted above — only [color]/the icon name are reactive. -->
+  <div class="action-control rating-control">
+    <div class="star-row">
+      @for (value of starValues; track value) {
+        <ion-button
+          class="star-button"
+          [attr.data-star]="value"
+          fill="clear"
+          size="small"
+          [color]="isFilled(value) ? 'warning' : 'light'"
+          [disabled]="busy()"
+          (click)="rate(value)"
+          [attr.aria-label]="'Rate trip ' + value + ' star' + (value === 1 ? '' : 's')"
+        >
+          <ion-icon slot="icon-only" [name]="isFilled(value) ? 'star' : 'star-outline'"></ion-icon>
+        </ion-button>
+      }
+    </div>
+    <span class="rating-count">{{ ratingCount() }}</span>
+  </div>
 </div>

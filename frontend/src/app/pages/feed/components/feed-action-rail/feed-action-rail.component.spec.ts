@@ -55,6 +55,13 @@ describe('FeedActionRailComponent', () => {
     return host.shadowRoot!.querySelector('button')!;
   }
 
+  function starButton(value: number): HTMLButtonElement {
+    const host: HTMLElement = fixture.nativeElement.querySelector(
+      `ion-button.star-button[data-star="${value}"]`,
+    );
+    return host.shadowRoot!.querySelector('button')!;
+  }
+
   beforeEach(async () => {
     toastCtrlSpy = jasmine.createSpyObj('ToastController', ['create']);
     toastCtrlSpy.create.and.returnValue(Promise.resolve({ present: () => Promise.resolve() } as any));
@@ -82,12 +89,31 @@ describe('FeedActionRailComponent', () => {
     httpMock.verify();
   });
 
-  it('renders exactly three action controls, each with an accessible label', () => {
-    const buttons: HTMLElement[] = Array.from(fixture.nativeElement.querySelectorAll('ion-button'));
-    expect(buttons.length).toBe(3);
+  it('renders exactly three like/save/clone controls, each with an accessible label', () => {
+    const buttons: HTMLElement[] = [
+      fixture.nativeElement.querySelector('ion-button.like-button'),
+      fixture.nativeElement.querySelector('ion-button.save-button'),
+      fixture.nativeElement.querySelector('ion-button.clone-button'),
+    ];
 
     const labels = buttons.map((btn) => btn.shadowRoot!.querySelector('button')!.getAttribute('aria-label'));
     expect(labels).toEqual(['Like trip', 'Save trip', 'Clone trip']);
+  });
+
+  it('renders five distinct star controls, each with an accessible label naming its value', () => {
+    const starButtons: HTMLElement[] = Array.from(
+      fixture.nativeElement.querySelectorAll('ion-button.star-button'),
+    );
+    expect(starButtons.length).toBe(5);
+
+    const labels = starButtons.map((btn) => btn.shadowRoot!.querySelector('button')!.getAttribute('aria-label'));
+    expect(labels).toEqual([
+      'Rate trip 1 star',
+      'Rate trip 2 stars',
+      'Rate trip 3 stars',
+      'Rate trip 4 stars',
+      'Rate trip 5 stars',
+    ]);
   });
 
   it('tapping like calls TripService.likeTrip and flips to active state; tapping again unlikes', () => {
@@ -207,6 +233,104 @@ describe('FeedActionRailComponent', () => {
 
     nativeButton('save-button').click();
     httpMock.expectOne('http://localhost:8080/api/trips/42/save').flush(null);
+
+    expect(navigateSpy).not.toHaveBeenCalled();
+  });
+
+  // ── Rating (SOCIAL-07) ───────────────────────────────────────────────────────
+
+  it('does not fetch a rating summary while the active input is false', () => {
+    TestBed.tick();
+    expect(httpMock.match('http://localhost:8080/api/trips/42/rating').length).toBe(0);
+  });
+
+  it('fetches the rating summary once the card becomes active', () => {
+    fixture.componentRef.setInput('active', true);
+    TestBed.tick();
+
+    const req = httpMock.expectOne('http://localhost:8080/api/trips/42/rating');
+    expect(req.request.method).toBe('GET');
+    req.flush({ averageRating: 4.0, ratingCount: 3, myRating: 2 });
+
+    expect(component.myRating()).toBe(2);
+    expect(component.ratingCount()).toBe(3);
+  });
+
+  it('does not re-fetch the rating summary on repeated activation of the same card', () => {
+    fixture.componentRef.setInput('active', true);
+    TestBed.tick();
+    httpMock.expectOne('http://localhost:8080/api/trips/42/rating').flush({
+      averageRating: null,
+      ratingCount: 0,
+      myRating: null,
+    });
+
+    fixture.componentRef.setInput('active', false);
+    TestBed.tick();
+    fixture.componentRef.setInput('active', true);
+    TestBed.tick();
+
+    expect(httpMock.match('http://localhost:8080/api/trips/42/rating').length).toBe(0);
+  });
+
+  it('tapping the third star calls rateTrip with 3 and renders three stars filled', () => {
+    starButton(3).click();
+
+    const req = httpMock.expectOne('http://localhost:8080/api/trips/42/rate');
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ rating: 3 });
+    req.flush(null);
+    fixture.detectChanges();
+
+    expect(component.myRating()).toBe(3);
+    expect(component.isFilled(3)).toBeTrue();
+    expect(component.isFilled(4)).toBeFalse();
+  });
+
+  it('re-tapping a different star calls rateTrip again with the new value and re-renders', () => {
+    starButton(3).click();
+    httpMock.expectOne('http://localhost:8080/api/trips/42/rate').flush(null);
+    fixture.detectChanges();
+
+    starButton(5).click();
+    const req = httpMock.expectOne('http://localhost:8080/api/trips/42/rate');
+    expect(req.request.body).toEqual({ rating: 5 });
+    req.flush(null);
+    fixture.detectChanges();
+
+    expect(component.myRating()).toBe(5);
+  });
+
+  it('reverts the star display to the previous value when a rate request fails, and surfaces a toast', () => {
+    starButton(3).click();
+    httpMock.expectOne('http://localhost:8080/api/trips/42/rate').flush(null);
+    fixture.detectChanges();
+    expect(component.myRating()).toBe(3);
+
+    starButton(5).click();
+    const req = httpMock.expectOne('http://localhost:8080/api/trips/42/rate');
+    req.flush({ message: 'Server error' }, { status: 500, statusText: 'Internal Server Error' });
+    fixture.detectChanges();
+
+    expect(component.myRating()).toBe(3);
+    expect(toastCtrlSpy.create).toHaveBeenCalled();
+  });
+
+  it('a rapid double-tap on a star issues exactly one outstanding HTTP request', () => {
+    const button = starButton(4);
+    button.click();
+    button.click();
+
+    const outstanding = httpMock.match('http://localhost:8080/api/trips/42/rate');
+    expect(outstanding.length).toBe(1);
+    outstanding[0].flush(null);
+  });
+
+  it('rating never navigates', () => {
+    const navigateSpy = spyOn(router, 'navigate');
+
+    starButton(4).click();
+    httpMock.expectOne('http://localhost:8080/api/trips/42/rate').flush(null);
 
     expect(navigateSpy).not.toHaveBeenCalled();
   });

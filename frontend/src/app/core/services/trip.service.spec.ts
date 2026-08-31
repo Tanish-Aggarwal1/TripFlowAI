@@ -672,4 +672,56 @@ describe('TripService', () => {
       .expectOne('http://localhost:8080/api/trips/saved?page=0&size=20')
       .flush({ message: 'Internal server error' }, { status: 500, statusText: 'Internal Server Error' });
   });
+
+  // ── Rating (SOCIAL-07) ───────────────────────────────────────────────────────
+
+  it('should rate a trip via POST with the rating in the body', (done) => {
+    service.rateTrip(15, 4).subscribe(() => done());
+
+    const req = httpMock.expectOne('http://localhost:8080/api/trips/15/rate');
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ rating: 4 });
+    req.flush(null);
+  });
+
+  it('should map an error from rateTrip through the standard error handler', (done) => {
+    service.rateTrip(15, 4).subscribe(
+      () => fail('should have failed'),
+      (error: any) => {
+        expect(error.status).toBe(404);
+        done();
+      },
+    );
+
+    httpMock
+      .expectOne('http://localhost:8080/api/trips/15/rate')
+      .flush({ message: 'Not found' }, { status: 404, statusText: 'Not Found' });
+  });
+
+  it('should get a trip rating summary via GET', (done) => {
+    const mockSummary = { averageRating: 4.0, ratingCount: 3, myRating: 5 };
+
+    service.getTripRating(15).subscribe((summary) => {
+      expect(summary).toEqual(mockSummary);
+      done();
+    });
+
+    const req = httpMock.expectOne('http://localhost:8080/api/trips/15/rating');
+    expect(req.request.method).toBe('GET');
+    req.flush(mockSummary);
+  });
+
+  it('should map an error from getTripRating through the standard error handler', (done) => {
+    service.getTripRating(15).subscribe(
+      () => fail('should have failed'),
+      (error: any) => {
+        expect(error.status).toBe(404);
+        done();
+      },
+    );
+
+    httpMock
+      .expectOne('http://localhost:8080/api/trips/15/rating')
+      .flush({ message: 'Not found' }, { status: 404, statusText: 'Not Found' });
+  });
 });
