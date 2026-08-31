@@ -147,8 +147,9 @@ Each task was committed atomically:
 1. **Task 1: Rating vertical slice — migration through POST /api/trips/{id}/rate** - `bbfee6d` (feat, tracer)
 2. **Task 2: Rating summary endpoint** - `687ab58` (feat)
 3. **Task 3: Star rating control on the feed action rail** - `0c1d221` (feat)
+4. **Task 3 follow-up: rating-summary-fetch error path coverage** - `b6e66fe` (test)
 
-**Plan metadata:** commit pending (this SUMMARY + deferred-items.md)
+**Plan metadata:** `618d80d` (docs: complete plan)
 
 ## Files Created/Modified
 - `backend/src/main/resources/db/migration/V16__create_trip_ratings.sql` - trip_ratings table, composite PK, CHECK constraint, trip_id index
