@@ -152,7 +152,7 @@ Plans:
 
 **Goal**: TripFlowAI has a working social layer — a TikTok-style "For You" feed of PUBLIC trips, engagement actions, ratings, and a minimal user profile, with lightweight interest-based ranking. The SCRUM-9 epic goes from reserved-but-empty to functional.
 **Depends on**: Phase 5 (soft — independent in practice, sequenced after polish/observability by convention in the fall plan)
-**Requirements**: SOCIAL-01, SOCIAL-02, SOCIAL-03, SOCIAL-04, SOCIAL-05, SOCIAL-06
+**Requirements**: SOCIAL-01, SOCIAL-02, SOCIAL-03, SOCIAL-04, SOCIAL-05, SOCIAL-06, SOCIAL-07
 **Jira epic**: `SCRUM-279` ("SOCIAL v2") — created 2026-08-06; `SCRUM-9` (SOCIAL) closes 2026-08-17
 **Scope expanded 2026-08-06 (Phase 6 discussion)**: original SOCIAL-01 (paginated/searchable discovery feed) restyled as a full-screen, TikTok-style vertical swipe feed per-trip, with two additions beyond the original milestone scope: a minimal user profile page (SOCIAL-05) and lightweight interest-based feed ranking (SOCIAL-06). Both folded into this phase rather than pushed to a new phase — see `.planning/phases/06-community-social/06-CONTEXT.md` for the full discussion.
 **Success Criteria** (what must be TRUE):
@@ -163,7 +163,7 @@ Plans:
   4. Trips with no stop photos fall back to a text-based card (stop descriptions) instead of breaking the swipe layout
   5. Users have a profile page showing username, join date, and their stored interests
 
-**Plans**: 6 plans (task breakdown from FB-19/20/21/24 plus the two scope additions)
+**Plans**: 6 plans — `/gsd-plan-phase 6` run 2026-08-31 produced 6 PLAN.md files (`06-01` through `06-06`) mapping 1:1 onto the plan items below. The pre-planning audit findings each item carries are retained as history; the PLAN.md list beneath them is the executable breakdown, with waves assigned for parallel execution.
 **Critical — reconcile with existing Jira tickets before implementing (do not duplicate)**: `SCRUM-71` (parent, **Done** as of 2026-08-12 — was stale "In Progress" in this doc, subtasks below confirm Done) already has subtasks `SCRUM-159` (71a, visibility enforcement), `SCRUM-160` (71b, discovery feed), `SCRUM-161` (71c, like endpoints), `SCRUM-162` (71d, clone), `SCRUM-163` (71e, search). **[UPDATED 2026-08-10] SCRUM-160/161/162/163 merged to `main` 2026-08-06 (after this roadmap entry was written) — the backend for discovery feed, search, like, and clone all ship and work today (`DiscoveryController`, `TripController`, documented in `docs/api-contracts.md`); paths are `GET /api/discovery/trips`/`GET /api/discovery/search`, matching this doc's assumption, not the earlier `/api/trips/discover` guess. Only the frontend consumer is outstanding — `trip.service.ts` has no methods calling any of these, and no discovery/feed/clone/like UI exists. Do not re-plan or re-implement the backend for 06-01/06-03; scope those plans to frontend wiring against the endpoints that already exist.** Also resolve `SCRUM-274` (404 existence-hiding standardization across owner-gated mutations) as part of this phase, not separately — it directly determines whether like/clone/rate return 403 or 404 on private trips. See `docs/social-features-traceability-audit.md` and RISK-J1/J3 in `.planning/RISKS.md`.
 
 Plans:
@@ -174,6 +174,26 @@ Plans:
 - [ ] 06-04: Trip ratings (star, trip-level, join-table pattern) — FB-19d — **confirmed NOT started** (2026-08-14 audit): no `Rating` domain class, no rating controller/endpoint
 - [ ] 06-05: User profile page — username, join date, stored interests (new field/table) — SOCIAL-05 — **confirmed NOT started** (2026-08-14 audit): no `profile` path under `frontend/src`
 - [ ] 06-06: Interest-based feed ranking — order feed by interest-tag match against profile interests, fall back to recency — SOCIAL-06 (depends on 06-05) — **confirmed NOT started** (2026-08-14 audit): existing "interest" hits are AI itinerary-preferences fields, unrelated to feed ranking
+
+PLAN.md files (2026-08-31):
+
+**Wave 1**
+
+- [ ] 06-01-PLAN.md — Authenticated feed backend + Angular data seam: remove `/api/discovery/**` from `SecurityConfig` permitAll (one-way decision checkpoint), new `GET /api/discovery/feed` returning `FeedTripResponse` (owner username, description, tags, stops with photo URLs and text for the D-03 fallback), batched `findByStopIdIn` photo fetch, `DiscoveryService`/`feed.model.ts` (SOCIAL-01) · wave 1 · not autonomous
+
+**Wave 2** *(blocked on Wave 1)*
+
+- [ ] 06-02-PLAN.md — TikTok-style swipe feed UI: `swiper` install behind a blocking package-legitimacy checkpoint, `/feed` route + full-screen outer vertical swiper (D-01), `feed-card` with pinned header/footer chrome (D-02), nested inner horizontal stop swiper, no-photo text card (D-03), paging and dashboard entry point (SOCIAL-01) · wave 2 · not autonomous
+
+**Wave 3** *(blocked on Wave 2 — parallel with each other, zero file overlap)*
+
+- [ ] 06-03-PLAN.md — Save/bookmark backend (`V14__create_trip_saves.sql`, `SavedTrip`/`SavedTripId`/`SavedTripRepository`/`TripSaveService`, `POST`/`DELETE /api/trips/{id}/save`, `GET /api/trips/saved`) plus the D-04 on-card action rail wiring like, save and clone (SOCIAL-02/03/04) · wave 3
+- [ ] 06-05-PLAN.md — User profile: `V15__add_user_interests.sql` + `User.interests TEXT[]` behind a one-way decision checkpoint (D-07), `ProfileController`/`ProfileService`, `GET /api/profile` + `PATCH /api/profile/interests` with 20x50 limits, `/profile` page (SOCIAL-05) · wave 3 · not autonomous
+
+**Wave 4** *(blocked on Wave 3 — parallel with each other, zero file overlap)*
+
+- [ ] 06-04-PLAN.md — Trip ratings: `V16__create_trip_ratings.sql` with a 1-5 CHECK constraint, `TripRating` upsert (`ON CONFLICT DO UPDATE`) so re-rating replaces rather than duplicates, `POST /api/trips/{id}/rate` + `GET /api/trips/{id}/rating`, star control on the action rail (SOCIAL-07) · wave 4
+- [ ] 06-06-PLAN.md — Interest-based ranking: `findPublicRankedByInterests` ordering tag-overlap first then recency with empty-interests fallback (D-05/D-06), paging-stability coverage, plus the phase's single `docs/api-contracts.md` + `docs/auth.md` documentation pass (SOCIAL-06) · wave 4
 
 ### Phase 7: Trip Tracking
 

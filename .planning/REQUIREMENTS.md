@@ -59,6 +59,7 @@ Requirements for this milestone (fall break through winter presentation). Each m
 - [ ] **SOCIAL-04**: Users can save/bookmark a PUBLIC trip to a private "saved trips" list, idempotently, directly from the on-card action rail (FB-24)
 - [ ] **SOCIAL-05**: Users have a profile page showing their username, join date, and stored interests (new, added 2026-08-06 — required as the data source for SOCIAL-06 and to support the feed's owner-username display)
 - [ ] **SOCIAL-06**: The "For You" feed orders PUBLIC trips with interest-tag matches against the viewer's stored profile interests first, falling back to recency for the rest (new, added 2026-08-06 — lightweight personalization, not a full recommendation algorithm)
+- [ ] **SOCIAL-07**: Users can rate a PUBLIC trip (1-5 stars, trip-level, one rating per user via a join-table pattern) (FB-19d). Referenced by ROADMAP.md's Phase 6 plan 06-04 and `docs/social-features-traceability-audit.md` since the fall-break plan's inception but missing a tracked requirement ID until the 06-RESEARCH.md gap-check on 2026-08-31 — added here rather than left untracked.
 
 ### Trip Tracking (TRACK)
 
@@ -115,6 +116,7 @@ None — fall-break and winter scope are already fully enumerated above; nothing
 | SOCIAL-04 | Phase 6 | Pending |
 | SOCIAL-05 | Phase 6 | Pending |
 | SOCIAL-06 | Phase 6 | Pending |
+| SOCIAL-07 | Phase 6 | Pending |
 | TRACK-01 | Phase 7 | Pending |
 | TRACK-02 | Phase 7 | Pending |
 | HARDEN-01 | Phase 9 | Pending |
@@ -126,10 +128,10 @@ None — fall-break and winter scope are already fully enumerated above; nothing
 
 **Coverage:**
 
-- v1 requirements: 32 total
-- Mapped to phases: 32
+- v1 requirements: 33 total
+- Mapped to phases: 33
 - Unmapped: 0 ✓
-- Done: 4 (AUTH-01/02/03, EXPORT-01) · Partial: 5 (AI-02, POLISH-01, SOCIAL-01/02/03) · Pending: 23
+- Done: 4 (AUTH-01/02/03, EXPORT-01) · Partial: 5 (AI-02, POLISH-01, SOCIAL-01/02/03) · Pending: 24
 
 **[FIXED 2026-08-14]** HARDEN-01..06 were mismapped to "Phase 8" in this table since 2026-08-06 — ROADMAP.md's Phase 8 is Trip Collaboration, not Winter Hardening (that's Phase 9). Corrected above; this was a stale/incorrect artifact, not a codebase finding.
 
