@@ -152,7 +152,7 @@ Plans:
 
 **Goal**: TripFlowAI has a working social layer — a TikTok-style "For You" feed of PUBLIC trips, engagement actions, ratings, and a minimal user profile, with lightweight interest-based ranking. The SCRUM-9 epic goes from reserved-but-empty to functional.
 **Depends on**: Phase 5 (soft — independent in practice, sequenced after polish/observability by convention in the fall plan)
-**Requirements**: SOCIAL-01, SOCIAL-02, SOCIAL-03, SOCIAL-04, SOCIAL-05, SOCIAL-06
+**Requirements**: SOCIAL-01, SOCIAL-02, SOCIAL-03, SOCIAL-04, SOCIAL-05, SOCIAL-06, SOCIAL-07
 **Jira epic**: `SCRUM-279` ("SOCIAL v2") — created 2026-08-06; `SCRUM-9` (SOCIAL) closes 2026-08-17
 **Scope expanded 2026-08-06 (Phase 6 discussion)**: original SOCIAL-01 (paginated/searchable discovery feed) restyled as a full-screen, TikTok-style vertical swipe feed per-trip, with two additions beyond the original milestone scope: a minimal user profile page (SOCIAL-05) and lightweight interest-based feed ranking (SOCIAL-06). Both folded into this phase rather than pushed to a new phase — see `.planning/phases/06-community-social/06-CONTEXT.md` for the full discussion.
 **Success Criteria** (what must be TRUE):
