@@ -2,14 +2,18 @@ package com.tripflow.backend.service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.tripflow.backend.domain.Stop;
+import com.tripflow.backend.domain.StopPhoto;
 import com.tripflow.backend.domain.Trip;
 import com.tripflow.backend.domain.User;
 import com.tripflow.backend.domain.enums.TripVisibility;
@@ -21,7 +25,9 @@ import com.tripflow.backend.dto.TripSearchFilters;
 import com.tripflow.backend.dto.TripSummaryResponse;
 import com.tripflow.backend.dto.UpdateTripRequest;
 import com.tripflow.backend.exception.InvalidRequestException;
+import com.tripflow.backend.mapper.FeedTripMapper;
 import com.tripflow.backend.mapper.TripMapper;
+import com.tripflow.backend.repository.StopPhotoRepository;
 import com.tripflow.backend.repository.TripRepository;
 import com.tripflow.backend.repository.TripSearchRepositoryImpl;
 import com.tripflow.backend.repository.UserRepository;
@@ -47,6 +53,8 @@ public class TripService {
     private final TripMapper tripMapper;
     private final TripOwnershipService tripOwnershipService;
     private final StopService stopService;
+    private final StopPhotoRepository stopPhotoRepository;
+    private final FeedTripMapper feedTripMapper;
 
     @Transactional(readOnly = true)
     public Page<TripOwnerSummaryResponse> listTrips(Long ownerId, Pageable pageable) {
@@ -100,41 +108,28 @@ public class TripService {
      * it and adding the parameter later would ripple through the controller and both test
      * classes. Ordered by recency only; ranking is explicitly out of scope here (06-06 owns it).
      *
-     * <p>Photo lookup is a no-op empty list in this task — Task 3 wires the batched
-     * {@code StopPhotoRepository.findByStopIdInOrderByCreatedAtAsc} fetch.
+     * <p>Stop photos are fetched in exactly one batched {@link StopPhotoRepository} query per
+     * page (Pitfall 2): every stop id across the page's trips is collected first, the batch
+     * finder is called once, then results are grouped by stop id for {@link FeedTripMapper}.
+     * An empty page short-circuits before that call entirely.
      */
     @Transactional(readOnly = true)
     public Page<FeedTripResponse> listFeed(Long viewerId, Pageable pageable) {
         Page<Trip> page = tripRepository.findByVisibility(TripVisibility.PUBLIC, pageable);
         log.debug("Feed page loaded viewerId={} trips={}", viewerId, page.getNumberOfElements());
-        return page.map(this::toFeedResponse);
-    }
 
-    private FeedTripResponse toFeedResponse(Trip trip) {
-        List<FeedTripResponse.FeedStop> stops = trip.getStops().stream()
-                .map(this::toFeedStop)
+        List<Long> stopIds = page.getContent().stream()
+                .flatMap(trip -> trip.getStops().stream())
+                .map(Stop::getId)
                 .toList();
-        return new FeedTripResponse(
-                trip.getId(),
-                trip.getTitle(),
-                trip.getDescription(),
-                trip.getTags(),
-                trip.getUser().getUsername(),
-                trip.getLikeCount(),
-                trip.getCreatedAt(),
-                stops
-        );
-    }
 
-    private FeedTripResponse.FeedStop toFeedStop(Stop stop) {
-        return new FeedTripResponse.FeedStop(
-                stop.getId(),
-                stop.getPlace().getName(),
-                stop.getPlace().getAddress(),
-                stop.getStopOrder(),
-                stop.getNotes(),
-                List.of()
-        );
+        Map<Long, List<StopPhoto>> photosByStopId = stopIds.isEmpty()
+                ? Map.of()
+                : stopPhotoRepository.findByStopIdInOrderByCreatedAtAsc(stopIds).stream()
+                        .collect(Collectors.groupingBy(photo -> photo.getStop().getId()));
+
+        List<FeedTripResponse> responses = feedTripMapper.toFeedResponses(page.getContent(), photosByStopId);
+        return new PageImpl<>(responses, pageable, page.getTotalElements());
     }
 
     @Transactional

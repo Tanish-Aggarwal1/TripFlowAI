@@ -21,11 +21,16 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.tripflow.backend.domain.Stop;
+import com.tripflow.backend.domain.StopPhoto;
 import com.tripflow.backend.domain.User;
 import com.tripflow.backend.domain.enums.TripVisibility;
 import com.tripflow.backend.dto.CreateStopRequest;
 import com.tripflow.backend.dto.CreateTripRequest;
+import com.tripflow.backend.repository.StopPhotoRepository;
+import com.tripflow.backend.repository.StopRepository;
 import com.tripflow.backend.repository.UserRepository;
 import com.tripflow.backend.security.UserPrincipal;
 import com.tripflow.backend.testsupport.PostgresTestcontainersConfiguration;
@@ -48,6 +53,12 @@ class DiscoveryFeedControllerIT {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private StopRepository stopRepository;
+
+    @Autowired
+    private StopPhotoRepository stopPhotoRepository;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -139,5 +150,65 @@ class DiscoveryFeedControllerIT {
                 .andExpect(jsonPath("$.content[0].ownerUsername").value(owner.getUsername()))
                 .andExpect(jsonPath("$.content[0].ownerUsername",
                         org.hamcrest.Matchers.not(org.hamcrest.Matchers.equalTo(viewer.getUsername()))));
+    }
+
+    @Test
+    void getFeed_zeroPhotoTrip_stillPresentWithEmptyPhotoUrls() throws Exception {
+        // D-03: a trip whose stops all have zero photos is included in the feed with
+        // renderable text content (non-null name/notes), not excluded and not broken.
+        User owner = createTestUser("owner4");
+        User viewer = createTestUser("viewer4");
+
+        createTrip(owner, "No Photos Yet", "Still worth seeing", TripVisibility.PUBLIC, null);
+
+        mockMvc.perform(get("/api/discovery/feed").with(asUser(viewer)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].stops[0].name").value("Byward Market"))
+                .andExpect(jsonPath("$.content[0].stops[0].notes").value("Try the beavertails"))
+                .andExpect(jsonPath("$.content[0].stops[0].photoUrls").isArray())
+                .andExpect(jsonPath("$.content[0].stops[0].photoUrls.length()").value(0));
+    }
+
+    @Test
+    void getFeed_batchedPhotoFetch_preservesCreatedAtAscendingOrder() throws Exception {
+        User owner = createTestUser("owner5");
+        User viewer = createTestUser("viewer5");
+
+        CreateTripRequest request = new CreateTripRequest(
+                "Multi-Stop Trip",
+                null,
+                null,
+                TripVisibility.PUBLIC,
+                List.of(
+                        new CreateStopRequest("Stop A", 45.4285, -75.6935, null, null, null),
+                        new CreateStopRequest("Stop B", 45.42, -75.69, null, null, null)));
+
+        String body = mockMvc.perform(post("/api/trips").with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)).with(asUser(owner)))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        JsonNode tripJson = objectMapper.readTree(body);
+        Long firstStopId = tripJson.get("stops").get(0).get("id").asLong();
+
+        Stop firstStop = stopRepository.findById(firstStopId).orElseThrow();
+        StopPhoto photoOne = new StopPhoto();
+        photoOne.setStop(firstStop);
+        photoOne.setUrl("https://res.cloudinary.com/demo/image/upload/v1/photo-one.jpg");
+        stopPhotoRepository.saveAndFlush(photoOne);
+
+        StopPhoto photoTwo = new StopPhoto();
+        photoTwo.setStop(firstStop);
+        photoTwo.setUrl("https://res.cloudinary.com/demo/image/upload/v1/photo-two.jpg");
+        stopPhotoRepository.saveAndFlush(photoTwo);
+
+        mockMvc.perform(get("/api/discovery/feed").with(asUser(viewer)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].stops[0].photoUrls.length()").value(2))
+                .andExpect(jsonPath("$.content[0].stops[0].photoUrls[0]")
+                        .value("https://res.cloudinary.com/demo/image/upload/v1/photo-one.jpg"))
+                .andExpect(jsonPath("$.content[0].stops[0].photoUrls[1]")
+                        .value("https://res.cloudinary.com/demo/image/upload/v1/photo-two.jpg"))
+                .andExpect(jsonPath("$.content[0].stops[1].photoUrls.length()").value(0));
     }
 }
