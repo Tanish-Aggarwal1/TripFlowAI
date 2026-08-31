@@ -25,9 +25,9 @@
       mousewheel="true"
       (swiperslidechange)="onSlideChange($event)"
     >
-      @for (trip of trips(); track trip.id) {
+      @for (trip of trips(); track trip.id; let idx = $index) {
         <swiper-slide class="outer-slide">
-          <app-feed-card [trip]="trip" />
+          <app-feed-card [trip]="trip" [active]="idx === activeIndex()" />
         </swiper-slide>
       }
     </swiper-container>
