@@ -37,3 +37,13 @@
   text-align: center;
   padding: 16px;
 }
+
+// Task 4: non-blocking indicator while the next page loads in the background —
+// overlaid at the bottom of the viewport so it never covers the active card.
+.load-more-indicator {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+}
