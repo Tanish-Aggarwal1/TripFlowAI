@@ -122,13 +122,25 @@ public class TripService {
      * The ranking query's fixed ordering already encodes the only sort this endpoint supports, so
      * dropping the incoming {@code Sort} loses nothing.
      *
+     * <p>A non-default {@code pageable} sort is rejected, same mechanism and rationale as
+     * {@link #searchPublicTrips}: the interest-then-recency order IS the feature (SOCIAL-06), so
+     * silently honouring a client-supplied sort would let a caller quietly defeat the ranking and
+     * make it look broken to whoever passed one.
+     *
      * <p>Stop photos are fetched in exactly one batched {@link StopPhotoRepository} query per
      * page (Pitfall 2): every stop id across the page's trips is collected first, the batch
      * finder is called once, then results are grouped by stop id for {@link FeedTripMapper}.
      * An empty page short-circuits before that call entirely.
      */
+    private static final Sort FEED_SORT = Sort.by(Sort.Direction.DESC, "createdAt");
+
     @Transactional(readOnly = true)
     public Page<FeedTripResponse> listFeed(Long viewerId, Pageable pageable) {
+        if (!pageable.getSort().isEmpty() && !pageable.getSort().equals(FEED_SORT)) {
+            throw new InvalidRequestException(
+                    "Custom 'sort' is not supported on this endpoint; the feed is always ordered by interest match then createdAt desc");
+        }
+
         List<String> interests = userRepository.findById(viewerId)
                 .map(User::getInterests)
                 .orElse(List.of());

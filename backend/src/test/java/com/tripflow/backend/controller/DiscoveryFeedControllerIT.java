@@ -10,7 +10,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -367,8 +370,77 @@ class DiscoveryFeedControllerIT {
         // override, so it sits at its natural insertion time — before either stranger trip in
         // this sequence). The load-bearing assertion is that newerOtherTrip precedes
         // olderFoodTrip, not any particular position for the viewer's own trip.
-        List<Long> ids = new java.util.ArrayList<>();
+        List<Long> ids = new ArrayList<>();
         content.forEach(node -> ids.add(node.get("id").asLong()));
         assertThat(ids.indexOf(newerOtherTrip)).isLessThan(ids.indexOf(olderFoodTrip));
+    }
+
+    // ---------- SOCIAL-06 Task 2: paging stability and ranking-order regression ----------
+
+    @Test
+    void getFeed_pagingOverRankedFeed_yieldsDistinctIdsNoDuplicateNoOmission() throws Exception {
+        // app.ratelimit.trip-create is capped at 5/user/hour in application-test.properties,
+        // so 25 trips need 5 distinct owners (5 each) rather than one owner making 25 calls.
+        User viewer = createTestUserWithInterests("viewer13", List.of("hiking"));
+        List<User> owners = List.of(
+                createTestUser("owner13-0"), createTestUser("owner13-1"), createTestUser("owner13-2"),
+                createTestUser("owner13-3"), createTestUser("owner13-4"));
+
+        List<Long> tripIds = new ArrayList<>();
+        for (int i = 0; i < 25; i++) {
+            User owner = owners.get(i / 5);
+            List<String> tags = i % 2 == 0 ? List.of("hiking") : List.of("beach");
+            Long id = createTrip(owner, "Paging Trip " + i, null, TripVisibility.PUBLIC, tags);
+            setCreatedAt(id, Instant.parse("2026-01-01T00:00:00Z").plusSeconds(i * 60L));
+            tripIds.add(id);
+        }
+
+        Set<Long> seen = new HashSet<>();
+        for (int page = 0; page <= 1; page++) {
+            String body = mockMvc.perform(get("/api/discovery/feed")
+                            .param("page", String.valueOf(page))
+                            .param("size", "20")
+                            .with(asUser(viewer)))
+                    .andExpect(status().isOk())
+                    .andReturn().getResponse().getContentAsString();
+            objectMapper.readTree(body).get("content").forEach(node -> seen.add(node.get("id").asLong()));
+        }
+
+        assertThat(seen).hasSize(25);
+        assertThat(seen).containsExactlyInAnyOrderElementsOf(tripIds);
+    }
+
+    @Test
+    void getFeed_totalElementCount_excludesPrivateTrips() throws Exception {
+        User owner = createTestUser("owner14");
+        User viewer = createTestUserWithInterests("viewer14", List.of("hiking"));
+
+        createTrip(owner, "Public One", null, TripVisibility.PUBLIC, List.of("hiking"));
+        createTrip(owner, "Public Two", null, TripVisibility.PUBLIC, List.of("beach"));
+        createTrip(owner, "Private One", null, TripVisibility.PRIVATE, List.of("hiking"));
+
+        mockMvc.perform(get("/api/discovery/feed").with(asUser(viewer)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.page.totalElements").value(2));
+    }
+
+    @Test
+    void getFeed_clientSuppliedSort_isRejected() throws Exception {
+        User viewer = createTestUserWithInterests("viewer15", List.of());
+
+        mockMvc.perform(get("/api/discovery/feed").param("sort", "title,asc").with(asUser(viewer)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void getFeed_pageBeyondLast_returns200WithEmptyContent() throws Exception {
+        User owner = createTestUser("owner16");
+        User viewer = createTestUserWithInterests("viewer16", List.of());
+
+        createTrip(owner, "Only Trip", null, TripVisibility.PUBLIC, null);
+
+        mockMvc.perform(get("/api/discovery/feed").param("page", "5").param("size", "20").with(asUser(viewer)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(0));
     }
 }
