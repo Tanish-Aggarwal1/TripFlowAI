@@ -1,5 +1,6 @@
 package com.tripflow.backend.controller;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -7,6 +8,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
@@ -15,6 +18,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.context.ImportTestcontainers;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -60,6 +64,9 @@ class DiscoveryFeedControllerIT {
     @Autowired
     private StopPhotoRepository stopPhotoRepository;
 
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private User createTestUser(String suffix) {
@@ -70,13 +77,21 @@ class DiscoveryFeedControllerIT {
         return userRepository.save(user);
     }
 
+    // SOCIAL-06/D-06: interests live on the viewer's stored profile row, never inferred from
+    // trip history — this helper is the only place ranking tests seed that source.
+    private User createTestUserWithInterests(String suffix, List<String> interests) {
+        User user = createTestUser(suffix);
+        user.setInterests(interests);
+        return userRepository.save(user);
+    }
+
     private RequestPostProcessor asUser(User user) {
         UserPrincipal principal = new UserPrincipal(user.getId(), user.getEmail());
         var auth = new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
         return authentication(auth);
     }
 
-    private void createTrip(User owner, String title, String description, TripVisibility visibility,
+    private Long createTrip(User owner, String title, String description, TripVisibility visibility,
             List<String> tags) throws Exception {
         CreateTripRequest request = new CreateTripRequest(
                 title,
@@ -86,9 +101,20 @@ class DiscoveryFeedControllerIT {
                 List.of(new CreateStopRequest("Byward Market", 45.4285, -75.6935, "55 ByWard Market Sq", null,
                         "Try the beavertails")));
 
-        mockMvc.perform(post("/api/trips").with(csrf()).contentType(MediaType.APPLICATION_JSON)
+        String body = mockMvc.perform(post("/api/trips").with(csrf()).contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)).with(asUser(owner)))
-                .andExpect(status().isCreated());
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        return objectMapper.readTree(body).get("id").asLong();
+    }
+
+    // SOCIAL-06 Task 1: pins the ORDER BY's created_at tiebreaker deliberately, following the
+    // established TripSearchRepositoryIT#searchOwnedTrips_equalCreatedAt_ordersByIdDescendingStably
+    // pattern of writing an exact createdAt value straight to the row after the entity is
+    // persisted (BaseEntity.createdAt is @CreatedDate/updatable=false, so it can't be set through
+    // JPA — a raw UPDATE is the only way to control it deterministically in a test).
+    private void setCreatedAt(Long tripId, Instant instant) {
+        jdbcTemplate.update("UPDATE trips SET created_at = ? WHERE id = ?", Timestamp.from(instant), tripId);
     }
 
     @Test
@@ -210,5 +236,139 @@ class DiscoveryFeedControllerIT {
                 .andExpect(jsonPath("$.content[0].stops[0].photoUrls[1]")
                         .value("https://res.cloudinary.com/demo/image/upload/v1/photo-two.jpg"))
                 .andExpect(jsonPath("$.content[0].stops[1].photoUrls.length()").value(0));
+    }
+
+    // ---------- SOCIAL-06 (D-05/D-06): interest-based ranking ----------
+
+    @Test
+    void getFeed_olderMatchingTripOutranksNewerNonMatchingTrip() throws Exception {
+        User owner = createTestUser("owner6");
+        User viewer = createTestUserWithInterests("viewer6", List.of("hiking"));
+
+        Long matchingId = createTrip(owner, "Older Matching Trip", null, TripVisibility.PUBLIC, List.of("hiking"));
+        Long nonMatchingId = createTrip(owner, "Newer Non-Matching Trip", null, TripVisibility.PUBLIC,
+                List.of("beach"));
+        setCreatedAt(matchingId, Instant.parse("2026-01-01T00:00:00Z"));
+        setCreatedAt(nonMatchingId, Instant.parse("2026-06-01T00:00:00Z"));
+
+        mockMvc.perform(get("/api/discovery/feed").with(asUser(viewer)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(2))
+                .andExpect(jsonPath("$.content[0].id").value(matchingId))
+                .andExpect(jsonPath("$.content[1].id").value(nonMatchingId));
+    }
+
+    @Test
+    void getFeed_bothMatchingTrips_moreRecentAppearsFirst() throws Exception {
+        User owner = createTestUser("owner7");
+        User viewer = createTestUserWithInterests("viewer7", List.of("hiking"));
+
+        Long olderMatch = createTrip(owner, "Older Match", null, TripVisibility.PUBLIC, List.of("hiking"));
+        Long newerMatch = createTrip(owner, "Newer Match", null, TripVisibility.PUBLIC, List.of("hiking"));
+        setCreatedAt(olderMatch, Instant.parse("2026-01-01T00:00:00Z"));
+        setCreatedAt(newerMatch, Instant.parse("2026-06-01T00:00:00Z"));
+
+        mockMvc.perform(get("/api/discovery/feed").with(asUser(viewer)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value(newerMatch))
+                .andExpect(jsonPath("$.content[1].id").value(olderMatch));
+    }
+
+    @Test
+    void getFeed_neitherTripMatches_moreRecentAppearsFirst() throws Exception {
+        User owner = createTestUser("owner8");
+        User viewer = createTestUserWithInterests("viewer8", List.of("hiking"));
+
+        Long olderNonMatch = createTrip(owner, "Older Non-Match", null, TripVisibility.PUBLIC, List.of("beach"));
+        Long newerNonMatch = createTrip(owner, "Newer Non-Match", null, TripVisibility.PUBLIC, List.of("city"));
+        setCreatedAt(olderNonMatch, Instant.parse("2026-01-01T00:00:00Z"));
+        setCreatedAt(newerNonMatch, Instant.parse("2026-06-01T00:00:00Z"));
+
+        mockMvc.perform(get("/api/discovery/feed").with(asUser(viewer)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value(newerNonMatch))
+                .andExpect(jsonPath("$.content[1].id").value(olderNonMatch));
+    }
+
+    @Test
+    void getFeed_viewerWithEmptyInterests_isPureRecencyOrderWithNoError() throws Exception {
+        User owner = createTestUser("owner9");
+        User viewer = createTestUserWithInterests("viewer9", List.of());
+
+        Long older = createTrip(owner, "Older Trip", null, TripVisibility.PUBLIC, List.of("hiking"));
+        Long newer = createTrip(owner, "Newer Trip", null, TripVisibility.PUBLIC, List.of("beach"));
+        setCreatedAt(older, Instant.parse("2026-01-01T00:00:00Z"));
+        setCreatedAt(newer, Instant.parse("2026-06-01T00:00:00Z"));
+
+        mockMvc.perform(get("/api/discovery/feed").with(asUser(viewer)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value(newer))
+                .andExpect(jsonPath("$.content[1].id").value(older));
+    }
+
+    @Test
+    void getFeed_privateTripWithMatchingTag_neverAppears() throws Exception {
+        User owner = createTestUser("owner10");
+        User viewer = createTestUserWithInterests("viewer10", List.of("hiking"));
+
+        createTrip(owner, "Private Matching Trip", null, TripVisibility.PRIVATE, List.of("hiking"));
+        Long publicId = createTrip(owner, "Public Non-Matching Trip", null, TripVisibility.PUBLIC, List.of("beach"));
+
+        mockMvc.perform(get("/api/discovery/feed").with(asUser(viewer)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].id").value(publicId));
+    }
+
+    @Test
+    void getFeed_twoViewersWithDifferentInterests_receiveDifferentOrderings() throws Exception {
+        User owner = createTestUser("owner11");
+        User hikingViewer = createTestUserWithInterests("hikingviewer11", List.of("hiking"));
+        User beachViewer = createTestUserWithInterests("beachviewer11", List.of("beach"));
+
+        Long hikingTrip = createTrip(owner, "Hiking Trip", null, TripVisibility.PUBLIC, List.of("hiking"));
+        Long beachTrip = createTrip(owner, "Beach Trip", null, TripVisibility.PUBLIC, List.of("beach"));
+        setCreatedAt(hikingTrip, Instant.parse("2026-01-01T00:00:00Z"));
+        setCreatedAt(beachTrip, Instant.parse("2026-06-01T00:00:00Z"));
+
+        mockMvc.perform(get("/api/discovery/feed").with(asUser(hikingViewer)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value(hikingTrip))
+                .andExpect(jsonPath("$.content[1].id").value(beachTrip));
+
+        mockMvc.perform(get("/api/discovery/feed").with(asUser(beachViewer)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value(beachTrip))
+                .andExpect(jsonPath("$.content[1].id").value(hikingTrip));
+    }
+
+    @Test
+    void getFeed_rankingUsesStoredInterests_notViewersOwnTripTags() throws Exception {
+        // D-06: the viewer's own trip's tag ("food") must never act as a stand-in interest
+        // signal. The viewer's stored interests are empty, so this must fall back to pure
+        // recency — if ranking wrongly inferred interests from the viewer's own trips, the
+        // older "food"-tagged stranger trip would incorrectly outrank the newer one.
+        User viewer = createTestUserWithInterests("viewer12", List.of());
+        createTrip(viewer, "Viewer's Own Food Trip", null, TripVisibility.PUBLIC, List.of("food"));
+
+        User stranger = createTestUser("owner12");
+        Long olderFoodTrip = createTrip(stranger, "Older Food Trip", null, TripVisibility.PUBLIC, List.of("food"));
+        Long newerOtherTrip = createTrip(stranger, "Newer Other Trip", null, TripVisibility.PUBLIC,
+                List.of("other"));
+        setCreatedAt(olderFoodTrip, Instant.parse("2026-01-01T00:00:00Z"));
+        setCreatedAt(newerOtherTrip, Instant.parse("2026-06-01T00:00:00Z"));
+
+        String body = mockMvc.perform(get("/api/discovery/feed").with(asUser(viewer)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        JsonNode content = objectMapper.readTree(body).get("content");
+
+        // Recency order across all 3 PUBLIC trips (viewer's own trip has no explicit createdAt
+        // override, so it sits at its natural insertion time — before either stranger trip in
+        // this sequence). The load-bearing assertion is that newerOtherTrip precedes
+        // olderFoodTrip, not any particular position for the viewer's own trip.
+        List<Long> ids = new java.util.ArrayList<>();
+        content.forEach(node -> ids.add(node.get("id").asLong()));
+        assertThat(ids.indexOf(newerOtherTrip)).isLessThan(ids.indexOf(olderFoodTrip));
     }
 }
