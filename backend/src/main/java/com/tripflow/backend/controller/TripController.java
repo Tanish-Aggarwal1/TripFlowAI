@@ -25,6 +25,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.tripflow.backend.domain.enums.TripStatus;
 import com.tripflow.backend.domain.enums.TripVisibility;
 import com.tripflow.backend.dto.CreateTripRequest;
+import com.tripflow.backend.dto.RateTripRequest;
 import com.tripflow.backend.dto.TripOwnerSummaryResponse;
 import com.tripflow.backend.dto.TripResponse;
 import com.tripflow.backend.dto.TripSearchFilters;
@@ -35,6 +36,7 @@ import com.tripflow.backend.security.UserPrincipal;
 import com.tripflow.backend.service.RouteOptimizationService;
 import com.tripflow.backend.service.TripCloneService;
 import com.tripflow.backend.service.TripLikeService;
+import com.tripflow.backend.service.TripRatingService;
 import com.tripflow.backend.service.TripSaveService;
 import com.tripflow.backend.service.TripService;
 
@@ -54,6 +56,7 @@ public class TripController {
     private final TripCloneService tripCloneService;
     private final TripLikeService tripLikeService;
     private final TripSaveService tripSaveService;
+    private final TripRatingService tripRatingService;
     private final RateLimiterService rateLimiterService;
     private final RateLimitProperties rateLimitProperties;
 
@@ -189,6 +192,18 @@ public class TripController {
     public ResponseEntity<Void> unsaveTrip(
             @PathVariable Long id, @AuthenticationPrincipal UserPrincipal principal) {
         tripSaveService.unsaveTrip(id, principal.userId());
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "Rate a trip", description = "Sets or replaces the caller's 1-5 star rating "
+            + "(SOCIAL-07). PUBLIC trips only, or your own PRIVATE trips. Re-rating replaces the "
+            + "previous value — never creates a second row.")
+    @PostMapping("/{id}/rate")
+    public ResponseEntity<Void> rateTrip(
+            @PathVariable Long id,
+            @RequestBody @Valid RateTripRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        tripRatingService.rateTrip(id, principal.userId(), request.rating());
         return ResponseEntity.ok().build();
     }
 }
