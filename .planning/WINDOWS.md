@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 5
+open_count: 6
 waived_count: 0
 fixed_count: 0
-total_count: 5
-last_updated: 2026-08-31T20:54:18.166Z
+total_count: 6
+last_updated: 2026-08-31T21:21:39.136Z
 ---
 
 # Broken Windows Ledger
@@ -20,6 +20,7 @@ last_updated: 2026-08-31T20:54:18.166Z
 | 3 | 01 | stub | backend/src/main/java/com/tripflow/backend/service/RefreshTokenService.java |  | Replayed already-used refresh token is rejected as generically invalid instead of triggering the D-03 family mass-revoke - fail-closed placeholder for plan 01-03 | open |  | 2026-08-14T21:40:35.780Z |  |
 | 4 | 06 | unrun-verify | frontend/src/app/pages/feed/components/feed-card/feed-card.component.html |  | nested=true diagonal-drag gesture disambiguation (D-01) not verified on a real touch device or DevTools touch emulation; Task 3's <human-check> still owed | open |  | 2026-08-31T20:05:39.291Z |  |
 | 5 | 06 | deviation | frontend/src/app/pages/trips/dashboard/dashboard.page.ts |  | Pre-existing frontend function-coverage gate shortfall (88.64% vs 90% threshold) unrelated to 06-03 - app.routes.ts (0/16), dashboard.page.ts, trip-edit.page.ts, trip-view.page.ts, stop-photo.service.ts, testing/a11y.ts already sit below threshold before this plan | open |  | 2026-08-31T20:54:18.166Z |  |
+| 6 | 06 | lint-warning | frontend/karma.conf.js |  | Global function-coverage floor (90%) already unmet at 88.6-88.9% before this plan (app.routes.ts lazy-loadComponent arrows are structurally never unit-covered); pre-existing, not introduced by 06-05 (all 06-05 new files are 100% function-covered). | open |  | 2026-08-31T21:21:39.136Z |  |
 
 ````json
 [
@@ -81,6 +82,18 @@ last_updated: 2026-08-31T20:54:18.166Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-08-31T20:54:18.166Z",
+    "resolved_at": null
+  },
+  {
+    "id": 6,
+    "kind": "lint-warning",
+    "phase": "06",
+    "file": "frontend/karma.conf.js",
+    "line": null,
+    "description": "Global function-coverage floor (90%) already unmet at 88.6-88.9% before this plan (app.routes.ts lazy-loadComponent arrows are structurally never unit-covered); pre-existing, not introduced by 06-05 (all 06-05 new files are 100% function-covered).",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-08-31T21:21:39.136Z",
     "resolved_at": null
   }
 ]
