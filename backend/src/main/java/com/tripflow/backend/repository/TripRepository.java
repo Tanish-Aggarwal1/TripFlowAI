@@ -73,6 +73,16 @@ public interface TripRepository extends JpaRepository<Trip, Long>, TripSearchRep
             @Param("visibility") TripVisibility visibility, Pageable pageable);
 
     /**
+     * Full-entity page read backing {@code GET /api/discovery/feed} (SOCIAL-01). Unlike
+     * {@link #findSummariesByVisibility}, this returns the actual {@link Trip} entities
+     * (with stops, per {@code Trip.stops}' {@code @OrderBy("stopOrder ASC")}) so
+     * {@code TripService.listFeed} can build the full-card {@code FeedTripResponse} shape —
+     * owner username, tags, and per-stop text/photos — that the summary projection doesn't
+     * carry. No interest-overlap {@code ORDER BY} here; plan 06-06 owns ranking.
+     */
+    Page<Trip> findByVisibility(TripVisibility visibility, Pageable pageable);
+
+    /**
      * Atomic counter bump (SCRUM-161) — {@code SET like_count = like_count + 1} at the
      * database, not a Java read-modify-write, so concurrent likes never lose an update.
      * Only call after {@link com.tripflow.backend.repository.TripLikeRepository#insertIfAbsent}

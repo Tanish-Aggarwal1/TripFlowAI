@@ -1,6 +1,7 @@
 package com.tripflow.backend.service;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -8,10 +9,12 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.tripflow.backend.domain.Stop;
 import com.tripflow.backend.domain.Trip;
 import com.tripflow.backend.domain.User;
 import com.tripflow.backend.domain.enums.TripVisibility;
 import com.tripflow.backend.dto.CreateTripRequest;
+import com.tripflow.backend.dto.FeedTripResponse;
 import com.tripflow.backend.dto.TripOwnerSummaryResponse;
 import com.tripflow.backend.dto.TripResponse;
 import com.tripflow.backend.dto.TripSearchFilters;
@@ -89,6 +92,49 @@ public class TripService {
     @Transactional(readOnly = true)
     public Page<TripSummaryResponse> listPublicTrips(Pageable pageable) {
         return tripRepository.findSummariesByVisibility(TripVisibility.PUBLIC, pageable);
+    }
+
+    /**
+     * SOCIAL-01: authenticated, full-card feed of PUBLIC trips. {@code viewerId} is accepted
+     * now even though this task does not branch on it — 06-06 (interest-based ranking) needs
+     * it and adding the parameter later would ripple through the controller and both test
+     * classes. Ordered by recency only; ranking is explicitly out of scope here (06-06 owns it).
+     *
+     * <p>Photo lookup is a no-op empty list in this task — Task 3 wires the batched
+     * {@code StopPhotoRepository.findByStopIdInOrderByCreatedAtAsc} fetch.
+     */
+    @Transactional(readOnly = true)
+    public Page<FeedTripResponse> listFeed(Long viewerId, Pageable pageable) {
+        Page<Trip> page = tripRepository.findByVisibility(TripVisibility.PUBLIC, pageable);
+        log.debug("Feed page loaded viewerId={} trips={}", viewerId, page.getNumberOfElements());
+        return page.map(this::toFeedResponse);
+    }
+
+    private FeedTripResponse toFeedResponse(Trip trip) {
+        List<FeedTripResponse.FeedStop> stops = trip.getStops().stream()
+                .map(this::toFeedStop)
+                .toList();
+        return new FeedTripResponse(
+                trip.getId(),
+                trip.getTitle(),
+                trip.getDescription(),
+                trip.getTags(),
+                trip.getUser().getUsername(),
+                trip.getLikeCount(),
+                trip.getCreatedAt(),
+                stops
+        );
+    }
+
+    private FeedTripResponse.FeedStop toFeedStop(Stop stop) {
+        return new FeedTripResponse.FeedStop(
+                stop.getId(),
+                stop.getPlace().getName(),
+                stop.getPlace().getAddress(),
+                stop.getStopOrder(),
+                stop.getNotes(),
+                List.of()
+        );
     }
 
     @Transactional
