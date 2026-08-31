@@ -7,6 +7,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -103,20 +104,52 @@ public class TripService {
     }
 
     /**
-     * SOCIAL-01: authenticated, full-card feed of PUBLIC trips. {@code viewerId} is accepted
-     * now even though this task does not branch on it — 06-06 (interest-based ranking) needs
-     * it and adding the parameter later would ripple through the controller and both test
-     * classes. Ordered by recency only; ranking is explicitly out of scope here (06-06 owns it).
+     * SOCIAL-01/SOCIAL-06: authenticated, full-card, interest-ranked feed of PUBLIC trips.
+     * D-05/D-06: PUBLIC trips whose {@code tags} overlap the viewer's <strong>stored profile
+     * interests</strong> (never a signal inferred from the viewer's own trip history) come
+     * first, with everything else falling back to recency — both within the two groups and
+     * entirely, when the viewer has no stored interests.
+     *
+     * <p>An empty {@code interests} branches to {@link TripRepository#findByVisibility} rather
+     * than calling the ranked query with an empty collection: an empty SQL {@code IN (...)} list
+     * is a syntax error, not a query that matches nothing.
+     *
+     * <p>The ranked branch strips {@code pageable}'s {@code Sort} before calling the repository
+     * (Rule 1 fix, found via this task's own {@code <verify>}): Spring Data JPA's native-query
+     * paging support appends an {@code ORDER BY} built from the raw JPA property name (it has no
+     * way to resolve {@code createdAt} to the actual {@code created_at} column for a native
+     * query), which both duplicates and breaks the ranked query's own explicit {@code ORDER BY}.
+     * The ranking query's fixed ordering already encodes the only sort this endpoint supports, so
+     * dropping the incoming {@code Sort} loses nothing.
+     *
+     * <p>A non-default {@code pageable} sort is rejected, same mechanism and rationale as
+     * {@link #searchPublicTrips}: the interest-then-recency order IS the feature (SOCIAL-06), so
+     * silently honouring a client-supplied sort would let a caller quietly defeat the ranking and
+     * make it look broken to whoever passed one.
      *
      * <p>Stop photos are fetched in exactly one batched {@link StopPhotoRepository} query per
      * page (Pitfall 2): every stop id across the page's trips is collected first, the batch
      * finder is called once, then results are grouped by stop id for {@link FeedTripMapper}.
      * An empty page short-circuits before that call entirely.
      */
+    private static final Sort FEED_SORT = Sort.by(Sort.Direction.DESC, "createdAt");
+
     @Transactional(readOnly = true)
     public Page<FeedTripResponse> listFeed(Long viewerId, Pageable pageable) {
-        Page<Trip> page = tripRepository.findByVisibility(TripVisibility.PUBLIC, pageable);
-        log.debug("Feed page loaded viewerId={} trips={}", viewerId, page.getNumberOfElements());
+        if (!pageable.getSort().isEmpty() && !pageable.getSort().equals(FEED_SORT)) {
+            throw new InvalidRequestException(
+                    "Custom 'sort' is not supported on this endpoint; the feed is always ordered by interest match then createdAt desc");
+        }
+
+        List<String> interests = userRepository.findById(viewerId)
+                .map(User::getInterests)
+                .orElse(List.of());
+        Page<Trip> page = interests.isEmpty()
+                ? tripRepository.findByVisibility(TripVisibility.PUBLIC, pageable)
+                : tripRepository.findPublicRankedByInterests(
+                        interests, PageRequest.of(pageable.getPageNumber(), pageable.getPageSize()));
+        log.debug("Feed page loaded viewerId={} trips={} ranked={}", viewerId, page.getNumberOfElements(),
+                !interests.isEmpty());
 
         List<Long> stopIds = page.getContent().stream()
                 .flatMap(trip -> trip.getStops().stream())
