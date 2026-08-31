@@ -27,12 +27,7 @@
     >
       @for (trip of trips(); track trip.id) {
         <swiper-slide class="outer-slide">
-          <!-- Tracer placeholder: real card chrome (D-02) and inner
-               horizontal stop-swiper land in FeedCardComponent (Task 3). -->
-          <h1>{{ trip.title }}</h1>
-          @if (trip.stops.length > 0) {
-            <p>{{ trip.stops[0].name }}</p>
-          }
+          <app-feed-card [trip]="trip" />
         </swiper-slide>
       }
     </swiper-container>

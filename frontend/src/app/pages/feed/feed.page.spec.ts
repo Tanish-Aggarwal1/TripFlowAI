@@ -61,7 +61,7 @@ describe('FeedPage', () => {
   it('renders exactly one swiper-slide for one loaded trip', () => {
     fixture.detectChanges();
 
-    const slides = fixture.nativeElement.querySelectorAll('swiper-slide');
+    const slides = fixture.nativeElement.querySelectorAll('.outer-slide');
     expect(slides.length).toBe(1);
     expect(fixture.nativeElement.textContent).toContain('Road Trip');
   });

@@ -19,12 +19,14 @@
 .outer-slide {
   width: 100%;
   height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
   background: var(--ion-color-dark, #000);
   color: var(--ion-color-light, #fff);
+
+  app-feed-card {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
 }
 
 .centered {

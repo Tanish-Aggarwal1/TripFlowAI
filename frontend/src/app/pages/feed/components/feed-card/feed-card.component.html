@@ -1,0 +1,43 @@
+<div class="feed-card">
+  <!-- D-02: pinned top overlay — trip title, major location, owner username.
+       Never moves as the inner stop-swiper's active slide changes. -->
+  <div class="top-overlay">
+    <h1 class="trip-title">{{ trip().title }}</h1>
+    @if (majorLocation()) {
+      <p class="major-location">{{ majorLocation() }}</p>
+    }
+    <p class="owner-username">&#64;{{ trip().ownerUsername }}</p>
+  </div>
+
+  <!-- Inner horizontal "stop-to-stop" swiper (D-01). nested="true" is the
+       documented mitigation for the outer/inner diagonal-swipe gesture
+       conflict (RESEARCH.md Pitfall 4) — confirmed on a real touch device
+       as a phase-level human check, not asserted here. -->
+  <swiper-container class="inner-swiper" direction="horizontal" slides-per-view="1" nested="true">
+    @for (stop of trip().stops; track stop.id) {
+      <swiper-slide class="inner-slide">
+        @if (hasPhotos(stop)) {
+          <img [src]="stop.photoUrls[0]" [alt]="stop.name" class="stop-photo" />
+        } @else {
+          <!-- D-03: text fallback for a stop with zero photos. -->
+          <div class="stop-text-fallback">
+            <h2>{{ stop.name }}</h2>
+            @if (stop.notes) {
+              <p>{{ stop.notes }}</p>
+            }
+          </div>
+        }
+      </swiper-slide>
+    }
+  </swiper-container>
+
+  <!-- Reserved for plan 06-03's on-card action rail (D-04: like/save/clone). -->
+
+  <!-- D-02: pinned bottom overlay — trip description. Renders nothing (not
+       the string "null") when the trip has no description. -->
+  @if (trip().description) {
+    <div class="bottom-overlay">
+      <p class="trip-description">{{ trip().description }}</p>
+    </div>
+  }
+</div>
