@@ -1,10 +1,13 @@
 package com.tripflow.backend.service;
 
+import java.util.ArrayList;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.tripflow.backend.domain.User;
 import com.tripflow.backend.dto.ProfileResponse;
+import com.tripflow.backend.dto.UpdateInterestsRequest;
 import com.tripflow.backend.exception.ResourceNotFoundException;
 import com.tripflow.backend.repository.UserRepository;
 
@@ -26,6 +29,16 @@ public class ProfileService {
     @Transactional(readOnly = true)
     public ProfileResponse getProfile(Long userId) {
         return toResponse(loadUser(userId));
+    }
+
+    // Replace-wholesale, not a delta merge: the caller always sends the full resulting array
+    // (T-06-05-03 keeps username/joinedAt structurally unreachable through this endpoint).
+    @Transactional
+    public ProfileResponse updateInterests(Long userId, UpdateInterestsRequest request) {
+        User user = loadUser(userId);
+        user.setInterests(new ArrayList<>(request.interests()));
+        log.info("Profile interests updated userId={} count={}", userId, user.getInterests().size());
+        return toResponse(user);
     }
 
     private User loadUser(Long userId) {
