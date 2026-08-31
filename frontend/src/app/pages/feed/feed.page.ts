@@ -10,6 +10,7 @@ import { IonContent, IonSpinner } from '@ionic/angular';
 import { register } from 'swiper/element/bundle';
 import { DiscoveryService } from '../../core/services/discovery.service';
 import { FeedTrip } from '../../core/models/feed.model';
+import { FeedCardComponent } from './components/feed-card/feed-card.component';
 
 // Registers <swiper-container>/<swiper-slide> as custom elements. Done here (the
 // lazily-loaded feed route) rather than main.ts so Swiper never enters the
@@ -18,16 +19,15 @@ register();
 
 /**
  * SOCIAL-01 (D-01): the outer vertical "trip-to-trip" swiper. Full-screen,
- * one PUBLIC trip per slide. The inner horizontal "stop-to-stop" swiper and
- * D-02's fixed header/footer chrome live in FeedCardComponent (plan 06-02
- * Task 3) — this tracer renders each slide as plain text so the outer
- * swiper + data-fetch seam can be verified end-to-end first.
+ * one PUBLIC trip per slide, rendered via FeedCardComponent (D-02's fixed
+ * header/footer chrome, D-03's no-photo text fallback, the inner horizontal
+ * "stop-to-stop" swiper).
  */
 @Component({
   selector: 'app-feed',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IonContent, IonSpinner],
+  imports: [IonContent, IonSpinner, FeedCardComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: 'feed.page.html',
   styleUrls: ['feed.page.scss'],
