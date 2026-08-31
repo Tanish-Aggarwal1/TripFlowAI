@@ -35,6 +35,7 @@ import com.tripflow.backend.security.UserPrincipal;
 import com.tripflow.backend.service.RouteOptimizationService;
 import com.tripflow.backend.service.TripCloneService;
 import com.tripflow.backend.service.TripLikeService;
+import com.tripflow.backend.service.TripSaveService;
 import com.tripflow.backend.service.TripService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -52,6 +53,7 @@ public class TripController {
     private final RouteOptimizationService routeOptimizationService;
     private final TripCloneService tripCloneService;
     private final TripLikeService tripLikeService;
+    private final TripSaveService tripSaveService;
     private final RateLimiterService rateLimiterService;
     private final RateLimitProperties rateLimitProperties;
 
@@ -159,6 +161,23 @@ public class TripController {
     public ResponseEntity<Void> unlikeTrip(
             @PathVariable Long id, @AuthenticationPrincipal UserPrincipal principal) {
         tripLikeService.unlikeTrip(id, principal.userId());
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "Save a trip", description = "Idempotent: saving an already-saved trip still returns 200. "
+            + "PUBLIC trips only, or your own PRIVATE trips.")
+    @PostMapping("/{id}/save")
+    public ResponseEntity<Void> saveTrip(
+            @PathVariable Long id, @AuthenticationPrincipal UserPrincipal principal) {
+        tripSaveService.saveTrip(id, principal.userId());
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "Unsave a trip", description = "Idempotent: unsaving a trip you haven't saved still returns 200.")
+    @DeleteMapping("/{id}/save")
+    public ResponseEntity<Void> unsaveTrip(
+            @PathVariable Long id, @AuthenticationPrincipal UserPrincipal principal) {
+        tripSaveService.unsaveTrip(id, principal.userId());
         return ResponseEntity.ok().build();
     }
 }
