@@ -3,6 +3,7 @@ package com.tripflow.backend.service;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.tripflow.backend.dto.TripRatingSummaryResponse;
 import com.tripflow.backend.repository.TripRatingRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -31,5 +32,30 @@ public class TripRatingService {
 
         tripRatingRepository.upsertRating(requesterId, tripId, rating);
         log.info("Trip rated tripId={} userId={} rating={}", tripId, requesterId, rating);
+    }
+
+    /**
+     * Average, count and the caller's own rating for a trip. Deliberately not folded into
+     * {@code FeedTripResponse} — that would mean either a second aggregate per trip on
+     * every feed page, or a denormalized average column to keep in sync. The action rail
+     * fetches this per card as it becomes active instead (RESEARCH.md Pitfall 2).
+     *
+     * <p>Calls {@code loadVisibleTripLite} so the read path honours the same 404-not-403
+     * existence-hiding rule as {@link #rateTrip} — the summary endpoint must not become an
+     * oracle that discloses a PRIVATE trip's existence the write path refuses to.
+     */
+    @Transactional(readOnly = true)
+    public TripRatingSummaryResponse getSummary(Long tripId, Long requesterId) {
+        tripOwnershipService.loadVisibleTripLite(tripId, requesterId);
+
+        // The repository's Object[] return type is itself a single-element wrapper around
+        // the query's one aggregate row (also an Object[]) — Spring Data treats an array
+        // return type as a collection projection, not the row tuple directly.
+        Object[] row = (Object[]) tripRatingRepository.findAverageAndCountByTripId(tripId)[0];
+        Double averageRating = (Double) row[0];
+        long ratingCount = (Long) row[1];
+        Integer myRating = tripRatingRepository.findRatingByUserIdAndTripId(requesterId, tripId).orElse(null);
+
+        return new TripRatingSummaryResponse(averageRating, ratingCount, myRating);
     }
 }

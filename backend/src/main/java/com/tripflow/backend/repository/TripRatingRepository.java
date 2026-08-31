@@ -27,9 +27,11 @@ public interface TripRatingRepository extends JpaRepository<TripRating, TripRati
     void upsertRating(@Param("userId") Long userId, @Param("tripId") Long tripId, @Param("rating") int rating);
 
     /**
-     * Average and count of every rating on a trip, as a 2-element {@code Object[]} of
-     * {@code [Double average, Long count]}. {@code AVG} over zero rows returns SQL NULL, not
-     * zero — {@code TripRatingService} maps that NULL through to
+     * Average and count of every rating on a trip. Spring Data returns an array-typed method
+     * as a one-row wrapper, so this comes back as a single-element {@code Object[]} whose
+     * only element is the actual {@code [Double average, Long count]} row — callers must
+     * unwrap once (see {@code TripRatingService.getSummary}). {@code AVG} over zero rows
+     * returns SQL NULL, not zero — {@code TripRatingService} maps that NULL through to
      * {@code TripRatingSummaryResponse.averageRating} honestly rather than as a misleading
      * 0.0. Plain {@code Object[]} rather than a constructor-expression DTO: a two-column
      * aggregate with no other consumer doesn't earn a dedicated projection class.

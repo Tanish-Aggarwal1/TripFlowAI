@@ -27,6 +27,7 @@ import com.tripflow.backend.domain.enums.TripVisibility;
 import com.tripflow.backend.dto.CreateTripRequest;
 import com.tripflow.backend.dto.RateTripRequest;
 import com.tripflow.backend.dto.TripOwnerSummaryResponse;
+import com.tripflow.backend.dto.TripRatingSummaryResponse;
 import com.tripflow.backend.dto.TripResponse;
 import com.tripflow.backend.dto.TripSearchFilters;
 import com.tripflow.backend.dto.UpdateTripRequest;
@@ -205,5 +206,14 @@ public class TripController {
             @AuthenticationPrincipal UserPrincipal principal) {
         tripRatingService.rateTrip(id, principal.userId(), request.rating());
         return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "Get a trip's rating summary", description = "Average rating, rating count "
+            + "and the caller's own rating (null if they haven't rated it) for a trip (SOCIAL-07). "
+            + "PUBLIC trips only, or your own PRIVATE trips.")
+    @GetMapping("/{id}/rating")
+    public ResponseEntity<TripRatingSummaryResponse> getTripRating(
+            @PathVariable Long id, @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(tripRatingService.getSummary(id, principal.userId()));
     }
 }
