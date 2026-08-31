@@ -1,0 +1,40 @@
+<ion-content [fullscreen]="true" class="feed-content">
+  @if (loading()) {
+    <div class="centered">
+      <ion-spinner name="crescent" />
+    </div>
+  }
+
+  @if (!loading() && error()) {
+    <div class="centered error">
+      <p>{{ error() }}</p>
+    </div>
+  }
+
+  @if (!loading() && !error() && trips().length === 0) {
+    <div class="centered empty-state">
+      <p>No trips to show yet. Check back soon.</p>
+    </div>
+  }
+
+  @if (!loading() && !error() && trips().length > 0) {
+    <swiper-container
+      class="outer-swiper"
+      direction="vertical"
+      slides-per-view="1"
+      mousewheel="true"
+      (swiperslidechange)="onSlideChange($event)"
+    >
+      @for (trip of trips(); track trip.id) {
+        <swiper-slide class="outer-slide">
+          <!-- Tracer placeholder: real card chrome (D-02) and inner
+               horizontal stop-swiper land in FeedCardComponent (Task 3). -->
+          <h1>{{ trip.title }}</h1>
+          @if (trip.stops.length > 0) {
+            <p>{{ trip.stops[0].name }}</p>
+          }
+        </swiper-slide>
+      }
+    </swiper-container>
+  }
+</ion-content>
