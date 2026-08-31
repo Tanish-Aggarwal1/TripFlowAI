@@ -169,6 +169,85 @@ class TripRatingServiceIT {
     }
 
     @Test
+    void getSummary_threeRatings_returnsAverageAndCount() {
+        User owner = saveUser("owner9");
+        User raterA = saveUser("ratera9");
+        User raterB = saveUser("raterb9");
+        User raterC = saveUser("raterc9");
+        Trip trip = saveTrip(owner, "Well Rated Trip", TripVisibility.PUBLIC);
+
+        tripRatingService.rateTrip(trip.getId(), raterA.getId(), 5);
+        tripRatingService.rateTrip(trip.getId(), raterB.getId(), 3);
+        tripRatingService.rateTrip(trip.getId(), raterC.getId(), 4);
+
+        var summary = tripRatingService.getSummary(trip.getId(), raterA.getId());
+
+        assertThat(summary.averageRating()).isEqualTo(4.0);
+        assertThat(summary.ratingCount()).isEqualTo(3);
+        assertThat(summary.myRating()).isEqualTo(5);
+    }
+
+    @Test
+    void getSummary_unratedTrip_returnsNullAverageAndZeroCount() {
+        User owner = saveUser("owner10");
+        User viewer = saveUser("viewer10");
+        Trip trip = saveTrip(owner, "Unrated Trip", TripVisibility.PUBLIC);
+
+        var summary = tripRatingService.getSummary(trip.getId(), viewer.getId());
+
+        assertThat(summary.averageRating())
+                .as("AVG over zero rows must be represented as null, not 0.0")
+                .isNull();
+        assertThat(summary.ratingCount()).isEqualTo(0);
+        assertThat(summary.myRating()).isNull();
+    }
+
+    @Test
+    void getSummary_callerHasNotRated_myRatingIsNull() {
+        User owner = saveUser("owner11");
+        User rater = saveUser("rater11");
+        User viewer = saveUser("viewer11");
+        Trip trip = saveTrip(owner, "Partially Rated Trip", TripVisibility.PUBLIC);
+
+        tripRatingService.rateTrip(trip.getId(), rater.getId(), 4);
+
+        var summary = tripRatingService.getSummary(trip.getId(), viewer.getId());
+
+        assertThat(summary.myRating()).isNull();
+        assertThat(summary.ratingCount()).isEqualTo(1);
+    }
+
+    @Test
+    void getSummary_reRate_changesAverageWithoutChangingCount() {
+        User owner = saveUser("owner12");
+        User rater = saveUser("rater12");
+        Trip trip = saveTrip(owner, "Re-rated Trip", TripVisibility.PUBLIC);
+
+        tripRatingService.rateTrip(trip.getId(), rater.getId(), 2);
+        var before = tripRatingService.getSummary(trip.getId(), rater.getId());
+        assertThat(before.averageRating()).isEqualTo(2.0);
+        assertThat(before.ratingCount()).isEqualTo(1);
+
+        tripRatingService.rateTrip(trip.getId(), rater.getId(), 5);
+        var after = tripRatingService.getSummary(trip.getId(), rater.getId());
+
+        assertThat(after.averageRating()).isEqualTo(5.0);
+        assertThat(after.ratingCount())
+                .as("re-rating must change the average without changing the count")
+                .isEqualTo(1);
+    }
+
+    @Test
+    void getSummary_foreignPrivateTrip_throwsResourceNotFound() {
+        User owner = saveUser("owner13");
+        User other = saveUser("other13");
+        Trip trip = saveTrip(owner, "Private Rating Summary Trip", TripVisibility.PRIVATE);
+
+        assertThatThrownBy(() -> tripRatingService.getSummary(trip.getId(), other.getId()))
+                .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
     void directInsert_zeroRating_isRejectedByCheckConstraint() {
         User owner = saveUser("owner8");
         User rater = saveUser("rater8");
