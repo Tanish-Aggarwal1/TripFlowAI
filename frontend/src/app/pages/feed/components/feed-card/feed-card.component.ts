@@ -24,6 +24,10 @@ import { FeedActionRailComponent } from '../feed-action-rail/feed-action-rail.co
 })
 export class FeedCardComponent {
   trip = input.required<FeedTrip>();
+  // SOCIAL-07: set by FeedPage from the outer swiper's active index. Forwarded
+  // verbatim to the action rail, which uses it to fetch a rating summary only for
+  // the slide the viewer is actually looking at.
+  active = input(false);
 
   // D-02's "major location": the first stop's address when present, otherwise
   // the first stop's name, otherwise empty (a trip with no stops at all).
