@@ -1,8 +1,11 @@
 package com.tripflow.backend.service;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.tripflow.backend.dto.TripOwnerSummaryResponse;
 import com.tripflow.backend.repository.SavedTripRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -49,5 +52,15 @@ public class TripSaveService {
         } else {
             log.debug("Trip was not saved tripId={} userId={}", tripId, requesterId);
         }
+    }
+
+    /**
+     * Paged read of the requester's own saved trips. Scoped strictly to
+     * {@code requesterId} — never accepts a user id from the request, so one user's saves
+     * can never be listed by another (SOCIAL-04).
+     */
+    @Transactional(readOnly = true)
+    public Page<TripOwnerSummaryResponse> listSaved(Long requesterId, Pageable pageable) {
+        return savedTripRepository.findSavedTripsByUserId(requesterId, pageable);
     }
 }
