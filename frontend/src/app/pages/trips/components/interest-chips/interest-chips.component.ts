@@ -17,6 +17,9 @@ import { MAX_INTEREST_LENGTH, MAX_INTERESTS } from '../../../../core/models/trip
 export class InterestChipsComponent {
   @Input() label = 'Interests';
   @Input() interests: string[] = [];
+  // SOCIAL-05: profile-page interests reuse this component at the 20-element backend limit
+  // (docs/api-contracts.md's Trip.tags policy) rather than the AI-prompt callers' 10.
+  @Input() maxInterests = MAX_INTERESTS;
   @Output() interestsChange = new EventEmitter<string[]>();
 
   interestInput = '';
@@ -34,8 +37,8 @@ export class InterestChipsComponent {
       this.error = `Each interest must be at most ${MAX_INTEREST_LENGTH} characters.`;
       return;
     }
-    if (this.interests.length >= MAX_INTERESTS) {
-      this.error = `At most ${MAX_INTERESTS} interests are allowed.`;
+    if (this.interests.length >= this.maxInterests) {
+      this.error = `At most ${this.maxInterests} interests are allowed.`;
       return;
     }
     if (!this.interests.includes(value)) {
