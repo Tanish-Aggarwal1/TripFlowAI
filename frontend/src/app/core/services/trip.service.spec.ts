@@ -524,12 +524,40 @@ describe('TripService', () => {
     req.flush(null);
   });
 
+  it('should map a 404 from likeTrip through the standard error handler', (done) => {
+    service.likeTrip(12).subscribe(
+      () => fail('should have failed'),
+      (error: any) => {
+        expect(error.message).toBe('Trip not found.');
+        done();
+      },
+    );
+
+    httpMock
+      .expectOne('http://localhost:8080/api/trips/12/like')
+      .flush({ message: 'Not found' }, { status: 404, statusText: 'Not Found' });
+  });
+
   it('should unlike a trip via DELETE', (done) => {
     service.unlikeTrip(12).subscribe(() => done());
 
     const req = httpMock.expectOne('http://localhost:8080/api/trips/12/like');
     expect(req.request.method).toBe('DELETE');
     req.flush(null);
+  });
+
+  it('should map an error from unlikeTrip through the standard error handler', (done) => {
+    service.unlikeTrip(12).subscribe(
+      () => fail('should have failed'),
+      (error: any) => {
+        expect(error.status).toBe(404);
+        done();
+      },
+    );
+
+    httpMock
+      .expectOne('http://localhost:8080/api/trips/12/like')
+      .flush({ message: 'Not found' }, { status: 404, statusText: 'Not Found' });
   });
 
   it('should save a trip via POST', (done) => {
@@ -540,12 +568,40 @@ describe('TripService', () => {
     req.flush(null);
   });
 
+  it('should map an error from saveTrip through the standard error handler', (done) => {
+    service.saveTrip(13).subscribe(
+      () => fail('should have failed'),
+      (error: any) => {
+        expect(error.status).toBe(404);
+        done();
+      },
+    );
+
+    httpMock
+      .expectOne('http://localhost:8080/api/trips/13/save')
+      .flush({ message: 'Not found' }, { status: 404, statusText: 'Not Found' });
+  });
+
   it('should unsave a trip via DELETE', (done) => {
     service.unsaveTrip(13).subscribe(() => done());
 
     const req = httpMock.expectOne('http://localhost:8080/api/trips/13/save');
     expect(req.request.method).toBe('DELETE');
     req.flush(null);
+  });
+
+  it('should map an error from unsaveTrip through the standard error handler', (done) => {
+    service.unsaveTrip(13).subscribe(
+      () => fail('should have failed'),
+      (error: any) => {
+        expect(error.status).toBe(404);
+        done();
+      },
+    );
+
+    httpMock
+      .expectOne('http://localhost:8080/api/trips/13/save')
+      .flush({ message: 'Not found' }, { status: 404, statusText: 'Not Found' });
   });
 
   it('should clone a trip via POST and resolve with the new TripResponse', (done) => {
@@ -576,6 +632,20 @@ describe('TripService', () => {
     req.flush(clonedTrip);
   });
 
+  it('should map an error from cloneTrip through the standard error handler', (done) => {
+    service.cloneTrip(13).subscribe(
+      () => fail('should have failed'),
+      (error: any) => {
+        expect(error.status).toBe(404);
+        done();
+      },
+    );
+
+    httpMock
+      .expectOne('http://localhost:8080/api/trips/13/clone')
+      .flush({ message: 'Not found' }, { status: 404, statusText: 'Not Found' });
+  });
+
   it('should list saved trips via GET', (done) => {
     const mockPage = { content: [], page: { size: 20, number: 0, totalElements: 0, totalPages: 0 } };
 
@@ -587,5 +657,19 @@ describe('TripService', () => {
     const req = httpMock.expectOne('http://localhost:8080/api/trips/saved?page=0&size=20');
     expect(req.request.method).toBe('GET');
     req.flush(mockPage);
+  });
+
+  it('should map an error from listSavedTrips through the standard error handler', (done) => {
+    service.listSavedTrips().subscribe(
+      () => fail('should have failed'),
+      (error: any) => {
+        expect(error.status).toBe(500);
+        done();
+      },
+    );
+
+    httpMock
+      .expectOne('http://localhost:8080/api/trips/saved?page=0&size=20')
+      .flush({ message: 'Internal server error' }, { status: 500, statusText: 'Internal Server Error' });
   });
 });

@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, CUSTOM_ELEMENTS_SCHEMA, computed, input } from '@angular/core';
 import { FeedStop, FeedTrip } from '../../../../core/models/feed.model';
+import { FeedActionRailComponent } from '../feed-action-rail/feed-action-rail.component';
 
 /**
  * SOCIAL-01 (D-02/D-03): a single full-screen feed slide. Trip name, major
@@ -17,6 +18,7 @@ import { FeedStop, FeedTrip } from '../../../../core/models/feed.model';
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
+  imports: [FeedActionRailComponent],
   templateUrl: 'feed-card.component.html',
   styleUrls: ['feed-card.component.scss'],
 })

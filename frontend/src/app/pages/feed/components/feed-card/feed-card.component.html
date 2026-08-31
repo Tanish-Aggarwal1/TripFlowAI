@@ -31,7 +31,8 @@
     }
   </swiper-container>
 
-  <!-- Reserved for plan 06-03's on-card action rail (D-04: like/save/clone). -->
+  <!-- D-04: on-card action rail (like/save/clone) -->
+  <app-feed-action-rail [trip]="trip()" />
 
   <!-- D-02: pinned bottom overlay — trip description. Renders nothing (not
        the string "null") when the trip has no description. -->
