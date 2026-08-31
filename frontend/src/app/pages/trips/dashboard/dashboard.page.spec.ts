@@ -153,6 +153,12 @@ describe('DashboardPage', () => {
     expect(routerSpy.navigate).toHaveBeenCalledWith(['/trips/new']);
   });
 
+  it('openFeed navigates to /feed', () => {
+    component.openFeed();
+
+    expect(routerSpy.navigate).toHaveBeenCalledWith(['/feed']);
+  });
+
   describe('AI trip creation modal', () => {
     it('openAiCreate opens the modal', () => {
       component.openAiCreate();

@@ -32,4 +32,10 @@
       }
     </swiper-container>
   }
+
+  @if (loadingMore()) {
+    <div class="load-more-indicator">
+      <ion-spinner name="dots" />
+    </div>
+  }
 </ion-content>
