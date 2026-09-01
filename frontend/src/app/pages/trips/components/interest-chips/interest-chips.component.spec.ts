@@ -69,6 +69,19 @@ describe('InterestChipsComponent', () => {
       expect(component.error).toBe('At most 10 interests are allowed.');
     });
 
+    // SOCIAL-05: the profile page overrides maxInterests to 20 (Trip.tags's backend limit).
+    it('honors a caller-supplied maxInterests instead of the default 10', () => {
+      spyOn(component.interestsChange, 'emit');
+      component.maxInterests = 20;
+      component.interests = Array.from({ length: 20 }, (_, i) => `interest-${i}`);
+      component.interestInput = 'one-too-many';
+
+      component.addInterest();
+
+      expect(component.interestsChange.emit).not.toHaveBeenCalled();
+      expect(component.error).toBe('At most 20 interests are allowed.');
+    });
+
     it('does not emit a duplicate interest', () => {
       spyOn(component.interestsChange, 'emit');
       component.interests = ['food'];

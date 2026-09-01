@@ -25,7 +25,9 @@ import org.springframework.web.bind.annotation.RestController;
 import com.tripflow.backend.domain.enums.TripStatus;
 import com.tripflow.backend.domain.enums.TripVisibility;
 import com.tripflow.backend.dto.CreateTripRequest;
+import com.tripflow.backend.dto.RateTripRequest;
 import com.tripflow.backend.dto.TripOwnerSummaryResponse;
+import com.tripflow.backend.dto.TripRatingSummaryResponse;
 import com.tripflow.backend.dto.TripResponse;
 import com.tripflow.backend.dto.TripSearchFilters;
 import com.tripflow.backend.dto.UpdateTripRequest;
@@ -35,6 +37,8 @@ import com.tripflow.backend.security.UserPrincipal;
 import com.tripflow.backend.service.RouteOptimizationService;
 import com.tripflow.backend.service.TripCloneService;
 import com.tripflow.backend.service.TripLikeService;
+import com.tripflow.backend.service.TripRatingService;
+import com.tripflow.backend.service.TripSaveService;
 import com.tripflow.backend.service.TripService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -52,6 +56,8 @@ public class TripController {
     private final RouteOptimizationService routeOptimizationService;
     private final TripCloneService tripCloneService;
     private final TripLikeService tripLikeService;
+    private final TripSaveService tripSaveService;
+    private final TripRatingService tripRatingService;
     private final RateLimiterService rateLimiterService;
     private final RateLimitProperties rateLimitProperties;
 
@@ -93,6 +99,17 @@ public class TripController {
             @AuthenticationPrincipal UserPrincipal principal) {
         rateLimiterService.checkLimit("trip-create:" + principal.userId(), rateLimitProperties.tripCreate());
         return new ResponseEntity<>(tripService.createTrip(principal.userId(), request), HttpStatus.CREATED);
+    }
+
+    @Operation(summary = "List saved trips", description = "Paginated list of the authenticated user's own "
+            + "saved/bookmarked trips (SOCIAL-04). Never includes another user's saves. Declared above "
+            + "GET /{id} so Spring's literal-segment matching resolves 'saved' before the {id} template.")
+    @GetMapping("/saved")
+    public ResponseEntity<PagedModel<TripOwnerSummaryResponse>> listSavedTrips(
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        Page<TripOwnerSummaryResponse> page = tripSaveService.listSaved(principal.userId(), pageable);
+        return ResponseEntity.ok(new PagedModel<>(page));
     }
 
     @Operation(summary = "Get a trip",
@@ -160,5 +177,43 @@ public class TripController {
             @PathVariable Long id, @AuthenticationPrincipal UserPrincipal principal) {
         tripLikeService.unlikeTrip(id, principal.userId());
         return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "Save a trip", description = "Idempotent: saving an already-saved trip still returns 200. "
+            + "PUBLIC trips only, or your own PRIVATE trips.")
+    @PostMapping("/{id}/save")
+    public ResponseEntity<Void> saveTrip(
+            @PathVariable Long id, @AuthenticationPrincipal UserPrincipal principal) {
+        tripSaveService.saveTrip(id, principal.userId());
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "Unsave a trip", description = "Idempotent: unsaving a trip you haven't saved still returns 200.")
+    @DeleteMapping("/{id}/save")
+    public ResponseEntity<Void> unsaveTrip(
+            @PathVariable Long id, @AuthenticationPrincipal UserPrincipal principal) {
+        tripSaveService.unsaveTrip(id, principal.userId());
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "Rate a trip", description = "Sets or replaces the caller's 1-5 star rating "
+            + "(SOCIAL-07). PUBLIC trips only, or your own PRIVATE trips. Re-rating replaces the "
+            + "previous value — never creates a second row.")
+    @PostMapping("/{id}/rate")
+    public ResponseEntity<Void> rateTrip(
+            @PathVariable Long id,
+            @RequestBody @Valid RateTripRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        tripRatingService.rateTrip(id, principal.userId(), request.rating());
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "Get a trip's rating summary", description = "Average rating, rating count "
+            + "and the caller's own rating (null if they haven't rated it) for a trip (SOCIAL-07). "
+            + "PUBLIC trips only, or your own PRIVATE trips.")
+    @GetMapping("/{id}/rating")
+    public ResponseEntity<TripRatingSummaryResponse> getTripRating(
+            @PathVariable Long id, @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(tripRatingService.getSummary(id, principal.userId()));
     }
 }

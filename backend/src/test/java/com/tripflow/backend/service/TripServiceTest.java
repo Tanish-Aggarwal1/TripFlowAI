@@ -42,8 +42,10 @@ import com.tripflow.backend.dto.UpsertStopRequest;
 import com.tripflow.backend.exception.ForbiddenException;
 import com.tripflow.backend.exception.InvalidRequestException;
 import com.tripflow.backend.exception.ResourceNotFoundException;
+import com.tripflow.backend.mapper.FeedTripMapper;
 import com.tripflow.backend.mapper.StopMapper;
 import com.tripflow.backend.mapper.TripMapper;
+import com.tripflow.backend.repository.StopPhotoRepository;
 import com.tripflow.backend.repository.TripRepository;
 import com.tripflow.backend.repository.UserRepository;
 
@@ -56,6 +58,7 @@ public class TripServiceTest {
 	@Mock private TripRepository tripRepository;
     @Mock private UserRepository userRepository;
     @Mock private StopService stopService;
+    @Mock private StopPhotoRepository stopPhotoRepository;
 
     private TripService tripService;
 
@@ -67,7 +70,9 @@ public class TripServiceTest {
         // so every existing `when(tripRepository.findWithStopsById(...))` stub below still
         // drives the ownership check unchanged.
         TripOwnershipService tripOwnershipService = new TripOwnershipService(tripRepository);
-        tripService = new TripService(tripRepository, userRepository, tripMapper, tripOwnershipService, stopService);
+        FeedTripMapper feedTripMapper = new FeedTripMapper();
+        tripService = new TripService(tripRepository, userRepository, tripMapper, tripOwnershipService, stopService,
+                stopPhotoRepository, feedTripMapper);
     }
 
     /** A PRIVATE trip with no stops, owned by {@code ownerId}, matching the id every stub below uses. */

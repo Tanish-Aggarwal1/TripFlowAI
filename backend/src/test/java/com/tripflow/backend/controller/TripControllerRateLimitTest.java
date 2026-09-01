@@ -28,6 +28,8 @@ import com.tripflow.backend.security.UserPrincipal;
 import com.tripflow.backend.service.RouteOptimizationService;
 import com.tripflow.backend.service.TripCloneService;
 import com.tripflow.backend.service.TripLikeService;
+import com.tripflow.backend.service.TripRatingService;
+import com.tripflow.backend.service.TripSaveService;
 import com.tripflow.backend.service.TripService;
 
 /**
@@ -50,6 +52,10 @@ class TripControllerRateLimitTest {
 	@Mock
 	private TripLikeService tripLikeService;
 	@Mock
+	private TripSaveService tripSaveService;
+	@Mock
+	private TripRatingService tripRatingService;
+	@Mock
 	private RateLimiterService rateLimiterService;
 	@Mock
 	private RateLimitProperties rateLimitProperties;
@@ -58,7 +64,7 @@ class TripControllerRateLimitTest {
 
 	private TripController controller() {
 		return new TripController(tripService, routeOptimizationService, tripCloneService, tripLikeService,
-				rateLimiterService, rateLimitProperties);
+				tripSaveService, tripRatingService, rateLimiterService, rateLimitProperties);
 	}
 
 	private CreateTripRequest sampleCreateRequest() {

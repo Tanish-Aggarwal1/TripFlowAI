@@ -178,6 +178,7 @@ All supplied filters AND together (e.g. `?search=paris&status=ACTIVE&visibility=
 | `stops[].notes` | max 2000 chars (SCRUM-417) |
 | `stops[].latitude` | -90.0 to 90.0 |
 | `stops[].longitude` | -180.0 to 180.0 |
+| `User.interests` (`PATCH /api/profile/interests`, SOCIAL-05) | max 20 elements, each max 50 chars — reuses the `tags` policy above verbatim, not a new numbers policy |
 
 Same per-field limits apply to `PUT /api/trips/{id}` (via `UpsertStopRequest` — see that endpoint's section for how it differs from `CreateStopRequest`) and the nested stop endpoints (`POST`/`PUT /api/trips/{tripId}/stops[/{stopId}]`, which share `CreateStopRequest`/`UpdateStopRequest`).
 
@@ -408,33 +409,203 @@ Unlikes a trip. Idempotent — unliking a trip you haven't liked still returns 2
 
 ---
 
-## Discovery (SCRUM-160 / SCRUM-163)
+## Discovery (SCRUM-160 / SCRUM-163 / SOCIAL-01 / SOCIAL-06)
 
-Public, unauthenticated browsing of `PUBLIC` trips — no `Authorization` header required on either endpoint. Both follow the same paged shape as `GET /api/trips` (see REF-21 note above).
+**Auth (corrected — Phase 6, SOCIAL-01):** every endpoint below now requires `Authorization: Bearer <token>`. This section previously said the discovery surface was public, unauthenticated browsing; that was closed in Phase 6 because `06-CONTEXT.md`'s Phase Boundary requires an account to browse the "For You" feed at all, and leaving `/trips`/`/search` public while only authenticating `/feed` would still let a stranger enumerate every `PUBLIC` trip. See `docs/auth.md`'s permitAll table for the corresponding `SecurityConfig` note.
+
+### GET /api/discovery/feed (SOCIAL-01 / SOCIAL-06)
+Full-screen "For You" feed: one full-card `FeedTripResponse` per `PUBLIC` trip, ordered by interest match then recency (see Ranking below) — not the card-projection shape the other two discovery endpoints use.
+
+**Auth:** Bearer token required.
+
+**Query params:** `page` (0-indexed, default 0), `size` (default 20). **`sort` is not honoured** — the ordering below IS the endpoint's contract; passing any `sort` other than the default `createdAt,desc` is a `400`, not a silently-ignored no-op (same convention as `GET /api/discovery/search`'s `sort` rejection).
+
+**Ranking (SOCIAL-06, D-05/D-06):** `PUBLIC` trips whose `tags` share at least one value with the viewer's own stored profile `interests` (`GET /api/profile`, see below) are ordered first; everything else, and the ordering within each of those two groups, falls back to `createdAt` descending. A viewer with no stored interests gets a purely recency-ordered feed. This reads only the viewer's stored profile interests — never a signal inferred from the viewer's own trip history (D-06) — and is a boolean "shares at least one tag" check, not a weighted/scored recommendation (D-05). Paging is stable across pages (no duplicate or omitted trip) because the ranking query carries a `createdAt` tiebreaker in addition to the match boolean.
+
+**Success (200):**
+```json
+{
+  "content": [
+    {
+      "id": 1,
+      "title": "string",
+      "description": "string",
+      "tags": ["string"],
+      "ownerUsername": "string",
+      "likeCount": 0,
+      "createdAt": "ISO-8601 datetime",
+      "stops": [
+        {
+          "id": 1,
+          "name": "string",
+          "address": "string",
+          "stopOrder": 0,
+          "notes": "string",
+          "photoUrls": ["string"]
+        }
+      ]
+    }
+  ],
+  "page": {
+    "size": 20,
+    "number": 0,
+    "totalElements": 1,
+    "totalPages": 1
+  }
+}
+```
+`ownerUsername` is always the trip's actual owner, never the viewer (D-02's fixed card header needs the poster's identity, not the reader's). `stops[].photoUrls` is always a non-null array — empty when the stop has zero photos, which is the data precondition for D-03's text-based fallback card (rendered client-side from `stops[].name`/`stops[].notes` when `photoUrls` is empty). `totalElements` counts only `PUBLIC` trips.
+
+**Errors:**
+- 401 — missing/invalid token
+- 400 — non-default `sort` supplied
 
 ### GET /api/discovery/trips
-Paginated feed of all `PUBLIC` trips, newest first by default.
+Paginated card-projection list of all `PUBLIC` trips, newest first by default.
 
-**Auth:** None required.
+**Auth:** Bearer token required.
 
 **Query params:** same as `GET /api/trips` — `page`, `size`, `sort` (default `createdAt,desc`).
 
 **Success (200):** same paged shape as `GET /api/trips` (`content[]` of `TripSummaryResponse` + `page` block).
-**Errors:** none beyond standard validation of `page`/`size`/`sort`.
+**Errors:**
+- 401 — missing/invalid token
+- none beyond standard validation of `page`/`size`/`sort`
 
 ### GET /api/discovery/search
 Case-insensitive substring search over `PUBLIC` trip titles and tags. `q` is required and must not be blank.
 
-**Auth:** None required.
+**Auth:** Bearer token required.
 
 **Query params:** `q` (required, non-blank), plus `page`/`size` as above. **`sort` is not honoured** (SCRUM-415) — results are always ordered `createdAt desc, id desc`; passing a non-default `sort` is a 400, not a silently-ignored no-op. Unlike `GET /api/trips`, this endpoint is always in "search mode" (`q` is mandatory), so there's no unfiltered path where `sort` would apply.
 
 **Success (200):** same paged shape as `GET /api/trips`.
 **Errors:**
+- 401 — missing/invalid token
 - 400 — `q` missing or blank
 - 400 — `sort` present and not the default (`createdAt,desc`)
 
-**Both discovery endpoints deliberately keep the leaner `TripSummaryResponse` shape — no `visitedStopCount`/`completionPercentage` (D-08).** These endpoints are unauthenticated and cross-owner by nature (anyone browsing `PUBLIC` trips), so serving another user's completion progress here would leak it to strangers. `GET /api/trips`'s owner-only `TripOwnerSummaryResponse` is a separate DTO for exactly this reason — do not "fix" this asymmetry by adding the fields here; it is intentional, not an oversight.
+**`GET /api/discovery/trips` and `GET /api/discovery/search` deliberately keep the leaner `TripSummaryResponse` shape — no `visitedStopCount`/`completionPercentage` (D-08).** These two are cross-owner by nature (anyone with an account can browse any `PUBLIC` trip), so serving another user's completion progress here would leak it to strangers. `GET /api/trips`'s owner-only `TripOwnerSummaryResponse` is a separate DTO for exactly this reason — do not "fix" this asymmetry by adding the fields here; it is intentional, not an oversight. `GET /api/discovery/feed` (above) is a third, richer shape (`FeedTripResponse`) for the same reason it needs owner/description/tags/stops that the card projection doesn't carry.
+
+---
+
+## Saved Trips (SOCIAL-04)
+
+### POST /api/trips/{id}/save
+Saves/bookmarks a trip to the caller's private saved-trips list. Idempotent — saving an already-saved trip still returns 200 and does not create a duplicate row. Allowed on any `PUBLIC` trip, or your own `PRIVATE` trips.
+
+**Auth:** Bearer token required.
+
+**Request:** No body.
+
+**Success (200):** no body.
+**Errors:**
+- 404 — trip not found, **or** the trip is `PRIVATE` and belongs to someone else (same 404 either way so existence isn't leaked — no 403 path, same SCRUM-274 convention as like/clone)
+
+### DELETE /api/trips/{id}/save
+Unsaves a trip. Idempotent — unsaving a trip you haven't saved still returns 200.
+
+**Auth:** Bearer token required.
+
+**Request:** No body.
+
+**Success (200):** no body.
+**Errors:**
+- 404 — trip not found, **or** the trip is `PRIVATE` and belongs to someone else
+
+### GET /api/trips/saved
+Paginated, owner-scoped list of the caller's own saved trips — never includes another user's saves. Declared ahead of `GET /api/trips/{id}` on the router so the literal `saved` segment resolves before the `{id}` path template.
+
+**Auth:** Bearer token required.
+
+**Query params:** `page` (default 0), `size` (default 20), `sort` (default `createdAt,desc`).
+
+**Success (200):** same paged shape as `GET /api/trips` (`content[]` of `TripOwnerSummaryResponse` + `page` block) — the caller's own `visitedStopCount`/`completionPercentage` are included since these are always the caller's own trips.
+**Errors:** none beyond standard validation of `page`/`size`/`sort`.
+
+---
+
+## Trip Ratings (SOCIAL-07)
+
+### POST /api/trips/{id}/rate
+Sets or replaces the caller's 1-5 star rating on a trip. Re-rating replaces the previous value in place — it never creates a second row or double-counts toward the average. Allowed on any `PUBLIC` trip, or your own `PRIVATE` trips. There is no unrate endpoint — a rating is a value the caller changes by re-rating, not a toggle.
+
+**Auth:** Bearer token required.
+
+**Request:**
+```json
+{
+  "rating": 5
+}
+```
+`rating` is required, an integer from 1 to 5 inclusive.
+
+**Success (200):** no body.
+**Errors:**
+- 400 — `rating` missing, non-integer, or outside 1-5 (`fieldErrors`) — independently backed by a database `CHECK` constraint
+- 404 — trip not found, **or** the trip is `PRIVATE` and belongs to someone else (same 404 either way — no 403 path)
+
+### GET /api/trips/{id}/rating
+Returns the trip's rating summary: average, count, and the caller's own rating.
+
+**Auth:** Bearer token required.
+
+**Request:** No body.
+
+**Success (200):**
+```json
+{
+  "averageRating": 4.5,
+  "ratingCount": 2,
+  "myRating": 5
+}
+```
+`averageRating` is `null` (never `0.0`) when the trip has zero ratings. `myRating` is `null` when the caller hasn't rated this trip. Never carries another user's individual rating or identity.
+
+**Errors:**
+- 404 — trip not found, **or** the trip is `PRIVATE` and belongs to someone else
+
+---
+
+## Profile (SOCIAL-05)
+
+Every handler resolves its target user from the authenticated principal only — neither endpoint accepts a path or query user-id parameter, so nothing can retarget a read or write at another account.
+
+### GET /api/profile
+Returns the caller's own username, join date, and stored interests.
+
+**Auth:** Bearer token required.
+
+**Request:** No body.
+
+**Success (200):**
+```json
+{
+  "id": 1,
+  "username": "string",
+  "joinedAt": "ISO-8601 datetime",
+  "interests": ["string"]
+}
+```
+`joinedAt` is the account's creation timestamp (the same underlying value as every other entity's `createdAt`, named `joinedAt` here so the API reads as a profile contract). `interests` is free-text, case-sensitive, and is the source `GET /api/discovery/feed`'s ranking reads (see Discovery above) — it is never inferred from the caller's own trips.
+
+**Errors:** none beyond standard auth (401).
+
+### PATCH /api/profile/interests
+Replaces the caller's stored interests wholesale (not a merge/append).
+
+**Auth:** Bearer token required.
+
+**Request:**
+```json
+{
+  "interests": ["string"]
+}
+```
+
+**Success (200):** the caller's updated `ProfileResponse`, same shape as `GET /api/profile`.
+**Errors:**
+- 400 — `interests` is `null`, has more than 20 elements, or any element exceeds 50 characters (`fieldErrors`)
 
 ---
 

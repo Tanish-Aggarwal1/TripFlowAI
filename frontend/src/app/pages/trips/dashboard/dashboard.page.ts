@@ -9,7 +9,7 @@ import {
   ViewWillEnter
 } from '@ionic/angular';
 import { addIcons } from 'ionicons';
-import { add, lockClosed, globeOutline, trash, create, sparkles, imageOutline, mapOutline } from 'ionicons/icons';
+import { add, lockClosed, globeOutline, trash, create, sparkles, imageOutline, mapOutline, compassOutline } from 'ionicons/icons';
 import { TripService } from '../../../core/services/trip.service';
 import { ToastService } from '../../../core/services/toast.service';
 import {
@@ -70,6 +70,7 @@ export class DashboardPage implements ViewWillEnter {
       sparkles,
       'image-outline': imageOutline,
       'map-outline': mapOutline,
+      'compass-outline': compassOutline,
     });
 
     this.filterChanges
@@ -167,6 +168,11 @@ export class DashboardPage implements ViewWillEnter {
 
   createTrip(): void {
     this.router.navigate(['/trips/new']);
+  }
+
+  // SOCIAL-01: the dashboard's only entry point into /feed.
+  openFeed(): void {
+    this.router.navigate(['/feed']);
   }
 
   openAiCreate(): void {
