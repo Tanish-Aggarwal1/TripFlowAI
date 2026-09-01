@@ -142,6 +142,45 @@ export class TripService {
       .pipe(catchError((err: HttpErrorResponse) => this.handleError(err)));
   }
 
+  // ── FEED ACTIONS (SOCIAL-02/03/04, D-04) ──────────────────────────────────────
+
+  likeTrip(id: number): Observable<void> {
+    return this.http
+      .post<void>(`${this.baseUrl}/${id}/like`, {})
+      .pipe(catchError((err: HttpErrorResponse) => this.handleError(err)));
+  }
+
+  unlikeTrip(id: number): Observable<void> {
+    return this.http
+      .delete<void>(`${this.baseUrl}/${id}/like`)
+      .pipe(catchError((err: HttpErrorResponse) => this.handleError(err)));
+  }
+
+  saveTrip(id: number): Observable<void> {
+    return this.http
+      .post<void>(`${this.baseUrl}/${id}/save`, {})
+      .pipe(catchError((err: HttpErrorResponse) => this.handleError(err)));
+  }
+
+  unsaveTrip(id: number): Observable<void> {
+    return this.http
+      .delete<void>(`${this.baseUrl}/${id}/save`)
+      .pipe(catchError((err: HttpErrorResponse) => this.handleError(err)));
+  }
+
+  cloneTrip(id: number): Observable<TripResponse> {
+    return this.http
+      .post<TripResponse>(`${this.baseUrl}/${id}/clone`, {})
+      .pipe(catchError((err: HttpErrorResponse) => this.handleError(err)));
+  }
+
+  listSavedTrips(page = 0, size = 20): Observable<PagedResponse<TripOwnerSummaryResponse>> {
+    const params = new HttpParams().set('page', page).set('size', size);
+    return this.http
+      .get<PagedResponse<TripOwnerSummaryResponse>>(`${this.baseUrl}/saved`, { params })
+      .pipe(catchError((err: HttpErrorResponse) => this.handleError(err)));
+  }
+
   // ── ERROR HANDLING ───────────────────────────────────────────────────────────
 
   private handleError(err: HttpErrorResponse): Observable<never> {

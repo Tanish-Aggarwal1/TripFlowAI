@@ -1,0 +1,33 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-title>Profile</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  @if (loading()) {
+    <ion-spinner></ion-spinner>
+  } @else if (profile(); as p) {
+    <h2>{{ p.username }}</h2>
+    <p class="joined-date">Joined {{ p.joinedAt | date: 'mediumDate' }}</p>
+
+    <app-interest-chips
+      label="Interests"
+      [interests]="draftInterests()"
+      [maxInterests]="maxInterests"
+      (interestsChange)="onInterestsChange($event)"
+    ></app-interest-chips>
+
+    @if (draftInterests().length === 0) {
+      <p class="empty-state">No interests yet — add some above to personalize your feed.</p>
+    }
+
+    @if (error()) {
+      <p class="form-error" role="alert">{{ error() }}</p>
+    }
+
+    <ion-button [disabled]="saving()" (click)="save()">Save interests</ion-button>
+  } @else if (error()) {
+    <p class="form-error" role="alert">{{ error() }}</p>
+  }
+</ion-content>
