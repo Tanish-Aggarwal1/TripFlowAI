@@ -1,5 +1,6 @@
 package com.tripflow.backend.repository;
 
+import java.util.Collection;
 import java.util.Optional;
 
 import org.springframework.data.domain.Page;
@@ -81,6 +82,40 @@ public interface TripRepository extends JpaRepository<Trip, Long>, TripSearchRep
      * carry. No interest-overlap {@code ORDER BY} here; plan 06-06 owns ranking.
      */
     Page<Trip> findByVisibility(TripVisibility visibility, Pageable pageable);
+
+    /**
+     * Ranked feed query (SOCIAL-06, D-05/D-06) — PUBLIC trips whose {@code tags} overlap the
+     * viewer's stored {@code User.interests} come first, {@code created_at} descending second.
+     * {@code TripService.listFeed} only calls this when {@code interests} is non-empty; an empty
+     * {@code IN (...)} list is a SQL syntax error, not a query that matches nothing, so the empty
+     * case branches to {@link #findByVisibility} instead.
+     *
+     * <p>Deliberate deviation from 06-RESEARCH.md Pattern 4's Postgres array-overlap ({@code &&})
+     * sketch: {@code &&} requires binding a {@code text[]} parameter, which in practice means
+     * assembling a Postgres array literal string out of free-text, user-supplied interest values —
+     * a value containing a comma, brace or double quote silently corrupts that literal. This
+     * {@code unnest} + {@code IN} form instead binds an ordinary collection parameter that Spring
+     * Data expands into regular bound placeholders, so no literal is ever constructed and no
+     * escaping is required. The semantics are identical: both answer "do these two sets share at
+     * least one element."
+     *
+     * <p>The {@code created_at DESC} tiebreaker is not cosmetic — without a total ordering,
+     * Postgres may return rows in a different order at offset 20 than at offset 0, which is
+     * exactly how a paginated feed starts duplicating and skipping trips across pages.
+     */
+    @Query(value = """
+            SELECT t.* FROM trips t
+            WHERE t.visibility = 'PUBLIC'
+            ORDER BY
+                EXISTS (SELECT 1 FROM unnest(t.tags) AS tag WHERE tag IN (:interests)) DESC,
+                t.created_at DESC
+            """,
+            countQuery = """
+            SELECT COUNT(*) FROM trips t
+            WHERE t.visibility = 'PUBLIC'
+            """,
+            nativeQuery = true)
+    Page<Trip> findPublicRankedByInterests(@Param("interests") Collection<String> interests, Pageable pageable);
 
     /**
      * Atomic counter bump (SCRUM-161) — {@code SET like_count = like_count + 1} at the

@@ -11,7 +11,7 @@ This milestone covers the semester-5→semester-6 break (fall, ~4.5 months: 2026
 - [ ] **Phase 3: AI Quality & Scheduling** (Fall) - Gemini prompt pass, day/time/meal-aware itineraries, alternative suggestions
 - [ ] **Phase 4: Frontend & Map Polish** (Fall) - Route polyline + clustering, dark mode, Mapbox place search
 - [ ] **Phase 5: Notifications, Observability & PWA** (Fall) - Email notifications, Sentry, offline caching, native build spike
-- [ ] **Phase 6: Community & Social** (Fall) - TikTok-style For You feed, like/save/clone, ratings, user profile page, interest-based ranking
+- [x] **Phase 6: Community & Social** (Fall) - TikTok-style For You feed, like/save/clone, ratings, user profile page, interest-based ranking — 6/6 plans executed, verification passed (completed 2026-08-31)
 - [ ] **Phase 7: Trip Tracking** (Fall) - Foreground stop-arrival detection (+ blocked push-notification stretch)
 - [ ] **Phase 8: Trip Collaboration** (Fall) - Multi-owner trips: invite/accept, collaborator permissions, shared editing
 - [ ] **Phase 9: Winter Hardening & Sign-off** (Winter) - Production hardening, deploy automation, load test, regression, docs, README
@@ -163,7 +163,7 @@ Plans:
   4. Trips with no stop photos fall back to a text-based card (stop descriptions) instead of breaking the swipe layout
   5. Users have a profile page showing username, join date, and their stored interests
 
-**Plans**: 4/6 plans executed — `/gsd-plan-phase 6` run 2026-08-31 produced 6 PLAN.md files (`06-01` through `06-06`) mapping 1:1 onto the plan items below. The pre-planning audit findings each item carries are retained as history; the PLAN.md list beneath them is the executable breakdown, with waves assigned for parallel execution.
+**Plans**: 6/6 plans executed — `/gsd-plan-phase 6` run 2026-08-31 produced 6 PLAN.md files (`06-01` through `06-06`) mapping 1:1 onto the plan items below. The pre-planning audit findings each item carries are retained as history; the PLAN.md list beneath them is the executable breakdown, with waves assigned for parallel execution.
 **Critical — reconcile with existing Jira tickets before implementing (do not duplicate)**: `SCRUM-71` (parent, **Done** as of 2026-08-12 — was stale "In Progress" in this doc, subtasks below confirm Done) already has subtasks `SCRUM-159` (71a, visibility enforcement), `SCRUM-160` (71b, discovery feed), `SCRUM-161` (71c, like endpoints), `SCRUM-162` (71d, clone), `SCRUM-163` (71e, search). **[UPDATED 2026-08-10] SCRUM-160/161/162/163 merged to `main` 2026-08-06 (after this roadmap entry was written) — the backend for discovery feed, search, like, and clone all ship and work today (`DiscoveryController`, `TripController`, documented in `docs/api-contracts.md`); paths are `GET /api/discovery/trips`/`GET /api/discovery/search`, matching this doc's assumption, not the earlier `/api/trips/discover` guess. Only the frontend consumer is outstanding — `trip.service.ts` has no methods calling any of these, and no discovery/feed/clone/like UI exists. Do not re-plan or re-implement the backend for 06-01/06-03; scope those plans to frontend wiring against the endpoints that already exist.** Also resolve `SCRUM-274` (404 existence-hiding standardization across owner-gated mutations) as part of this phase, not separately — it directly determines whether like/clone/rate return 403 or 404 on private trips. See `docs/social-features-traceability-audit.md` and RISK-J1/J3 in `.planning/RISKS.md`.
 
 Plans:
@@ -171,9 +171,9 @@ Plans:
 - [x] 06-01: Discovery feed — **backend done, still confirmed** (`GET /api/discovery/trips`/`GET /api/discovery/search`, SCRUM-160/163, merged 2026-08-06); **frontend consumption still NOT started as of 2026-08-14 audit** — `trip.service.ts` has zero references to `/api/discovery`, no wiring added since 08-06 — FB-19a/19b/19c
 - [x] 06-02: Frontend TikTok-style full-screen swipeable feed — vertical scroll between trips, horizontal swipe between stop images within a trip, header/footer overlay, no-photo text-card fallback — new, replaces the original FB-19b list-page assumption — **confirmed NOT started** (2026-08-14 audit): no discovery-feed page/component exists
 - [x] 06-03: On-card action rail — like/save/clone tappable directly on the feed card — **PARTIAL, re-confirmed 2026-08-14**: like (`TripLikeService`, `POST`/`DELETE /{id}/like`) and clone (`TripCloneService`, `POST /{id}/clone`) backend done and wired in `TripController` (SCRUM-161/162, merged 2026-08-06); save/bookmark backend still missing entirely (no `SavedTrip` entity/service/endpoint); frontend wiring for all three still needed — FB-20a/20b, FB-21a/21b, FB-24 (resolve 404-vs-403 via SCRUM-274 first)
-- [ ] 06-04: Trip ratings (star, trip-level, join-table pattern) — FB-19d — **confirmed NOT started** (2026-08-14 audit): no `Rating` domain class, no rating controller/endpoint
+- [x] 06-04: Trip ratings (star, trip-level, join-table pattern) — FB-19d — **confirmed NOT started** (2026-08-14 audit): no `Rating` domain class, no rating controller/endpoint
 - [x] 06-05: User profile page — username, join date, stored interests (new field/table) — SOCIAL-05 — **confirmed NOT started** (2026-08-14 audit): no `profile` path under `frontend/src`
-- [ ] 06-06: Interest-based feed ranking — order feed by interest-tag match against profile interests, fall back to recency — SOCIAL-06 (depends on 06-05) — **confirmed NOT started** (2026-08-14 audit): existing "interest" hits are AI itinerary-preferences fields, unrelated to feed ranking
+- [x] 06-06: Interest-based feed ranking — order feed by interest-tag match against profile interests, fall back to recency — SOCIAL-06 (depends on 06-05) — **confirmed NOT started** (2026-08-14 audit): existing "interest" hits are AI itinerary-preferences fields, unrelated to feed ranking
 
 PLAN.md files (2026-08-31):
 
@@ -277,7 +277,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 3. AI Quality & Scheduling | 0/3 (03-02 partial: `reason` field exists) | Not started | - |
 | 4. Frontend & Map Polish | 0/3 (04-01 partial: polyline yes, clustering no) | Not started | - |
 | 5. Notifications, Observability & PWA | 0/4 | Not started | - |
-| 6. Community & Social | 4/6 | In Progress|  |
+| 6. Community & Social | 6/6 | In Progress|  |
 | 7. Trip Tracking | 0/2 | Not started | - |
 | 8. Trip Collaboration | 0/4 | Not started | - |
 | 9. Winter Hardening & Sign-off | 0/6 | Not started (groomable backlog, by design) | - |

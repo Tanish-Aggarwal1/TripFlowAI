@@ -43,3 +43,36 @@
   font-weight: 600;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
 }
+
+// SOCIAL-07: five stars in a row is wider than any other single control in this rail
+// (which otherwise stacks single 48px controls). Sized down from the rail's usual
+// 48px so the row doesn't push past the card's edge on a narrow phone, while staying
+// large enough (32px, well above a fingertip's ~9mm contact area) to hit individually.
+.rating-control {
+  align-items: flex-end;
+}
+
+.star-row {
+  display: flex;
+  flex-direction: row;
+  gap: 2px;
+
+  ion-button.star-button {
+    --padding-start: 2px;
+    --padding-end: 2px;
+    width: 32px;
+    height: 32px;
+    margin: 0;
+
+    ion-icon {
+      font-size: 20px;
+    }
+  }
+}
+
+.rating-count {
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+}

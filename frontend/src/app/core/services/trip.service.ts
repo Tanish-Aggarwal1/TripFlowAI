@@ -17,6 +17,7 @@ import {
   UpdateStopRequest,
   StopResponse,
 } from '../models/trip.model';
+import { TripRatingSummary } from '../models/feed.model';
 
 @Injectable({ providedIn: 'root' })
 export class TripService {
@@ -178,6 +179,20 @@ export class TripService {
     const params = new HttpParams().set('page', page).set('size', size);
     return this.http
       .get<PagedResponse<TripOwnerSummaryResponse>>(`${this.baseUrl}/saved`, { params })
+      .pipe(catchError((err: HttpErrorResponse) => this.handleError(err)));
+  }
+
+  // SOCIAL-07: sets/replaces the caller's 1-5 star rating. Re-rating sends the same
+  // verb/URL again — the backend upsert (not this client) is what makes it idempotent.
+  rateTrip(id: number, rating: number): Observable<void> {
+    return this.http
+      .post<void>(`${this.baseUrl}/${id}/rate`, { rating })
+      .pipe(catchError((err: HttpErrorResponse) => this.handleError(err)));
+  }
+
+  getTripRating(id: number): Observable<TripRatingSummary> {
+    return this.http
+      .get<TripRatingSummary>(`${this.baseUrl}/${id}/rating`)
       .pipe(catchError((err: HttpErrorResponse) => this.handleError(err)));
   }
 
