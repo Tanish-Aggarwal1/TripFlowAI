@@ -120,6 +120,7 @@
             "polyfills": "src/polyfills.ts",
             "tsConfig": "tsconfig.spec.json",
             "karmaConfig": "karma.conf.js",
+            "codeCoverageExclude": ["src/app/app.routes.ts"],
             "inlineStyleLanguage": "scss",
             "assets": [
               {

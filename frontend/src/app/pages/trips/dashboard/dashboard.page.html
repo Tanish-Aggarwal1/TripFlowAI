@@ -1,6 +1,12 @@
 <ion-header>
   <ion-toolbar color="primary">
     <ion-title>My Trips</ion-title>
+    <!-- SOCIAL-01: routes to /feed -->
+    <ion-buttons slot="end">
+      <ion-button (click)="openFeed()" aria-label="Open feed">
+        <ion-icon slot="icon-only" name="compass-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
   </ion-toolbar>
   <ion-toolbar>
     <ion-searchbar

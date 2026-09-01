@@ -1,0 +1,41 @@
+<ion-content [fullscreen]="true" class="feed-content">
+  @if (loading()) {
+    <div class="centered">
+      <ion-spinner name="crescent" />
+    </div>
+  }
+
+  @if (!loading() && error()) {
+    <div class="centered error">
+      <p>{{ error() }}</p>
+    </div>
+  }
+
+  @if (!loading() && !error() && trips().length === 0) {
+    <div class="centered empty-state">
+      <p>No trips to show yet. Check back soon.</p>
+    </div>
+  }
+
+  @if (!loading() && !error() && trips().length > 0) {
+    <swiper-container
+      class="outer-swiper"
+      direction="vertical"
+      slides-per-view="1"
+      mousewheel="true"
+      (swiperslidechange)="onSlideChange($event)"
+    >
+      @for (trip of trips(); track trip.id) {
+        <swiper-slide class="outer-slide">
+          <app-feed-card [trip]="trip" />
+        </swiper-slide>
+      }
+    </swiper-container>
+  }
+
+  @if (loadingMore()) {
+    <div class="load-more-indicator">
+      <ion-spinner name="dots" />
+    </div>
+  }
+</ion-content>
